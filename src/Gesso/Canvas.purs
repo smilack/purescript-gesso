@@ -15,7 +15,7 @@ import Data.Maybe (Maybe(..))
 import Halogen.Query.EventSource as ES
 import Data.Traversable (traverse_, sequence)
 import Data.Foldable (sequence_)
-import Web.HTML.Window as Window
+import Gesso.Window as Window
 import Web.HTML (window)
 import Effect.Aff.Class (class MonadAff)
 import Graphics.Canvas as Canvas
@@ -151,17 +151,20 @@ handleAction = case _ of
         $ ES.effectEventSource \emitter -> do
             ref <- Ref.new Nothing
             let
-              rAFLoop = do
+              rAFLoop :: Number -> Effect Unit
+              rAFLoop time = do
                 case renderFn of
                   NoRender -> pure unit
                   Continuous fn -> do
                     ES.emit emitter Tick
-                    sequence_ $ (fn 0.0) <$> mexternalState <*> mcontext
+                    sequence_ $ fn time <$> mexternalState <*> mcontext
                   OnChange fn -> do
                     sequence_ $ fn <$> mexternalState <*> mcontext
                 id <- Window.requestAnimationFrame rAFLoop =<< window
                 Ref.write (Just id) ref
-            rAFLoop
+            id1 <- Window.requestAnimationFrame rAFLoop =<< window
+            Ref.write (Just id1) ref
+            ES.emit emitter Tick
             pure
               $ ES.Finalizer do
                   Ref.read ref
