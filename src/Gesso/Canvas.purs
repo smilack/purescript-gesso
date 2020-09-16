@@ -42,11 +42,12 @@ data Action state
   | Receive (Input state)
 
 newtype Input state
-  = Input { origin :: Origin
-    , dimensions :: Dimensions
-    , renderFn :: RenderStyle state
-    , externalState :: state
-    }
+  = Input
+  { origin :: Origin
+  , dimensions :: Dimensions
+  , renderFn :: RenderStyle state
+  , externalState :: state
+  }
 
 data Dimensions
   = WH { width :: Number, height :: Number }
@@ -56,16 +57,17 @@ data AspectRatio
   = AspectRatio Number Number
 
 newtype State state
-  = State { viewBox :: ViewBox
-    , clientRect :: ClientRect
-    , renderFn :: RenderStyle state
-    , subscription :: Maybe H.SubscriptionId
-    , time :: Number
-    , frames :: Number
-    , context :: Maybe Canvas.Context2D
-    , name :: String
-    , externalState :: Maybe state
-    }
+  = State
+  { viewBox :: ViewBox
+  , clientRect :: ClientRect
+  , renderFn :: RenderStyle state
+  , subscription :: Maybe H.SubscriptionId
+  , time :: Number
+  , frames :: Number
+  , context :: Maybe Canvas.Context2D
+  , name :: String
+  , externalState :: Maybe state
+  }
 
 derive instance newtypeState :: Newtype (State state) _
 
@@ -85,35 +87,37 @@ component =
     , render
     , eval: eval
     }
-  
 
 eval ::
   forall state slots output query m.
   MonadAff m =>
-  H.HalogenQ query (Action state) (Input state) ~>
-  H.HalogenM (State state) (Action state) slots output m
-eval = H.mkEval
-  (H.defaultEval
-    { handleAction = handleAction
-    , initialize = Just Start
-    , receive = receive })
+  H.HalogenQ query (Action state) (Input state)
+    ~> H.HalogenM (State state) (Action state) slots output m
+eval =
+  H.mkEval
+    ( H.defaultEval
+        { handleAction = handleAction
+        , initialize = Just Start
+        , receive = receive
+        }
+    )
   where
-    receive :: Input state -> Maybe (Action state)
-    receive = Just <<< Receive
-        
+  receive :: Input state -> Maybe (Action state)
+  receive = Just <<< Receive
 
 initialState :: forall state. Input state -> State state
 initialState (Input { origin: (Origin o), dimensions, renderFn, externalState }) =
-  State { viewBox: ViewBox { x: o.x, y: o.y, w, h }
-  , clientRect: ClientRect { x: 0.0, y: 0.0, w: 0.0, h: 0.0 }
-  , renderFn
-  , subscription: Nothing
-  , time: 0.0
-  , frames: 0.0
-  , context: Nothing
-  , name: "screen"
-  , externalState: Just externalState
-  }
+  State
+    { viewBox: ViewBox { x: o.x, y: o.y, w, h }
+    , clientRect: ClientRect { x: 0.0, y: 0.0, w: 0.0, h: 0.0 }
+    , renderFn
+    , subscription: Nothing
+    , time: 0.0
+    , frames: 0.0
+    , context: Nothing
+    , name: "screen"
+    , externalState: Just externalState
+    }
   where
   { w, h } = case dimensions of
     WH { width, height } -> { w: width, h: height }
@@ -172,8 +176,7 @@ handleAction = case _ of
                         Window.cancelAnimationFrame id =<< window
     let
       updateSub :: H.SubscriptionId -> State state -> State state
-      updateSub subId (State state) =
-        (State state { subscription = Just subId })
+      updateSub subId (State state) = (State state { subscription = Just subId })
     H.modify_ (updateSub subscription)
   Stop -> do
     subscription <- H.gets $ _.subscription <<< unwrap
@@ -190,9 +193,8 @@ unsubscribe subscription = do
   H.unsubscribe subscription
   H.modify_ updateSub
   where
-    updateSub :: State state -> State state
-    updateSub (State state) =
-      (State state { subscription = Nothing })
+  updateSub :: State state -> State state
+  updateSub (State state) = (State state { subscription = Nothing })
 
 getContext :: String -> Effect (Maybe Canvas.Context2D)
 getContext name = do
