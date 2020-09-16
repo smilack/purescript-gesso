@@ -20,128 +20,117 @@ import Web.HTML (window)
 import Effect.Aff.Class (class MonadAff)
 import Graphics.Canvas as Canvas
 import Data.Newtype (class Newtype, unwrap)
+import Gesso.Dimensions as Dims
+import Gesso.Graphics as Graphics
 
-type BoundingBox
-  = { x :: Number, y :: Number, w :: Number, h :: Number }
-
-newtype ViewBox
-  = ViewBox BoundingBox
-
-newtype ClientRect
-  = ClientRect BoundingBox
-
-data RenderStyle state
+data RenderStyle appState
   = NoRender
-  | Continuous (Number -> state -> Context2D -> Effect Unit)
-  | OnChange (state -> Context2D -> Effect Unit)
+  | Continuous (Number -> appState -> Context2D -> Effect Unit)
+  | OnChange (appState -> Context2D -> Effect Unit)
 
-data Action state
+data Action appState
   = Start
   | Stop
   | Tick
-  | Receive (Input state)
+  | Receive (Input appState)
 
-newtype Input state
-  = Input
-  { origin :: Origin
-  , dimensions :: Dimensions
-  , renderFn :: RenderStyle state
-  , externalState :: state
-  }
+data Input appState
+  = Initialize (InitialInput appState)
+  | Update appState
 
-data Dimensions
-  = WH { width :: Number, height :: Number }
-  | WAR { width :: Number, aspectRatio :: AspectRatio }
+initialize :: forall appState. InitialInput appState -> Input appState
+initialize = Initialize
 
-data AspectRatio
-  = AspectRatio Number Number
+type InitialInput appState
+  = { origin :: Graphics.Point
+    , dimensions :: Dims.Dimensions
+    , renderFn :: RenderStyle appState
+    , appState :: appState
+    }
 
-newtype State state
+newtype State appState
   = State
-  { viewBox :: ViewBox
-  , clientRect :: ClientRect
-  , renderFn :: RenderStyle state
-  , subscription :: Maybe H.SubscriptionId
+  { viewBox :: Graphics.ViewBox
+  , clientRect :: Graphics.ClientRect
+  , renderFn :: RenderStyle appState
+  , tickSub :: Maybe H.SubscriptionId
   , time :: Number
   , frames :: Number
   , context :: Maybe Canvas.Context2D
   , name :: String
-  , externalState :: Maybe state
+  , appState :: appState
   }
 
-derive instance newtypeState :: Newtype (State state) _
-
-type Point
-  = { x :: Number, y :: Number }
-
-newtype Origin
-  = Origin Point
+derive instance newtypeState :: Newtype (State appState) _
 
 component ::
-  forall query state output m.
+  forall query appState output m.
   MonadAff m =>
-  H.Component HH.HTML query (Input state) output m
-component =
-  H.mkComponent
-    { initialState
-    , render
-    , eval: eval
-    }
-
-eval ::
-  forall state slots output query m.
-  MonadAff m =>
-  H.HalogenQ query (Action state) (Input state)
-    ~> H.HalogenM (State state) (Action state) slots output m
-eval =
-  H.mkEval
-    ( H.defaultEval
-        { handleAction = handleAction
-        , initialize = Just Start
-        , receive = receive
-        }
-    )
+  H.Component HH.HTML query (Input appState) output m
+component = H.mkComponent { initialState, render, eval }
   where
-  receive :: Input state -> Maybe (Action state)
-  receive = Just <<< Receive
+  eval ::
+    forall slots.
+    MonadAff m =>
+    H.HalogenQ query (Action appState) (Input appState)
+      ~> H.HalogenM (State appState) (Action appState) slots output m
+  eval =
+    H.mkEval
+      ( H.defaultEval
+          { handleAction = handleAction
+          , initialize = Just Start
+          , receive = Just <<< Receive
+          }
+      )
 
-initialState :: forall state. Input state -> State state
-initialState (Input { origin: (Origin o), dimensions, renderFn, externalState }) =
-  State
-    { viewBox: ViewBox { x: o.x, y: o.y, w, h }
-    , clientRect: ClientRect { x: 0.0, y: 0.0, w: 0.0, h: 0.0 }
-    , renderFn
-    , subscription: Nothing
-    , time: 0.0
-    , frames: 0.0
-    , context: Nothing
-    , name: "screen"
-    , externalState: Just externalState
-    }
-  where
-  { w, h } = case dimensions of
-    WH { width, height } -> { w: width, h: height }
-    WAR { width, aspectRatio: (AspectRatio w h) } -> { w: width, h: width * h / w }
+initialState :: forall appState. Input appState -> State appState
+initialState = case _ of
+  Initialize { origin, dimensions, renderFn, appState } ->
+    State
+      { viewBox: Graphics.mkViewBox origin dimensions
+      , clientRect: Graphics.mkClientRect Graphics.origin $ Dims.fromWidthAndHeight 0.0 0.0
+      , renderFn
+      , tickSub: Nothing
+      , time: 0.0
+      , frames: 0.0
+      , context: Nothing
+      , name: "screen"
+      , appState
+      }
+  Update appState ->
+    State
+      { viewBox: Graphics.mkViewBox Graphics.origin $ Dims.fromWidthAndHeight 0.0 0.0
+      , clientRect: Graphics.mkClientRect Graphics.origin $ Dims.fromWidthAndHeight 0.0 0.0
+      , renderFn: NoRender
+      , tickSub: Nothing
+      , time: 0.0
+      , frames: 0.0
+      , context: Nothing
+      , name: "screen"
+      , appState
+      }
 
 render ::
-  forall state slots m.
-  State state -> H.ComponentHTML (Action state) slots m
-render (State { viewBox: (ViewBox viewBox), name }) =
+  forall appState slots m.
+  State appState -> H.ComponentHTML (Action appState) slots m
+render (State { viewBox, name }) =
   HH.canvas
     [ HP.id_ name
-    , HP.width $ round viewBox.w
-    , HP.height $ round viewBox.h
+    , HP.width $ round w
+    , HP.height $ round h
     , HS.style do
         CSS.border CSS.double (CSS.px 5.0) Color.black
-        CSS.width $ CSS.px viewBox.w
-        CSS.height $ CSS.px viewBox.h
+        CSS.width $ CSS.px w
+        CSS.height $ CSS.px h
     ]
+  where
+  { w, h } = Graphics.getBoundingBox viewBox
 
 handleAction ::
-  forall state slots output m.
+  forall appState slots output m.
   MonadAff m =>
-  Action state ->
-  H.HalogenM (State state) (Action state) slots output m Unit
+  Action appState ->
+  H.HalogenM (State appState) (Action appState) slots output m Unit
 handleAction = case _ of
   Start -> do
     handleAction Stop
@@ -149,7 +138,7 @@ handleAction = case _ of
     name <- H.gets $ _.name <<< unwrap
     stateContext <- H.gets $ _.context <<< unwrap
     mcontext <- H.liftEffect $ pickContext stateContext name
-    mexternalState <- H.gets $ _.externalState <<< unwrap
+    appState <- H.gets $ _.appState <<< unwrap
     subscription <-
       H.subscribe
         $ ES.effectEventSource \emitter -> do
@@ -161,9 +150,9 @@ handleAction = case _ of
                   NoRender -> pure unit
                   Continuous fn -> do
                     ES.emit emitter Tick
-                    sequence_ $ fn time <$> mexternalState <*> mcontext
+                    sequence_ $ fn time appState <$> mcontext
                   OnChange fn -> do
-                    sequence_ $ fn <$> mexternalState <*> mcontext
+                    sequence_ $ fn appState <$> mcontext
                 id <- Window.requestAnimationFrame rAFLoop =<< window
                 Ref.write (Just id) ref
             id1 <- Window.requestAnimationFrame rAFLoop =<< window
@@ -175,26 +164,28 @@ handleAction = case _ of
                     >>= traverse_ \id ->
                         Window.cancelAnimationFrame id =<< window
     let
-      updateSub :: H.SubscriptionId -> State state -> State state
-      updateSub subId (State state) = (State state { subscription = Just subId })
+      updateSub :: H.SubscriptionId -> State appState -> State appState
+      updateSub subId (State state) = (State state { tickSub = Just subId })
     H.modify_ (updateSub subscription)
   Stop -> do
-    subscription <- H.gets $ _.subscription <<< unwrap
+    subscription <- H.gets $ _.tickSub <<< unwrap
     traverse_ unsubscribe subscription
   Tick -> H.modify_ $ (\st -> State $ st { frames = st.frames + 1.0 }) <<< unwrap
-  Receive (Input i) -> H.modify_ $ (\st -> State $ st { externalState = Just i.externalState }) <<< unwrap
+  Receive input -> case input of
+    Initialize _ -> pure unit
+    Update appState -> H.modify_ $ (\st -> State $ st { appState = appState }) <<< unwrap
 
 unsubscribe ::
-  forall state slots output m.
+  forall appState slots output m.
   MonadAff m =>
   H.SubscriptionId ->
-  H.HalogenM (State state) (Action state) slots output m Unit
+  H.HalogenM (State appState) (Action appState) slots output m Unit
 unsubscribe subscription = do
   H.unsubscribe subscription
   H.modify_ updateSub
   where
-  updateSub :: State state -> State state
-  updateSub (State state) = (State state { subscription = Nothing })
+  updateSub :: State appState -> State appState
+  updateSub (State state) = (State state { tickSub = Nothing })
 
 getContext :: String -> Effect (Maybe Canvas.Context2D)
 getContext name = do
@@ -210,12 +201,3 @@ pickContext stateContext name = case stateContext of
     pure mcontext
   Just context -> do
     pure $ Just context
-
--- handleQuery ::
---   forall state slots output m.
---   MonadAff m =>
---   Query state -> H.HalogenM (State state) Action slots output m (Maybe state)
--- handleQuery = case _ of
---   UpdateExternalState extSt -> do
---     H.modify_ (_ { externalState = extSt })
---     pure Nothing
