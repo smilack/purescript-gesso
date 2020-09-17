@@ -10,7 +10,6 @@ import Halogen.HTML.Properties as HP
 import Halogen.HTML.CSS as HS
 import CSS as CSS
 import Color as Color
-import Data.Int (round)
 import Data.Maybe (Maybe(..))
 import Halogen.Query.EventSource as ES
 import Data.Traversable (traverse_, sequence)
@@ -21,7 +20,6 @@ import Effect.Aff.Class (class MonadAff)
 import Graphics.Canvas as Canvas
 import Data.Newtype (class Newtype, unwrap)
 import Gesso.Dimensions as Dims
-import Gesso.Graphics as Graphics
 
 data RenderStyle appState
   = NoRender
@@ -32,26 +30,20 @@ data Action appState
   = Start
   | Stop
   | Tick
-  | Receive (Input appState)
 
-data Input appState
-  = Initialize (InitialInput appState)
-  | Update appState
-
-initialize :: forall appState. InitialInput appState -> Input appState
-initialize = Initialize
+newtype Input appState
+  = Input (InitialInput appState)
 
 type InitialInput appState
-  = { origin :: Graphics.Point
-    , dimensions :: Dims.Dimensions
+  = { boundingBox :: Dims.Dimensions
     , renderFn :: RenderStyle appState
     , appState :: appState
     }
 
 newtype State appState
   = State
-  { viewBox :: Graphics.ViewBox
-  , clientRect :: Graphics.ClientRect
+  { viewBox :: Dims.Dimensions
+  , clientRect :: Maybe Dims.ClientRect
   , renderFn :: RenderStyle appState
   , tickSub :: Maybe H.SubscriptionId
   , time :: Number
@@ -79,52 +71,34 @@ component = H.mkComponent { initialState, render, eval }
       ( H.defaultEval
           { handleAction = handleAction
           , initialize = Just Start
-          , receive = Just <<< Receive
           }
       )
 
 initialState :: forall appState. Input appState -> State appState
-initialState = case _ of
-  Initialize { origin, dimensions, renderFn, appState } ->
-    State
-      { viewBox: Graphics.mkViewBox origin dimensions
-      , clientRect: Graphics.mkClientRect Graphics.origin $ Dims.fromWidthAndHeight 0.0 0.0
-      , renderFn
-      , tickSub: Nothing
-      , time: 0.0
-      , frames: 0.0
-      , context: Nothing
-      , name: "screen"
-      , appState
-      }
-  Update appState ->
-    State
-      { viewBox: Graphics.mkViewBox Graphics.origin $ Dims.fromWidthAndHeight 0.0 0.0
-      , clientRect: Graphics.mkClientRect Graphics.origin $ Dims.fromWidthAndHeight 0.0 0.0
-      , renderFn: NoRender
-      , tickSub: Nothing
-      , time: 0.0
-      , frames: 0.0
-      , context: Nothing
-      , name: "screen"
-      , appState
-      }
+initialState (Input { boundingBox, renderFn, appState }) =
+  State
+    { viewBox: boundingBox
+    , clientRect: Nothing
+    , renderFn
+    , tickSub: Nothing
+    , time: 0.0
+    , frames: 0.0
+    , context: Nothing
+    , name: "screen"
+    , appState
+    }
 
 render ::
   forall appState slots m.
   State appState -> H.ComponentHTML (Action appState) slots m
 render (State { viewBox, name }) =
   HH.canvas
-    [ HP.id_ name
-    , HP.width $ round w
-    , HP.height $ round h
-    , HS.style do
-        CSS.border CSS.double (CSS.px 5.0) Color.black
-        CSS.width $ CSS.px w
-        CSS.height $ CSS.px h
-    ]
-  where
-  { w, h } = Graphics.getBoundingBox viewBox
+    $ [ HP.id_ name
+      , HS.style do
+          CSS.border CSS.double (CSS.px 5.0) Color.black
+          Dims.toSizeCss viewBox
+      ]
+    <> (Dims.toSizeProps viewBox)
 
 handleAction ::
   forall appState slots output m.
@@ -170,10 +144,7 @@ handleAction = case _ of
   Stop -> do
     subscription <- H.gets $ _.tickSub <<< unwrap
     traverse_ unsubscribe subscription
-  Tick -> H.modify_ $ (\st -> State $ st { frames = st.frames + 1.0 }) <<< unwrap
-  Receive input -> case input of
-    Initialize _ -> pure unit
-    Update appState -> H.modify_ $ (\st -> State $ st { appState = appState }) <<< unwrap
+  Tick -> pure unit --H.modify_ $ (\st -> State $ st { frames = st.frames + 1.0 }) <<< unwrap
 
 unsubscribe ::
   forall appState slots output m.
