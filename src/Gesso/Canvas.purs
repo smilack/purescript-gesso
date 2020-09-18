@@ -18,8 +18,7 @@ import Halogen.HTML.Properties (id_)
 import Halogen.Query.EventSource as ES
 import Web.Event.Event (EventType(..), Event)
 import Web.HTML (window)
-import Web.HTML.HTMLDocument (toEventTarget)
-import Web.HTML.Window (document)
+import Web.HTML.Window (toEventTarget)
 
 data RenderStyle appState
   = NoRender
@@ -105,12 +104,12 @@ handleAction = case _ of
   Initialize -> do
     name <- H.gets _.name
     mcontext <- H.liftEffect $ getContext name
-    document <- H.liftEffect $ document =<< window
+    wnd <- H.liftEffect window
     resizeSub <-
       H.subscribe
         $ ES.eventListenerEventSource
             (EventType "resize")
-            (toEventTarget document)
+            (toEventTarget wnd)
             (Just <<< HandleResize)
     H.modify_ \state -> state { context = mcontext, resizeSub = Just resizeSub }
     handleAction $ Tick Nothing
