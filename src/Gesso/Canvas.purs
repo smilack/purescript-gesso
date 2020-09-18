@@ -1,29 +1,25 @@
 module Gesso.Canvas where
 
 import Prelude
-import Effect (Effect)
-import Effect.Ref as Ref
-import Graphics.Canvas (Context2D)
-import Halogen as H
-import Halogen.HTML as HH
-import Halogen.HTML.Properties as HP
-import Halogen.HTML.CSS as HS
-import CSS as CSS
 import Color as Color
-import Data.Maybe (Maybe(..))
-import Halogen.Query.EventSource as ES
-import Halogen.Query.EventSource (eventListenerEventSource, effectEventSource)
-import Data.Traversable (traverse_, sequence)
+import CSS as CSS
 import Data.Foldable (sequence_)
-import Gesso.Window as Window
-import Web.HTML (window)
-import Web.HTML.Window (document)
+import Data.Maybe (Maybe(..))
+import Data.Traversable (sequence)
+import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
-import Graphics.Canvas as Canvas
-import Data.Newtype (class Newtype, unwrap)
 import Gesso.Dimensions as Dims
+import Gesso.Window (requestAnimationFrame)
+import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
+import Halogen as H
+import Halogen.HTML (canvas, HTML)
+import Halogen.HTML.CSS (style)
+import Halogen.HTML.Properties (id_)
+import Halogen.Query.EventSource as ES
 import Web.Event.Event (EventType(..), Event)
-import Web.HTML.HTMLDocument as HTMLDocument
+import Web.HTML (window)
+import Web.HTML.HTMLDocument (toEventTarget)
+import Web.HTML.Window (document)
 
 data RenderStyle appState
   = NoRender
@@ -51,7 +47,7 @@ type State appState
     , clientRect :: Maybe Dims.ClientRect
     , renderFn :: RenderStyle appState
     , frames :: Number
-    , context :: Maybe Canvas.Context2D
+    , context :: Maybe Context2D
     , resizeSub :: Maybe H.SubscriptionId
     , name :: String
     , appState :: appState
@@ -60,7 +56,7 @@ type State appState
 component ::
   forall appState output m.
   MonadAff m =>
-  H.Component HH.HTML (Query appState) (Input appState) output m
+  H.Component HTML (Query appState) (Input appState) output m
 component = H.mkComponent { initialState, render, eval }
   where
   eval ::
@@ -92,9 +88,9 @@ render ::
   forall appState slots m.
   State appState -> H.ComponentHTML Action slots m
 render { viewBox, name } =
-  HH.canvas
-    $ [ HP.id_ name
-      , HS.style do
+  canvas
+    $ [ id_ name
+      , style do
           CSS.border CSS.double (CSS.px 5.0) Color.black
           Dims.toSizeCss viewBox
       ]
@@ -112,9 +108,9 @@ handleAction = case _ of
     document <- H.liftEffect $ document =<< window
     resizeSub <-
       H.subscribe
-        $ eventListenerEventSource
+        $ ES.eventListenerEventSource
             (EventType "resize")
-            (HTMLDocument.toEventTarget document)
+            (toEventTarget document)
             (Just <<< HandleResize)
     H.modify_ \state -> state { context = mcontext, resizeSub = Just resizeSub }
     handleAction $ Tick Nothing
@@ -132,10 +128,10 @@ animationFrame mLastTime = do
   renderFn <- H.gets _.renderFn
   _ <-
     H.subscribe' \_ ->
-      effectEventSource \emitter -> do
+      ES.effectEventSource \emitter -> do
         _ <-
           window
-            >>= Window.requestAnimationFrame \timestamp -> do
+            >>= requestAnimationFrame \timestamp -> do
                 case renderFn of
                   NoRender -> pure unit
                   OnChange fn -> sequence_ $ fn appState <$> mcontext
@@ -151,8 +147,8 @@ animationFrame mLastTime = do
         mempty
   pure unit
 
-getContext :: String -> Effect (Maybe Canvas.Context2D)
+getContext :: String -> Effect (Maybe Context2D)
 getContext name = do
-  mcanvas <- Canvas.getCanvasElementById name
-  mcontext <- sequence $ Canvas.getContext2D <$> mcanvas
+  mcanvas <- getCanvasElementById name
+  mcontext <- sequence $ getContext2D <$> mcanvas
   pure mcontext

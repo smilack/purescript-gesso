@@ -2,12 +2,12 @@ module Main where
 
 import Prelude
 import Effect (Effect)
+import Gesso.Canvas as Gesso.Canvas
+import Gesso.Dimensions as Dims
+import Graphics.Canvas as Canvas
 import Halogen.Aff (awaitBody, runHalogenAff)
 import Halogen.VDom.Driver (runUI)
-import Gesso.Canvas as Gesso.Canvas
-import Graphics.Canvas as Canvas
 import Math (cos, sin)
-import Gesso.Dimensions as Dims
 
 main :: Effect Unit
 main =
