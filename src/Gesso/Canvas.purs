@@ -5,20 +5,24 @@ import Color as Color
 import CSS as CSS
 import Data.Foldable (sequence_)
 import Data.Maybe (Maybe(..))
-import Data.Traversable (sequence)
+import Data.Traversable (sequence, traverse)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Dimensions as Dims
 import Gesso.Window (requestAnimationFrame)
-import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
+import Graphics.Canvas (CanvasElement, Context2D, getCanvasElementById, getContext2D)
 import Halogen as H
 import Halogen.HTML (canvas, HTML)
 import Halogen.HTML.CSS (style)
 import Halogen.HTML.Properties (id_)
 import Halogen.Query.EventSource as ES
-import Web.Event.Event (EventType(..), Event)
+import Web.DOM.Element (Element)
+import Web.DOM.NonElementParentNode (getElementById)
+import Web.Event.Event (EventType(..))
 import Web.HTML (window)
-import Web.HTML.Window (toEventTarget)
+import Web.HTML.HTMLDocument (toNonElementParentNode, HTMLDocument)
+import Web.HTML.HTMLElement (getBoundingClientRect, fromElement, HTMLElement, DOMRect)
+import Web.HTML.Window (toEventTarget, document)
 
 data RenderStyle appState
   = NoRender
@@ -28,7 +32,7 @@ data RenderStyle appState
 data Action
   = Initialize
   | Finalize
-  | HandleResize Event
+  | HandleResize
   | Tick (Maybe Number)
 
 data Query appState a
@@ -46,6 +50,7 @@ type State appState
     , clientRect :: Maybe Dims.ClientRect
     , renderFn :: RenderStyle appState
     , frames :: Number
+    , canvas :: Maybe CanvasElement
     , context :: Maybe Context2D
     , resizeSub :: Maybe H.SubscriptionId
     , name :: String
@@ -78,6 +83,7 @@ initialState (Input { boundingBox, renderFn, appState }) =
   , renderFn
   , frames: 0.0
   , resizeSub: Nothing
+  , canvas: Nothing
   , context: Nothing
   , name: "screen"
   , appState
@@ -103,6 +109,7 @@ handleAction = case _ of
   Finalize -> pure unit
   Initialize -> do
     name <- H.gets _.name
+    clientRect <- H.liftEffect $ getCanvasClientRect name
     mcontext <- H.liftEffect $ getContext name
     wnd <- H.liftEffect window
     resizeSub <-
@@ -110,10 +117,13 @@ handleAction = case _ of
         $ ES.eventListenerEventSource
             (EventType "resize")
             (toEventTarget wnd)
-            (Just <<< HandleResize)
-    H.modify_ \state -> state { context = mcontext, resizeSub = Just resizeSub }
+            (const $ Just HandleResize)
+    H.modify_ \state -> state { context = mcontext, resizeSub = Just resizeSub, clientRect = clientRect }
     handleAction $ Tick Nothing
-  HandleResize event -> pure unit
+  HandleResize -> do
+    name <- H.gets _.name
+    clientRect <- H.liftEffect $ getCanvasClientRect name
+    H.modify_ \state -> state { clientRect = clientRect }
   Tick mLastTime -> do
     animationFrame mLastTime
 
@@ -151,3 +161,11 @@ getContext name = do
   mcanvas <- getCanvasElementById name
   mcontext <- sequence $ getContext2D <$> mcanvas
   pure mcontext
+
+getCanvasClientRect :: String -> Effect (Maybe Dims.ClientRect)
+getCanvasClientRect name = do
+  (doc :: HTMLDocument) <- document =<< window
+  (mcanvas :: Maybe Element) <- getElementById name $ toNonElementParentNode doc
+  (mcanvasEl :: Maybe HTMLElement) <- pure $ mcanvas >>= fromElement
+  (mbounding :: Maybe DOMRect) <- traverse getBoundingClientRect mcanvasEl
+  pure $ Dims.fromDOMRect <$> mbounding
