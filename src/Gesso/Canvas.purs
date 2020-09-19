@@ -25,7 +25,7 @@ import Web.HTML.Window (toEventTarget, document)
 
 data RenderStyle appState
   = NoRender
-  | Continuous (Number -> Number -> appState -> Context2D -> Effect Unit)
+  | Continuous (appState -> Number -> Number -> Context2D -> Effect Unit)
   | OnChange (appState -> Context2D -> Effect Unit)
 
 data Action
@@ -95,7 +95,9 @@ handleAction = case _ of
     initialize
     handleAction $ Tick Nothing
   HandleResize -> updateClientRect
-  Tick mLastTime -> animationFrame mLastTime
+  Tick mLastTime -> do
+    { context, appState, renderFn } <- H.get
+    queueAnimationFrame mLastTime context appState renderFn
   Finalize -> unsubscribeResize
 
 initialize :: forall appState slots output m. MonadAff m => H.HalogenM (State appState) Action slots output m Unit
@@ -107,31 +109,31 @@ initialize = do
   clientRect <- H.liftEffect $ getCanvasClientRect mcanvas
   H.modify_ (_ { context = mcontext, resizeSub = Just resizeSub, clientRect = clientRect, canvas = mcanvas })
 
-animationFrame :: forall appState slots output m. MonadAff m => Maybe Number -> H.HalogenM (State appState) Action slots output m Unit
-animationFrame mLastTime = do
-  mcontext <- H.gets _.context
-  appState <- H.gets _.appState
-  renderFn <- H.gets _.renderFn
-  _ <-
-    H.subscribe' \_ ->
-      ES.effectEventSource \emitter -> do
-        _ <-
-          window
-            >>= requestAnimationFrame \timestamp -> do
-                case renderFn of
-                  NoRender -> pure unit
-                  OnChange fn -> sequence_ $ fn appState <$> mcontext
-                  Continuous fn -> do
-                    case mLastTime of
-                      Nothing -> pure unit
-                      Just lastTime -> do
-                        let
-                          delta = timestamp - lastTime
-                        sequence_ $ fn timestamp delta appState <$> mcontext
-                    ES.emit emitter $ Tick $ Just timestamp
-                ES.close emitter
-        mempty
+queueAnimationFrame ::
+  forall appState slots output m.
+  MonadAff m =>
+  Maybe Number -> Maybe Context2D -> appState -> RenderStyle appState -> H.HalogenM (State appState) Action slots output m Unit
+queueAnimationFrame mLastTime context appState renderFn = do
+  _ <- H.subscribe $ ES.effectEventSource rafEventSource
   pure unit
+  where
+  rafEventSource :: ES.Emitter Effect Action -> Effect (ES.Finalizer Effect)
+  rafEventSource emitter = do
+    _ <- requestAnimationFrame (rafCallback emitter) =<< window
+    mempty
+
+  rafCallback :: ES.Emitter Effect Action -> Number -> Effect Unit
+  rafCallback emitter timestamp = do
+    case renderFn of
+      NoRender -> pure unit
+      OnChange fn -> sequence_ $ fn appState <$> context
+      Continuous fn -> do
+        sequence_ $ fn appState timestamp <$> (delta timestamp) <*> context
+        ES.emit emitter $ Tick $ Just timestamp
+    ES.close emitter
+
+  delta :: Number -> Maybe Number
+  delta timestamp = (timestamp - _) <$> mLastTime
 
 getContext :: String -> Effect (Maybe Context2D)
 getContext name = do

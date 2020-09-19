@@ -32,8 +32,8 @@ init =
 renderFn :: Gesso.Canvas.RenderStyle AppState
 renderFn = Gesso.Canvas.Continuous render
   where
-  render :: Number -> Number -> AppState -> Canvas.Context2D -> Effect Unit
-  render timestamp delta { color } context = do
+  render :: AppState -> Number -> Number -> Canvas.Context2D -> Effect Unit
+  render { color } timestamp delta context = do
     Canvas.setFillStyle context "#DDFFDD"
     Canvas.fillRect context { x: 0.0, y: 0.0, width: 2560.0, height: 1440.0 }
     Canvas.setFillStyle context color
