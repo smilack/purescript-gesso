@@ -33,6 +33,10 @@ data Action
   | Finalize
   | HandleResize
   | Tick (Maybe (T.Timestamp T.Prev))
+  | AnimationFrameStart T.Delta
+
+data Output
+  = FrameStart T.Delta
 
 data Query appState a
   = UpdateAppState appState a
@@ -55,7 +59,7 @@ type State appState
     , appState :: appState
     }
 
-component :: forall appState output m. MonadAff m => H.Component HTML (Query appState) (Input appState) output m
+component :: forall appState m. MonadAff m => H.Component HTML (Query appState) (Input appState) Output m
 component =
   H.mkComponent
     { initialState
@@ -95,7 +99,7 @@ handleQuery (UpdateAppState appState a) = do
   H.modify_ (_ { appState = appState })
   pure $ Just a
 
-handleAction :: forall appState slots output m. MonadAff m => Action -> H.HalogenM (State appState) Action slots output m Unit
+handleAction :: forall appState slots m. MonadAff m => Action -> H.HalogenM (State appState) Action slots Output m Unit
 handleAction = case _ of
   Initialize -> do
     initialize
@@ -105,6 +109,7 @@ handleAction = case _ of
     { context, appState, renderFn } <- H.get
     queueAnimationFrame mLastTime context appState renderFn
   Finalize -> unsubscribeResize
+  AnimationFrameStart delta -> H.raise $ FrameStart delta
 
 initialize :: forall appState slots output m. MonadAff m => H.HalogenM (State appState) Action slots output m Unit
 initialize = do
@@ -134,7 +139,16 @@ queueAnimationFrame mLastTime context appState renderFn = do
       NoRender -> pure unit
       OnChange fn -> sequence_ $ fn appState <$> context
       Continuous fn -> do
-        sequence_ $ fn appState <$> (T.delta timestamp <$> mLastTime) <*> context
+        let
+          mdelta = T.delta timestamp <$> mLastTime
+        -- AnimationFrameStart notifies the parent of the time step and the
+        --   parent can update state and reply before fn is run, but I'm not
+        --   aware of a way to access the updated state in this context - so
+        --   appState is one frame behind. I don't know how big of a deal this
+        --   will be or if there are any alternatives.
+        -- Possibly by having the parent pass in the state update function?
+        traverse_ (ES.emit emitter <<< AnimationFrameStart) mdelta
+        sequence_ $ fn appState <$> mdelta <*> context
         ES.emit emitter $ Tick $ Just $ T.toPrev timestamp
     ES.close emitter
 

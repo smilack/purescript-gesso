@@ -1,6 +1,7 @@
 module Main where
 
 import Prelude
+import Control.Coroutine as CR
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Effect (Effect)
@@ -8,6 +9,7 @@ import Gesso.Canvas as Gesso.Canvas
 import Gesso.Dimensions as Dims
 import Gesso.Time as T
 import Graphics.Canvas as Canvas
+import Halogen as H
 import Halogen.Aff (awaitBody, runHalogenAff)
 import Halogen.VDom.Driver (runUI)
 import Math (cos, sin)
@@ -17,8 +19,10 @@ main =
   runHalogenAff do
     body <- awaitBody
     io <- runUI Gesso.Canvas.component init body
-    -- io.subscribe - subscribe to stream of output messages
-    -- _ <- io.query $ H.tell $ Gesso.Canvas.UpdateAppState {...}
+    io.subscribe
+      $ CR.consumer \(Gesso.Canvas.FrameStart delta) -> do
+          _ <- io.query $ H.tell $ Gesso.Canvas.UpdateAppState initialState
+          pure Nothing
     -- -- io.dispose - kill Halogen app
     pure unit
 
