@@ -64,6 +64,7 @@ component =
         H.mkEval
           $ H.defaultEval
               { handleAction = handleAction
+              , handleQuery = handleQuery
               , initialize = Just Initialize
               , finalize = Just Finalize
               }
@@ -88,6 +89,11 @@ render { viewBox, name } =
       , style fullscreenStyle
       ]
     <> Dims.toSizeProps viewBox
+
+handleQuery :: forall appState a slots output m. MonadAff m => Query appState a -> H.HalogenM (State appState) Action slots output m (Maybe a)
+handleQuery (UpdateAppState appState a) = do
+  H.modify_ (_ { appState = appState })
+  pure $ Just a
 
 handleAction :: forall appState slots output m. MonadAff m => Action -> H.HalogenM (State appState) Action slots output m Unit
 handleAction = case _ of
