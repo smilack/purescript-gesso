@@ -10,10 +10,13 @@ module Gesso.AspectRatio
   , w1h1
   ) where
 
-import Prelude ((*), (/))
+import Prelude ((*), (/), class Show, show, (<<<))
 
 data AspectRatio
   = AspectRatio Number Number
+
+instance showAspectRatio :: Show AspectRatio where
+  show = show <<< toNumber
 
 toNumber :: AspectRatio -> Number
 toNumber (AspectRatio w h) = w / h

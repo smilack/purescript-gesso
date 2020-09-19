@@ -39,6 +39,13 @@ class Positioned a where
   getX :: a -> Number
   getY :: a -> Number
 
+showPositioned :: forall a. Positioned a => a -> String
+showPositioned p = "{ x: " <> x <> ", y: " <> y <> " }"
+  where
+  x = show $ getX p
+
+  y = show $ getY p
+
 toPositionCss :: forall a. Positioned a => a -> CSS.CSS
 toPositionCss positioned = do
   CSS.left $ CSS.px $ getX positioned
@@ -48,6 +55,15 @@ class Sized a where
   getWidth :: a -> Number
   getHeight :: a -> Number
   getRatio :: a -> AspectRatio
+
+showSized :: forall a. Sized a => a -> String
+showSized s = "{ width: " <> width <> ", height: " <> height <> ", aspectRatio: " <> ar <> " }"
+  where
+  width = show $ getWidth s
+
+  height = show $ getHeight s
+
+  ar = show $ getRatio s
 
 toSizeCss :: forall a. Sized a => a -> CSS.CSS
 toSizeCss sized = do
@@ -64,6 +80,19 @@ toSizeProps sized =
   ]
 
 class (Positioned a, Sized a) <= Dimensioned a
+
+showDimensioned :: forall a. Dimensioned a => a -> String
+showDimensioned d = "{ x: " <> x <> ", y: " <> y <> ", width: " <> width <> ", height: " <> height <> ", aspectRatio: " <> ar <> " }"
+  where
+  x = show $ getX d
+
+  y = show $ getY d
+
+  width = show $ getWidth d
+
+  height = show $ getHeight d
+
+  ar = show $ getRatio d
 
 ---------------
 -- Size Type --
@@ -95,6 +124,9 @@ instance sizedSize :: Sized Size where
     WidthAndHeight { width, height } -> AR.custom width height
     WidthAndRatio { aspectRatio } -> aspectRatio
 
+instance showSize :: Show Size where
+  show = ("Size " <> _) <<< showSized
+
 ----------------
 -- Point type --
 ----------------
@@ -110,6 +142,9 @@ fromXAndY = Point
 instance positionedPoint :: Positioned Point where
   getX (Point { x }) = x
   getY (Point { y }) = y
+
+instance showPoint :: Show Point where
+  show = ("Point " <> _) <<< showPositioned
 
 ---------------------
 -- Dimensions type --
@@ -130,6 +165,9 @@ instance dimensionedDimensions :: Dimensioned Dimensions
 
 fromPointAndSize :: Point -> Size -> Dimensions
 fromPointAndSize = Dimensions
+
+instance showDimensions :: Show Dimensions where
+  show = ("Dimensions " <> _) <<< showDimensioned
 
 ---------------------
 -- ClientRect type --
@@ -153,6 +191,9 @@ fromDOMRect { left, top, width, height } =
   ClientRect
     (fromXAndY { x: left, y: top })
     (fromWidthAndHeight { width, height })
+
+instance showClientRect :: Show ClientRect where
+  show = ("ClientRect " <> _) <<< showDimensioned
 
 ---------------
 -- Constants --
