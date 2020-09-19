@@ -15,6 +15,7 @@ module Gesso.Dimensions
   , fromWidthAndRatio
   , Point
   , fromXAndY
+  , fromMouseEvent
   , Dimensions
   , fromPointAndSize
   , ClientRect
@@ -26,11 +27,12 @@ module Gesso.Dimensions
 
 import Prelude
 import CSS as CSS
-import Data.Int (round)
+import Data.Int (round, toNumber)
 import Gesso.AspectRatio (AspectRatio)
 import Gesso.AspectRatio as AR
 import Halogen.HTML.Properties as HP
 import Web.HTML.HTMLElement (DOMRect)
+import Web.UIEvent.MouseEvent (screenX, screenY, MouseEvent)
 
 -----------------
 -- Typeclasses --
@@ -140,6 +142,13 @@ type P
 
 fromXAndY :: P -> Point
 fromXAndY = Point
+
+fromMouseEvent :: MouseEvent -> Point
+fromMouseEvent me =
+  fromXAndY
+    { x: toNumber $ screenX $ me
+    , y: toNumber $ screenY $ me
+    }
 
 instance positionedPoint :: Positioned Point where
   getX (Point { x }) = x
