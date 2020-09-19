@@ -127,6 +127,8 @@ instance sizedSize :: Sized Size where
 instance showSize :: Show Size where
   show = ("Size " <> _) <<< showSized
 
+derive instance eqSize :: Eq Size
+
 ----------------
 -- Point type --
 ----------------
@@ -145,6 +147,8 @@ instance positionedPoint :: Positioned Point where
 
 instance showPoint :: Show Point where
   show = ("Point " <> _) <<< showPositioned
+
+derive instance eqPoint :: Eq Point
 
 ---------------------
 -- Dimensions type --
@@ -168,6 +172,8 @@ fromPointAndSize = Dimensions
 
 instance showDimensions :: Show Dimensions where
   show = ("Dimensions " <> _) <<< showDimensioned
+
+derive instance eqDimensions :: Eq Dimensions
 
 ---------------------
 -- ClientRect type --
@@ -194,6 +200,8 @@ fromDOMRect { left, top, width, height } =
 
 instance showClientRect :: Show ClientRect where
   show = ("ClientRect " <> _) <<< showDimensioned
+
+derive instance eqClientRect :: Eq ClientRect
 
 ---------------
 -- Constants --
