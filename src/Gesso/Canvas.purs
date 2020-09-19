@@ -55,10 +55,7 @@ type State appState
     , appState :: appState
     }
 
-component ::
-  forall appState output m.
-  MonadAff m =>
-  H.Component HTML (Query appState) (Input appState) output m
+component :: forall appState output m. MonadAff m => H.Component HTML (Query appState) (Input appState) output m
 component =
   H.mkComponent
     { initialState
@@ -84,9 +81,7 @@ initialState (Input { boundingBox, renderFn, appState }) =
   , appState
   }
 
-render ::
-  forall appState slots m.
-  State appState -> H.ComponentHTML Action slots m
+render :: forall appState slots m. State appState -> H.ComponentHTML Action slots m
 render { viewBox, name } =
   canvas
     $ [ id_ name
@@ -94,33 +89,25 @@ render { viewBox, name } =
       ]
     <> Dims.toSizeProps viewBox
 
-handleAction ::
-  forall appState slots output m.
-  MonadAff m =>
-  Action -> H.HalogenM (State appState) Action slots output m Unit
+handleAction :: forall appState slots output m. MonadAff m => Action -> H.HalogenM (State appState) Action slots output m Unit
 handleAction = case _ of
   Initialize -> do
-    name <- H.gets _.name
-    mcontext <- H.liftEffect $ getContext name
-    wnd <- H.liftEffect window
-    resizeSub <-
-      H.subscribe
-        $ ES.eventListenerEventSource
-            (EventType "resize")
-            (toEventTarget wnd)
-            (const $ Just HandleResize)
-    mcanvas <- H.liftEffect $ getCanvasElement name
-    clientRect <- H.liftEffect $ getCanvasClientRect mcanvas
-    H.modify_ (_ { context = mcontext, resizeSub = Just resizeSub, clientRect = clientRect, canvas = mcanvas })
+    initialize
     handleAction $ Tick Nothing
   HandleResize -> updateClientRect
   Tick mLastTime -> animationFrame mLastTime
   Finalize -> unsubscribeResize
 
-animationFrame ::
-  forall appState slots output m.
-  MonadAff m =>
-  Maybe Number -> H.HalogenM (State appState) Action slots output m Unit
+initialize :: forall appState slots output m. MonadAff m => H.HalogenM (State appState) Action slots output m Unit
+initialize = do
+  resizeSub <- subscribeResize
+  name <- H.gets _.name
+  mcontext <- H.liftEffect $ getContext name
+  mcanvas <- H.liftEffect $ getCanvasElement name
+  clientRect <- H.liftEffect $ getCanvasClientRect mcanvas
+  H.modify_ (_ { context = mcontext, resizeSub = Just resizeSub, clientRect = clientRect, canvas = mcanvas })
+
+animationFrame :: forall appState slots output m. MonadAff m => Maybe Number -> H.HalogenM (State appState) Action slots output m Unit
 animationFrame mLastTime = do
   mcontext <- H.gets _.context
   appState <- H.gets _.appState
@@ -163,10 +150,7 @@ getCanvasClientRect mcanvas = do
   (mbounding :: Maybe DOMRect) <- traverse getBoundingClientRect mcanvas
   pure $ Dims.fromDOMRect <$> mbounding
 
-updateClientRect ::
-  forall appState action slots output m.
-  MonadAff m =>
-  H.HalogenM (State appState) action slots output m Unit
+updateClientRect :: forall appState action slots output m. MonadAff m => H.HalogenM (State appState) action slots output m Unit
 updateClientRect = do
   mcanvas <- H.gets _.canvas
   clientRect <- H.liftEffect $ getCanvasClientRect mcanvas
@@ -181,10 +165,16 @@ fullscreenStyle = do
   CSS.top $ CSS.pct 50.0
   CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
 
-unsubscribeResize ::
-  forall appState action slots output m.
-  MonadAff m =>
-  H.HalogenM (State appState) action slots output m Unit
+unsubscribeResize :: forall appState action slots output m. MonadAff m => H.HalogenM (State appState) action slots output m Unit
 unsubscribeResize = do
   mresizeSub <- H.gets _.resizeSub
   traverse_ H.unsubscribe mresizeSub
+
+subscribeResize :: forall appState slots output m. MonadAff m => H.HalogenM (State appState) Action slots output m H.SubscriptionId
+subscribeResize = do
+  wnd <- H.liftEffect window
+  H.subscribe
+    $ ES.eventListenerEventSource
+        (EventType "resize")
+        (toEventTarget wnd)
+        (const $ Just HandleResize)
