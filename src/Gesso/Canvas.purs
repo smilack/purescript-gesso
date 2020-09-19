@@ -9,7 +9,7 @@ import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Dimensions as Dims
-import Gesso.Time (requestAnimationFrame)
+import Gesso.Time as T
 import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
 import Halogen as H
 import Halogen.HTML (canvas, HTML, memoized)
@@ -25,14 +25,14 @@ import Web.HTML.Window (toEventTarget, document)
 
 data RenderStyle appState
   = NoRender
-  | Continuous (appState -> Number -> Number -> Context2D -> Effect Unit)
+  | Continuous (appState -> T.Delta -> Context2D -> Effect Unit)
   | OnChange (appState -> Context2D -> Effect Unit)
 
 data Action
   = Initialize
   | Finalize
   | HandleResize
-  | Tick (Maybe Number)
+  | Tick (Maybe (T.Timestamp T.Prev))
 
 data Query appState a
   = UpdateAppState appState a
@@ -118,28 +118,25 @@ initialize = do
 queueAnimationFrame ::
   forall appState slots output m.
   MonadAff m =>
-  Maybe Number -> Maybe Context2D -> appState -> RenderStyle appState -> H.HalogenM (State appState) Action slots output m Unit
+  Maybe (T.Timestamp T.Prev) -> Maybe Context2D -> appState -> RenderStyle appState -> H.HalogenM (State appState) Action slots output m Unit
 queueAnimationFrame mLastTime context appState renderFn = do
   _ <- H.subscribe $ ES.effectEventSource rafEventSource
   pure unit
   where
   rafEventSource :: ES.Emitter Effect Action -> Effect (ES.Finalizer Effect)
   rafEventSource emitter = do
-    _ <- requestAnimationFrame (rafCallback emitter) =<< window
+    _ <- T.requestAnimationFrame (rafCallback emitter) =<< window
     mempty
 
-  rafCallback :: ES.Emitter Effect Action -> Number -> Effect Unit
+  rafCallback :: ES.Emitter Effect Action -> T.Timestamp T.Now -> Effect Unit
   rafCallback emitter timestamp = do
     case renderFn of
       NoRender -> pure unit
       OnChange fn -> sequence_ $ fn appState <$> context
       Continuous fn -> do
-        sequence_ $ fn appState timestamp <$> (delta timestamp) <*> context
-        ES.emit emitter $ Tick $ Just timestamp
+        sequence_ $ fn appState <$> (T.delta timestamp <$> mLastTime) <*> context
+        ES.emit emitter $ Tick $ Just $ T.toPrev timestamp
     ES.close emitter
-
-  delta :: Number -> Maybe Number
-  delta timestamp = (timestamp - _) <$> mLastTime
 
 getContext :: String -> Effect (Maybe Context2D)
 getContext name = do
