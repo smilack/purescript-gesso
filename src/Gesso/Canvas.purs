@@ -2,24 +2,24 @@ module Gesso.Canvas where
 
 import Prelude
 import CSS as CSS
-import Data.Foldable (sequence_)
+import Data.Foldable (sequence_, traverse_)
+import Data.Function (on)
 import Data.Maybe (Maybe(..))
-import Data.Traversable (sequence, traverse)
+import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Dimensions as Dims
 import Gesso.Window (requestAnimationFrame)
-import Graphics.Canvas (CanvasElement, Context2D, getCanvasElementById, getContext2D)
+import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
 import Halogen as H
-import Halogen.HTML (canvas, HTML)
+import Halogen.HTML (canvas, HTML, memoized)
 import Halogen.HTML.CSS (style)
 import Halogen.HTML.Properties (id_)
 import Halogen.Query.EventSource as ES
-import Web.DOM.Element (Element)
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.Event.Event (EventType(..))
 import Web.HTML (window)
-import Web.HTML.HTMLDocument (toNonElementParentNode, HTMLDocument)
+import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.HTMLElement (getBoundingClientRect, fromElement, HTMLElement, DOMRect)
 import Web.HTML.Window (toEventTarget, document)
 
@@ -48,8 +48,7 @@ type State appState
   = { viewBox :: Dims.Dimensions
     , clientRect :: Maybe Dims.ClientRect
     , renderFn :: RenderStyle appState
-    , frames :: Number
-    , canvas :: Maybe CanvasElement
+    , canvas :: Maybe HTMLElement
     , context :: Maybe Context2D
     , resizeSub :: Maybe H.SubscriptionId
     , name :: String
@@ -60,27 +59,24 @@ component ::
   forall appState output m.
   MonadAff m =>
   H.Component HTML (Query appState) (Input appState) output m
-component = H.mkComponent { initialState, render, eval }
-  where
-  eval ::
-    forall slots.
-    MonadAff m =>
-    H.HalogenQ (Query appState) Action (Input appState)
-      ~> H.HalogenM (State appState) Action slots output m
-  eval =
-    H.mkEval
-      ( H.defaultEval
-          { handleAction = handleAction
-          , initialize = Just Initialize
-          }
-      )
+component =
+  H.mkComponent
+    { initialState
+    , render: memoized (eq `on` _.clientRect) render
+    , eval:
+        H.mkEval
+          $ H.defaultEval
+              { handleAction = handleAction
+              , initialize = Just Initialize
+              , finalize = Just Finalize
+              }
+    }
 
 initialState :: forall appState. Input appState -> State appState
 initialState (Input { boundingBox, renderFn, appState }) =
   { viewBox: boundingBox
   , clientRect: Nothing
   , renderFn
-  , frames: 0.0
   , resizeSub: Nothing
   , canvas: Nothing
   , context: Nothing
@@ -94,25 +90,17 @@ render ::
 render { viewBox, name } =
   canvas
     $ [ id_ name
-      , style do
-          CSS.width $ CSS.pct 100.0
-          CSS.height $ CSS.pct 100.0
-          CSS.position CSS.absolute
-          CSS.left $ CSS.pct 50.0
-          CSS.top $ CSS.pct 50.0
-          CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
+      , style fullscreenStyle
       ]
-    <> (Dims.toSizeProps viewBox)
+    <> Dims.toSizeProps viewBox
 
 handleAction ::
   forall appState slots output m.
   MonadAff m =>
   Action -> H.HalogenM (State appState) Action slots output m Unit
 handleAction = case _ of
-  Finalize -> pure unit
   Initialize -> do
     name <- H.gets _.name
-    clientRect <- H.liftEffect $ getCanvasClientRect name
     mcontext <- H.liftEffect $ getContext name
     wnd <- H.liftEffect window
     resizeSub <-
@@ -121,14 +109,13 @@ handleAction = case _ of
             (EventType "resize")
             (toEventTarget wnd)
             (const $ Just HandleResize)
-    H.modify_ \state -> state { context = mcontext, resizeSub = Just resizeSub, clientRect = clientRect }
+    mcanvas <- H.liftEffect $ getCanvasElement name
+    clientRect <- H.liftEffect $ getCanvasClientRect mcanvas
+    H.modify_ (_ { context = mcontext, resizeSub = Just resizeSub, clientRect = clientRect, canvas = mcanvas })
     handleAction $ Tick Nothing
-  HandleResize -> do
-    name <- H.gets _.name
-    clientRect <- H.liftEffect $ getCanvasClientRect name
-    H.modify_ \state -> state { clientRect = clientRect }
-  Tick mLastTime -> do
-    animationFrame mLastTime
+  HandleResize -> updateClientRect
+  Tick mLastTime -> animationFrame mLastTime
+  Finalize -> unsubscribeResize
 
 animationFrame ::
   forall appState slots output m.
@@ -162,13 +149,42 @@ animationFrame mLastTime = do
 getContext :: String -> Effect (Maybe Context2D)
 getContext name = do
   mcanvas <- getCanvasElementById name
-  mcontext <- sequence $ getContext2D <$> mcanvas
+  mcontext <- traverse getContext2D mcanvas
   pure mcontext
 
-getCanvasClientRect :: String -> Effect (Maybe Dims.ClientRect)
-getCanvasClientRect name = do
-  (doc :: HTMLDocument) <- document =<< window
-  (mcanvas :: Maybe Element) <- getElementById name $ toNonElementParentNode doc
-  (mcanvasEl :: Maybe HTMLElement) <- pure $ mcanvas >>= fromElement
-  (mbounding :: Maybe DOMRect) <- traverse getBoundingClientRect mcanvasEl
+getCanvasElement :: String -> Effect (Maybe HTMLElement)
+getCanvasElement name = do
+  doc <- document =<< window
+  mcanvas <- getElementById name $ toNonElementParentNode doc
+  pure $ mcanvas >>= fromElement
+
+getCanvasClientRect :: Maybe HTMLElement -> Effect (Maybe Dims.ClientRect)
+getCanvasClientRect mcanvas = do
+  (mbounding :: Maybe DOMRect) <- traverse getBoundingClientRect mcanvas
   pure $ Dims.fromDOMRect <$> mbounding
+
+updateClientRect ::
+  forall appState action slots output m.
+  MonadAff m =>
+  H.HalogenM (State appState) action slots output m Unit
+updateClientRect = do
+  mcanvas <- H.gets _.canvas
+  clientRect <- H.liftEffect $ getCanvasClientRect mcanvas
+  H.modify_ (_ { clientRect = clientRect })
+
+fullscreenStyle :: CSS.CSS
+fullscreenStyle = do
+  CSS.width $ CSS.pct 100.0
+  CSS.height $ CSS.pct 100.0
+  CSS.position CSS.absolute
+  CSS.left $ CSS.pct 50.0
+  CSS.top $ CSS.pct 50.0
+  CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
+
+unsubscribeResize ::
+  forall appState action slots output m.
+  MonadAff m =>
+  H.HalogenM (State appState) action slots output m Unit
+unsubscribeResize = do
+  mresizeSub <- H.gets _.resizeSub
+  traverse_ H.unsubscribe mresizeSub
