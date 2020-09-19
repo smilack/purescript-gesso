@@ -1,4 +1,4 @@
-module Gesso.Window (requestAnimationFrame, module Web.HTML.Window) where
+module Gesso.Time (requestAnimationFrame, module Web.HTML.Window) where
 
 import Prelude (Unit, map, (<<<))
 import Data.Newtype (wrap)

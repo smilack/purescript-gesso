@@ -9,7 +9,7 @@ import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Dimensions as Dims
-import Gesso.Window (requestAnimationFrame)
+import Gesso.Time (requestAnimationFrame)
 import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
 import Halogen as H
 import Halogen.HTML (canvas, HTML, memoized)
