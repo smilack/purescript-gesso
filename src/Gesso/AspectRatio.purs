@@ -1,6 +1,7 @@
 module Gesso.AspectRatio
   ( AspectRatio
   , toNumber
+  , width
   , height
   , custom
   , w16h9
@@ -21,8 +22,11 @@ instance showAspectRatio :: Show AspectRatio where
 toNumber :: AspectRatio -> Number
 toNumber (AspectRatio w h) = w / h
 
+width :: Number -> AspectRatio -> Number
+width forHeight (AspectRatio w h) = forHeight * w / h
+
 height :: Number -> AspectRatio -> Number
-height width (AspectRatio w h) = width * h / w
+height forWidth (AspectRatio w h) = forWidth * h / w
 
 custom :: Number -> Number -> AspectRatio
 custom w h = AspectRatio w h
