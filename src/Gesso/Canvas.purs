@@ -1,7 +1,6 @@
 module Gesso.Canvas where
 
 import Prelude
-import Color as Color
 import CSS as CSS
 import Data.Foldable (sequence_)
 import Data.Maybe (Maybe(..))
@@ -96,8 +95,12 @@ render { viewBox, name } =
   canvas
     $ [ id_ name
       , style do
-          CSS.border CSS.double (CSS.px 5.0) Color.black
-          Dims.toSizeCss viewBox
+          CSS.width $ CSS.pct 100.0
+          CSS.height $ CSS.pct 100.0
+          CSS.position CSS.absolute
+          CSS.left $ CSS.pct 50.0
+          CSS.top $ CSS.pct 50.0
+          CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
       ]
     <> (Dims.toSizeProps viewBox)
 

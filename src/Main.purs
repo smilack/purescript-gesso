@@ -24,7 +24,7 @@ init =
     $ { boundingBox:
           Dims.fromPointAndSize
             Dims.origin
-            (Dims.fromWidthAndHeight { width: 300.0, height: 300.0 })
+            (Dims.fromWidthAndHeight { width: 2560.0, height: 1440.0 })
       , renderFn
       , appState: { color: "blue" }
       }
@@ -34,7 +34,8 @@ renderFn = Gesso.Canvas.Continuous render
   where
   render :: Number -> Number -> AppState -> Canvas.Context2D -> Effect Unit
   render timestamp delta { color } context = do
-    Canvas.clearRect context { x: 0.0, y: 0.0, width: 300.0, height: 300.0 }
+    Canvas.setFillStyle context "#DDFFDD"
+    Canvas.fillRect context { x: 0.0, y: 0.0, width: 2560.0, height: 1440.0 }
     Canvas.setFillStyle context color
     Canvas.fillRect context { x: 100.0, y: 50.0, width: 200.0, height: 25.0 }
     let
