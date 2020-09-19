@@ -15,6 +15,7 @@ import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
 import Halogen as H
 import Halogen.HTML (canvas, HTML, memoized)
 import Halogen.HTML.CSS (style)
+import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties (id_)
 import Halogen.Query.EventSource as ES
 import Web.DOM.NonElementParentNode (getElementById)
@@ -23,6 +24,7 @@ import Web.HTML (window)
 import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.HTMLElement (getBoundingClientRect, fromElement, HTMLElement, DOMRect)
 import Web.HTML.Window (toEventTarget, document)
+import Web.UIEvent.MouseEvent (MouseEvent)
 
 data RenderStyle appState
   = NoRender
@@ -35,9 +37,11 @@ data Action
   | HandleResize
   | Tick (Maybe (T.Timestamp T.Prev))
   | AnimationFrameStart T.Delta
+  | MouseMoveEvent Dims.Point
 
 data Output
   = FrameStart T.Delta
+  | MouseMove Dims.Point
 
 data Query appState a
   = UpdateAppState appState a
@@ -92,8 +96,12 @@ render { viewBox, name } =
   canvas
     $ [ id_ name
       , style fullscreenStyle
+      , HE.onMouseMove getCursorCoordinates
       ]
     <> Dims.toSizeProps viewBox
+
+getCursorCoordinates :: MouseEvent -> Maybe Action
+getCursorCoordinates = Just <<< MouseMoveEvent <<< Dims.fromMouseEvent
 
 handleQuery :: forall appState a slots output m. MonadAff m => Query appState a -> H.HalogenM (State appState) Action slots output m (Maybe a)
 handleQuery (UpdateAppState appState a) = do
@@ -111,6 +119,7 @@ handleAction = case _ of
     queueAnimationFrame mLastTime context appState renderFn
   Finalize -> unsubscribeResize
   AnimationFrameStart delta -> H.raise $ FrameStart delta
+  MouseMoveEvent p -> H.raise $ MouseMove p
 
 initialize :: forall appState slots output m. MonadAff m => H.HalogenM (State appState) Action slots output m Unit
 initialize = do
