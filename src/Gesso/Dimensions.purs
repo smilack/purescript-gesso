@@ -300,5 +300,5 @@ origin = fromXAndY { x: 0.0, y: 0.0 }
 sizeless :: Size
 sizeless = fromWidthAndHeight { width: 0.0, height: 0.0 }
 
-null :: Dimensions Unit
+null :: Dimensions ViewBox
 null = Dimensions origin sizeless
