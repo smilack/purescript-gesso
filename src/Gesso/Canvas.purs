@@ -9,7 +9,6 @@ import Data.Traversable (traverse)
 import Debug.Trace (trace, traceM, spy)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
-import Gesso.AspectRatio as AR
 import Gesso.Dimensions as Dims
 import Gesso.Time as T
 import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
