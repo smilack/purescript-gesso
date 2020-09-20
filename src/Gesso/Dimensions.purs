@@ -37,7 +37,7 @@ import Gesso.AspectRatio as AR
 import Halogen.HTML.Properties as HP
 import Math as Math
 import Web.HTML.HTMLElement (DOMRect)
-import Web.UIEvent.MouseEvent (screenX, screenY, MouseEvent)
+import Web.UIEvent.MouseEvent (pageX, pageY, MouseEvent)
 
 -----------------
 -- Typeclasses --
@@ -176,8 +176,8 @@ fromXAndY = Point
 fromMouseEvent :: MouseEvent -> Point
 fromMouseEvent me =
   fromXAndY
-    { x: toNumber $ screenX $ me
-    , y: toNumber $ screenY $ me
+    { x: toNumber $ pageX $ me
+    , y: toNumber $ pageY $ me
     }
 
 instance positionedPoint :: Positioned Point where
