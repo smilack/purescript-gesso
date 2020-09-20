@@ -13,6 +13,7 @@ module Gesso.Dimensions
   , Size
   , fromWidthAndHeight
   , fromWidthAndRatio
+  , fromHeightAndRatio
   , Point
   , fromXAndY
   , fromMouseEvent
@@ -20,6 +21,8 @@ module Gesso.Dimensions
   , fromPointAndSize
   , ClientRect
   , fromDOMRect
+  , ViewBox
+  , getViewBox
   , origin
   , sizeless
   , null
@@ -102,6 +105,7 @@ showDimensioned d = "{ x: " <> x <> ", y: " <> y <> ", width: " <> width <> ", h
 data Size
   = WidthAndHeight WH
   | WidthAndRatio WR
+  | HeightAndRatio HR
 
 type WH
   = { width :: Number, height :: Number }
@@ -109,22 +113,46 @@ type WH
 type WR
   = { width :: Number, aspectRatio :: AspectRatio }
 
+type HR
+  = { height :: Number, aspectRatio :: AspectRatio }
+
 fromWidthAndHeight :: WH -> Size
 fromWidthAndHeight = WidthAndHeight
 
 fromWidthAndRatio :: WR -> Size
 fromWidthAndRatio = WidthAndRatio
 
+fromHeightAndRatio :: HR -> Size
+fromHeightAndRatio = HeightAndRatio
+
+largestContainedArea :: AspectRatio -> ClientRect -> Size
+largestContainedArea aspectRatio clientRect = go
+  where
+  go
+    | getHeight keepWidth <= getHeight clientRect = keepWidth
+    | otherwise = keepHeight
+
+  width = getWidth clientRect
+
+  height = getHeight clientRect
+
+  keepWidth = fromWidthAndRatio { width, aspectRatio }
+
+  keepHeight = fromHeightAndRatio { height, aspectRatio }
+
 instance sizedSize :: Sized Size where
   getWidth = case _ of
     WidthAndHeight { width } -> width
     WidthAndRatio { width } -> width
+    HeightAndRatio { height, aspectRatio } -> AR.width height aspectRatio
   getHeight = case _ of
     WidthAndHeight { height } -> height
     WidthAndRatio { width, aspectRatio } -> AR.height width aspectRatio
+    HeightAndRatio { height } -> height
   getRatio = case _ of
     WidthAndHeight { width, height } -> AR.custom width height
     WidthAndRatio { aspectRatio } -> aspectRatio
+    HeightAndRatio { aspectRatio } -> aspectRatio
 
 instance showSize :: Show Size where
   show = ("Size " <> _) <<< showSized
@@ -211,6 +239,31 @@ instance showClientRect :: Show ClientRect where
   show = ("ClientRect " <> _) <<< showDimensioned
 
 derive instance eqClientRect :: Eq ClientRect
+
+---------------------
+-- ViewBox type --
+---------------------
+data ViewBox
+  = ViewBox Point Size
+
+instance positionedViewBox :: Positioned ViewBox where
+  getX (ViewBox p _) = getX p
+  getY (ViewBox p _) = getY p
+
+instance sizedViewBox :: Sized ViewBox where
+  getWidth (ViewBox _ s) = getWidth s
+  getHeight (ViewBox _ s) = getHeight s
+  getRatio (ViewBox _ s) = getRatio s
+
+instance dimensionedViewBox :: Dimensioned ViewBox
+
+instance showViewBox :: Show ViewBox where
+  show = ("ViewBox " <> _) <<< showDimensioned
+
+derive instance eqViewBox :: Eq ViewBox
+
+getViewBox :: Point -> AspectRatio -> ClientRect -> ViewBox
+getViewBox point aspectRatio clientRect = ViewBox point (largestContainedArea aspectRatio clientRect)
 
 ---------------
 -- Constants --
