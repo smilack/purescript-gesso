@@ -18,11 +18,12 @@ module Gesso.Dimensions
   , fromXAndY
   , fromMouseEvent
   , Dimensions
-  , fromPointAndSize
   , ClientRect
   , fromDOMRect
   , ViewBox
-  , getViewBox
+  , fromPointAndSize
+  , Scaler
+  , mkScaler
   , origin
   , sizeless
   , null
@@ -204,12 +205,6 @@ instance sizedDimensions :: Sized (Dimensions a) where
 
 instance dimensionedDimensions :: Dimensioned (Dimensions a)
 
-fromPointAndSize :: Point -> Size -> Dimensions Unit
-fromPointAndSize = Dimensions
-
-instance showDimensions :: Show (Dimensions Unit) where
-  show = ("Dimensions " <> _) <<< showDimensioned
-
 derive instance eqDimensions :: Eq (Dimensions a)
 
 ---------------------
@@ -226,16 +221,45 @@ fromDOMRect { left, top, width, height } =
 instance showClientRect :: Show (Dimensions ClientRect) where
   show = ("ClientRect " <> _) <<< showDimensioned
 
----------------------
+------------------
 -- ViewBox type --
----------------------
+------------------
 data ViewBox
 
 instance showViewBox :: Show (Dimensions ViewBox) where
   show = ("ViewBox " <> _) <<< showDimensioned
 
-getViewBox :: Point -> AspectRatio -> Dimensions ClientRect -> Dimensions ViewBox
-getViewBox point aspectRatio clientRect = Dimensions point (largestContainedArea aspectRatio clientRect)
+fromPointAndSize :: Point -> Size -> Dimensions ViewBox
+fromPointAndSize = Dimensions
+
+-----------------
+-- Scaler type --
+-----------------
+type Scaler
+  = { x_ :: Number -> Number
+    , y_ :: Number -> Number
+    , margin ::
+        { left :: Number
+        , top :: Number
+        , right :: Number
+        , bottom :: Number
+        }
+    }
+
+mkScaler :: Dimensions ViewBox -> Dimensions ClientRect -> Scaler
+mkScaler appWindow clientRect = { x_, y_, margin: { left, top, right, bottom } }
+  where
+  x_ = (_ + 0.0)
+
+  y_ = (_ + 0.0)
+
+  left = 0.0
+
+  top = 0.0
+
+  right = 0.0
+
+  bottom = 0.0
 
 ---------------
 -- Constants --

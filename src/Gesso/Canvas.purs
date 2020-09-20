@@ -29,7 +29,7 @@ import Web.UIEvent.MouseEvent (MouseEvent)
 
 data RenderStyle appState
   = NoRender
-  | Continuous (appState -> T.Delta -> Dims.Dimensions Dims.ViewBox -> Context2D -> Effect Unit)
+  | Continuous (appState -> T.Delta -> Dims.Scaler -> Context2D -> Effect Unit)
   | OnChange (appState -> Context2D -> Effect Unit)
 
 data Action
@@ -49,17 +49,15 @@ data Query appState a
 
 newtype Input appState
   = Input
-  { origin :: Dims.Point
-  , aspectRatio :: AR.AspectRatio
+  { viewBox :: Dims.Dimensions Dims.ViewBox
   , renderFn :: RenderStyle appState
   , appState :: appState
   }
 
 type State appState
-  = { origin :: Dims.Point
-    , aspectRatio :: AR.AspectRatio
+  = { viewBox :: Dims.Dimensions Dims.ViewBox
     , clientRect :: Maybe (Dims.Dimensions Dims.ClientRect)
-    , viewBox :: Maybe (Dims.Dimensions Dims.ViewBox)
+    , scaler :: Maybe Dims.Scaler
     , renderFn :: RenderStyle appState
     , canvas :: Maybe HTMLElement
     , context :: Maybe Context2D
@@ -84,11 +82,10 @@ component =
     }
 
 initialState :: forall appState. Input appState -> State appState
-initialState (Input { origin, aspectRatio, renderFn, appState }) =
-  { origin
-  , aspectRatio
+initialState (Input { viewBox, renderFn, appState }) =
+  { viewBox
   , clientRect: Nothing
-  , viewBox: Nothing
+  , scaler: Nothing
   , renderFn
   , resizeSub: Nothing
   , canvas: Nothing
@@ -129,8 +126,8 @@ handleAction = case _ of
     handleAction $ Tick Nothing
   HandleResize -> updateClientRect
   Tick mLastTime -> do
-    { context, appState, renderFn, viewBox } <- H.get
-    queueAnimationFrame mLastTime context viewBox appState renderFn
+    { context, appState, renderFn, scaler } <- H.get
+    queueAnimationFrame mLastTime context scaler appState renderFn
   Finalize -> unsubscribeResize
   AnimationFrameStart delta -> H.raise $ FrameStart delta
   MouseMoveEvent p -> H.raise $ MouseMove p
@@ -138,7 +135,7 @@ handleAction = case _ of
 initialize :: forall appState slots output m. MonadAff m => H.HalogenM (State appState) Action slots output m Unit
 initialize = do
   resizeSub <- subscribeResize
-  { name, origin, aspectRatio } <- H.get
+  { name, viewBox } <- H.get
   mcontext <- H.liftEffect $ getContext name
   mcanvas <- H.liftEffect $ getCanvasElement name
   clientRect <- H.liftEffect $ getCanvasClientRect mcanvas
@@ -148,7 +145,7 @@ initialize = do
         , resizeSub = Just resizeSub
         , clientRect = clientRect
         , canvas = mcanvas
-        , viewBox = Dims.getViewBox origin aspectRatio <$> clientRect
+        , scaler = Dims.mkScaler viewBox <$> clientRect
         }
     )
 
@@ -157,9 +154,9 @@ queueAnimationFrame ::
   MonadAff m =>
   Maybe (T.Timestamp T.Prev) ->
   Maybe Context2D ->
-  Maybe (Dims.Dimensions Dims.ViewBox) ->
+  Maybe Dims.Scaler ->
   appState -> RenderStyle appState -> H.HalogenM (State appState) Action slots output m Unit
-queueAnimationFrame mLastTime context viewBox appState renderFn = do
+queueAnimationFrame mLastTime context scaler appState renderFn = do
   _ <- H.subscribe $ ES.effectEventSource rafEventSource
   pure unit
   where
@@ -183,7 +180,7 @@ queueAnimationFrame mLastTime context viewBox appState renderFn = do
         --   will be or if there are any alternatives.
         -- Possibly by having the parent pass in the state update function?
         traverse_ (ES.emit emitter <<< AnimationFrameStart) mdelta
-        sequence_ $ fn appState <$> mdelta <*> viewBox <*> context
+        sequence_ $ fn appState <$> mdelta <*> scaler <*> context
         ES.emit emitter $ Tick $ Just $ T.toPrev timestamp
     ES.close emitter
 
@@ -209,12 +206,12 @@ updateClientRect ::
   MonadAff m =>
   H.HalogenM (State appState) action slots output m Unit
 updateClientRect = do
-  { canvas, origin, aspectRatio } <- H.get
+  { canvas, viewBox } <- H.get
   clientRect <- H.liftEffect $ getCanvasClientRect canvas
   H.modify_
     ( _
         { clientRect = clientRect
-        , viewBox = Dims.getViewBox origin aspectRatio <$> clientRect
+        , scaler = Dims.mkScaler viewBox <$> clientRect
         }
     )
 

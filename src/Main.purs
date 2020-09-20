@@ -48,8 +48,10 @@ initialState = { color: "blue", mouse: Nothing }
 init :: GC.Input AppState
 init =
   GC.Input
-    $ { origin: Dims.origin
-      , aspectRatio: AR.w1h1
+    $ { viewBox:
+          Dims.fromPointAndSize
+            Dims.origin
+            (Dims.fromHeightAndRatio { height: 360.0, aspectRatio: AR.w16h9 })
       , renderFn
       , appState: initialState
       }
@@ -57,24 +59,20 @@ init =
 renderFn :: GC.RenderStyle AppState
 renderFn = GC.Continuous render
   where
-  render :: AppState -> T.Delta -> Dims.Dimensions Dims.ViewBox -> Canvas.Context2D -> Effect Unit
-  render { color, mouse } { now } viewBox context = do
+  render :: AppState -> T.Delta -> Dims.Scaler -> Canvas.Context2D -> Effect Unit
+  render { color, mouse } { now } { x_, y_, margin } context = do
     Canvas.setFillStyle context "#DDFFDD"
-    Canvas.fillRect context { x: scaleW 5.0, y: scaleH 5.0, width: scaleW 630.0, height: scaleH 630.0 }
+    Canvas.fillRect context { x: x_ 5.0, y: y_ 5.0, width: x_ 630.0, height: y_ 630.0 }
     Canvas.setFillStyle context color
-    Canvas.fillRect context { x: scaleW 100.0, y: scaleH 50.0, width: scaleW 200.0, height: scaleH 25.0 }
+    Canvas.fillRect context { x: x_ 100.0, y: y_ 50.0, width: x_ 200.0, height: y_ 25.0 }
     Canvas.fillRect context
-      { x: scaleW $ 150.0 + 50.0 * cos t
-      , y: scaleH $ 150.0 + 50.0 * sin t
-      , width: scaleW 10.0
-      , height: scaleH 10.0
+      { x: x_ $ 150.0 + 50.0 * cos t
+      , y: y_ $ 150.0 + 50.0 * sin t
+      , width: x_ 10.0
+      , height: y_ 10.0
       }
     traverse_ (Canvas.fillRect context) (mouseRect <$> mouse)
     where
-    mouseRect { x, y } = { x, y, width: scaleW 30.0, height: scaleH 30.0 }
+    mouseRect { x, y } = { x, y, width: x_ 30.0, height: y_ 30.0 }
 
     t = (unwrap now) * 6.28 / 1000.0 / 2.0
-
-    scaleW = (_ / 640.0) <<< (_ * Dims.getWidth viewBox)
-
-    scaleH = (_ / 640.0) <<< (_ * Dims.getHeight viewBox)
