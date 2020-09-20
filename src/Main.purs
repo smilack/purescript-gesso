@@ -5,7 +5,7 @@ import Control.Coroutine as CR
 import Data.Foldable (traverse_)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
-import Debug (log, logShow, unsafeLogAnything)
+import Debug.Trace (trace, traceM, spy)
 import Effect (Effect)
 import Gesso.Canvas as Gesso.Canvas
 import Gesso.Dimensions as Dims

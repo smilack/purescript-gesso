@@ -6,7 +6,7 @@ import Data.Foldable (sequence_, traverse_)
 import Data.Function (on)
 import Data.Maybe (Maybe(..))
 import Data.Traversable (traverse)
-import Debug (log, logShow, unsafeLogAnything)
+import Debug.Trace (trace, traceM, spy)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Dimensions as Dims

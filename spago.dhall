@@ -6,6 +6,7 @@ You can edit this file as you like.
 , dependencies =
   [ "canvas"
   , "console"
+  , "debug"
   , "effect"
   , "halogen"
   , "halogen-css"
