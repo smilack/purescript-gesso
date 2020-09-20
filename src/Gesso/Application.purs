@@ -1,5 +1,6 @@
-module Gesso.AppSpec
-  ( AppSpec
+module Gesso.Application
+  ( Application
+  , AppSpec
   , defaultApp
   , WindowStyle
   , fixed
@@ -21,6 +22,9 @@ import Gesso.Dimensions as D
 import Gesso.Time as T
 import Graphics.Canvas as C
 
+newtype Application state
+  = Application (AppSpec state)
+
 type AppSpec state
   = { name :: String
     , window :: WindowStyle
@@ -37,6 +41,15 @@ defaultApp =
   , render: Nothing
   , update: Nothing
   }
+
+mkApplication ::
+  forall state.
+  String ->
+  WindowStyle ->
+  D.Dimensions D.ViewBox ->
+  Maybe (RenderStyle state) ->
+  Maybe (Update state) -> Application state
+mkApplication name window viewBox render up = Application { name, window, viewBox, render, update: up }
 
 data WindowStyle
   = Fixed D.Size
