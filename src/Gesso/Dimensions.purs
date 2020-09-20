@@ -35,6 +35,7 @@ import Data.Int (round, toNumber)
 import Gesso.AspectRatio (AspectRatio)
 import Gesso.AspectRatio as AR
 import Halogen.HTML.Properties as HP
+import Math as Math
 import Web.HTML.HTMLElement (DOMRect)
 import Web.UIEvent.MouseEvent (screenX, screenY, MouseEvent)
 
@@ -236,7 +237,11 @@ fromPointAndSize = Dimensions
 -- Scaler type --
 -----------------
 type Scaler
-  = { x_ :: Number -> Number
+  = { x' :: Number -> Number
+    , y' :: Number -> Number
+    , w' :: Number -> Number
+    , h' :: Number -> Number
+    , x_ :: Number -> Number
     , y_ :: Number -> Number
     , w_ :: Number -> Number
     , h_ :: Number -> Number
@@ -250,10 +255,14 @@ type Scaler
 
 mkScaler :: Dimensions ViewBox -> Dimensions ClientRect -> Scaler
 mkScaler viewBox clientRect =
-  { x_
-  , y_
-  , w_
-  , h_
+  { x'
+  , y'
+  , w'
+  , h'
+  , x_: Math.round <<< x'
+  , y_: Math.round <<< y'
+  , w_: Math.round <<< w'
+  , h_: Math.round <<< h'
   , screen:
       { x: 0.0
       , y: 0.0
@@ -274,13 +283,13 @@ mkScaler viewBox clientRect =
     , y: getHeight viewBox / getHeight actualVB
     }
 
-  x_ = (_ + margin.w) <<< w_
+  x' = (_ + margin.w) <<< w'
 
-  w_ = (_ / c.x) <<< (_ - getX viewBox)
+  w' = (_ / c.x) <<< (_ - getX viewBox)
 
-  y_ = (_ + margin.h) <<< h_
+  y' = (_ + margin.h) <<< h'
 
-  h_ = (_ / c.y) <<< (_ - getY viewBox)
+  h' = (_ / c.y) <<< (_ - getY viewBox)
 
 ---------------
 -- Constants --
