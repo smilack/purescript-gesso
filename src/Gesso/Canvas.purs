@@ -29,7 +29,7 @@ import Web.UIEvent.MouseEvent (MouseEvent)
 
 data RenderStyle appState
   = NoRender
-  | Continuous (appState -> T.Delta -> Dims.ViewBox -> Context2D -> Effect Unit)
+  | Continuous (appState -> T.Delta -> Dims.Dimensions Dims.ViewBox -> Context2D -> Effect Unit)
   | OnChange (appState -> Context2D -> Effect Unit)
 
 data Action
@@ -58,8 +58,8 @@ newtype Input appState
 type State appState
   = { origin :: Dims.Point
     , aspectRatio :: AR.AspectRatio
-    , clientRect :: Maybe Dims.ClientRect
-    , viewBox :: Maybe Dims.ViewBox
+    , clientRect :: Maybe (Dims.Dimensions Dims.ClientRect)
+    , viewBox :: Maybe (Dims.Dimensions Dims.ViewBox)
     , renderFn :: RenderStyle appState
     , canvas :: Maybe HTMLElement
     , context :: Maybe Context2D
@@ -157,7 +157,7 @@ queueAnimationFrame ::
   MonadAff m =>
   Maybe (T.Timestamp T.Prev) ->
   Maybe Context2D ->
-  Maybe Dims.ViewBox ->
+  Maybe (Dims.Dimensions Dims.ViewBox) ->
   appState -> RenderStyle appState -> H.HalogenM (State appState) Action slots output m Unit
 queueAnimationFrame mLastTime context viewBox appState renderFn = do
   _ <- H.subscribe $ ES.effectEventSource rafEventSource
@@ -199,7 +199,7 @@ getCanvasElement name = do
   mcanvas <- getElementById name $ toNonElementParentNode doc
   pure $ mcanvas >>= fromElement
 
-getCanvasClientRect :: Maybe HTMLElement -> Effect (Maybe Dims.ClientRect)
+getCanvasClientRect :: Maybe HTMLElement -> Effect (Maybe (Dims.Dimensions Dims.ClientRect))
 getCanvasClientRect mcanvas = do
   (mbounding :: Maybe DOMRect) <- traverse getBoundingClientRect mcanvas
   pure $ Dims.fromDOMRect <$> mbounding

@@ -125,7 +125,7 @@ fromWidthAndRatio = WidthAndRatio
 fromHeightAndRatio :: HR -> Size
 fromHeightAndRatio = HeightAndRatio
 
-largestContainedArea :: AspectRatio -> ClientRect -> Size
+largestContainedArea :: AspectRatio -> Dimensions ClientRect -> Size
 largestContainedArea aspectRatio clientRect = go
   where
   go
@@ -190,80 +190,52 @@ derive instance eqPoint :: Eq Point
 ---------------------
 -- Dimensions type --
 ---------------------
-data Dimensions
+data Dimensions a
   = Dimensions Point Size
 
-instance positionedDimensions :: Positioned Dimensions where
+instance positionedDimensions :: Positioned (Dimensions a) where
   getX (Dimensions p _) = getX p
   getY (Dimensions p _) = getY p
 
-instance sizedDimensions :: Sized Dimensions where
+instance sizedDimensions :: Sized (Dimensions a) where
   getWidth (Dimensions _ s) = getWidth s
   getHeight (Dimensions _ s) = getHeight s
   getRatio (Dimensions _ s) = getRatio s
 
-instance dimensionedDimensions :: Dimensioned Dimensions
+instance dimensionedDimensions :: Dimensioned (Dimensions a)
 
-fromPointAndSize :: Point -> Size -> Dimensions
+fromPointAndSize :: Point -> Size -> Dimensions Unit
 fromPointAndSize = Dimensions
 
-instance showDimensions :: Show Dimensions where
+instance showDimensions :: Show (Dimensions Unit) where
   show = ("Dimensions " <> _) <<< showDimensioned
 
-derive instance eqDimensions :: Eq Dimensions
+derive instance eqDimensions :: Eq (Dimensions a)
 
 ---------------------
 -- ClientRect type --
 ---------------------
 data ClientRect
-  = ClientRect Point Size
 
-instance positionedClientRect :: Positioned ClientRect where
-  getX (ClientRect p _) = getX p
-  getY (ClientRect p _) = getY p
-
-instance sizedClientRect :: Sized ClientRect where
-  getWidth (ClientRect _ s) = getWidth s
-  getHeight (ClientRect _ s) = getHeight s
-  getRatio (ClientRect _ s) = getRatio s
-
-instance dimensionedClientRect :: Dimensioned ClientRect
-
-fromDOMRect :: DOMRect -> ClientRect
+fromDOMRect :: DOMRect -> Dimensions ClientRect
 fromDOMRect { left, top, width, height } =
-  ClientRect
+  Dimensions
     (fromXAndY { x: left, y: top })
     (fromWidthAndHeight { width, height })
 
-instance showClientRect :: Show ClientRect where
+instance showClientRect :: Show (Dimensions ClientRect) where
   show = ("ClientRect " <> _) <<< showDimensioned
-
-derive instance eqClientRect :: Eq ClientRect
 
 ---------------------
 -- ViewBox type --
 ---------------------
 data ViewBox
-  = ViewBox Point Size
 
-instance positionedViewBox :: Positioned ViewBox where
-  getX (ViewBox p _) = getX p
-  getY (ViewBox p _) = getY p
-
-instance sizedViewBox :: Sized ViewBox where
-  getWidth (ViewBox _ s) = getWidth s
-  getHeight (ViewBox _ s) = getHeight s
-  getRatio (ViewBox _ s) = getRatio s
-
-instance dimensionedViewBox :: Dimensioned ViewBox
-
-instance showViewBox :: Show ViewBox where
+instance showViewBox :: Show (Dimensions ViewBox) where
   show = ("ViewBox " <> _) <<< showDimensioned
 
-derive instance eqViewBox :: Eq ViewBox
-
-getViewBox :: Point -> AspectRatio -> ClientRect -> ViewBox
-getViewBox point aspectRatio clientRect = ViewBox point (largestContainedArea aspectRatio clientRect)
+getViewBox :: Point -> AspectRatio -> Dimensions ClientRect -> Dimensions ViewBox
+getViewBox point aspectRatio clientRect = Dimensions point (largestContainedArea aspectRatio clientRect)
 
 ---------------
 -- Constants --
@@ -274,5 +246,5 @@ origin = fromXAndY { x: 0.0, y: 0.0 }
 sizeless :: Size
 sizeless = fromWidthAndHeight { width: 0.0, height: 0.0 }
 
-null :: Dimensions
+null :: Dimensions Unit
 null = Dimensions origin sizeless

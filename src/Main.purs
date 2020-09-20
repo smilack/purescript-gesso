@@ -57,7 +57,7 @@ init =
 renderFn :: GC.RenderStyle AppState
 renderFn = GC.Continuous render
   where
-  render :: AppState -> T.Delta -> Dims.ViewBox -> Canvas.Context2D -> Effect Unit
+  render :: AppState -> T.Delta -> Dims.Dimensions Dims.ViewBox -> Canvas.Context2D -> Effect Unit
   render { color, mouse } { now } viewBox context = do
     Canvas.setFillStyle context "#DDFFDD"
     Canvas.fillRect context { x: scaleW 5.0, y: scaleH 5.0, width: scaleW 630.0, height: scaleH 630.0 }
