@@ -238,28 +238,49 @@ fromPointAndSize = Dimensions
 type Scaler
   = { x_ :: Number -> Number
     , y_ :: Number -> Number
-    , margin ::
-        { left :: Number
-        , top :: Number
-        , right :: Number
-        , bottom :: Number
+    , w_ :: Number -> Number
+    , h_ :: Number -> Number
+    , screen ::
+        { x :: Number
+        , y :: Number
+        , width :: Number
+        , height :: Number
         }
     }
 
 mkScaler :: Dimensions ViewBox -> Dimensions ClientRect -> Scaler
-mkScaler appWindow clientRect = { x_, y_, margin: { left, top, right, bottom } }
+mkScaler viewBox clientRect =
+  { x_
+  , y_
+  , w_
+  , h_
+  , screen:
+      { x: 0.0
+      , y: 0.0
+      , width: getWidth clientRect
+      , height: getHeight clientRect
+      }
+  }
   where
-  x_ = (_ + 0.0)
+  actualVB = largestContainedArea (getRatio viewBox) clientRect
 
-  y_ = (_ + 0.0)
+  margin =
+    { w: (getWidth clientRect - getWidth actualVB) / 2.0
+    , h: (getHeight clientRect - getHeight actualVB) / 2.0
+    }
 
-  left = 0.0
+  c =
+    { x: getWidth viewBox / getWidth actualVB
+    , y: getHeight viewBox / getHeight actualVB
+    }
 
-  top = 0.0
+  x_ = (_ + margin.w) <<< w_
 
-  right = 0.0
+  w_ = (_ / c.x) <<< (_ - getX viewBox)
 
-  bottom = 0.0
+  y_ = (_ + margin.h) <<< h_
+
+  h_ = (_ / c.y) <<< (_ - getY viewBox)
 
 ---------------
 -- Constants --

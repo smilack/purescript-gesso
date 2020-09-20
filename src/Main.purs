@@ -60,19 +60,26 @@ renderFn :: GC.RenderStyle AppState
 renderFn = GC.Continuous render
   where
   render :: AppState -> T.Delta -> Dims.Scaler -> Canvas.Context2D -> Effect Unit
-  render { color, mouse } { now } { x_, y_, margin } context = do
+  render { color, mouse } { now } { x_, y_, w_, h_, screen } context = do
+    Canvas.setLineWidth context 3.0
+    Canvas.setFillStyle context "#FFDDDD"
+    Canvas.setStrokeStyle context "#00FF00"
+    Canvas.fillRect context { x: screen.x, y: screen.y, width: screen.width, height: screen.height }
+    Canvas.strokeRect context { x: screen.x, y: screen.y, width: screen.width, height: screen.height }
     Canvas.setFillStyle context "#DDFFDD"
-    Canvas.fillRect context { x: x_ 5.0, y: y_ 5.0, width: x_ 630.0, height: y_ 630.0 }
+    Canvas.setStrokeStyle context "#FF0000"
+    Canvas.fillRect context { x: x_ 0.0, y: y_ 0.0, width: w_ 640.0, height: h_ 360.0 }
+    Canvas.strokeRect context { x: x_ 0.0, y: y_ 0.0, width: w_ 640.0, height: h_ 360.0 }
     Canvas.setFillStyle context color
-    Canvas.fillRect context { x: x_ 100.0, y: y_ 50.0, width: x_ 200.0, height: y_ 25.0 }
+    Canvas.fillRect context { x: x_ 100.0, y: y_ 50.0, width: w_ 200.0, height: h_ 25.0 }
     Canvas.fillRect context
       { x: x_ $ 150.0 + 50.0 * cos t
       , y: y_ $ 150.0 + 50.0 * sin t
-      , width: x_ 10.0
-      , height: y_ 10.0
+      , width: w_ 10.0
+      , height: h_ 10.0
       }
     traverse_ (Canvas.fillRect context) (mouseRect <$> mouse)
     where
-    mouseRect { x, y } = { x, y, width: x_ 30.0, height: y_ 30.0 }
+    mouseRect { x, y } = { x, y, width: w_ 30.0, height: h_ 30.0 }
 
     t = (unwrap now) * 6.28 / 1000.0 / 2.0
