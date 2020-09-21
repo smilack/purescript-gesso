@@ -2,6 +2,7 @@ module Gesso.Application
   ( Application
   , AppSpec
   , defaultApp
+  , mkApplication
   , WindowStyle
   , fixed
   , stretch
@@ -12,18 +13,28 @@ module Gesso.Application
   , continuous
   , Update
   , UpdateFunction
-  , update
+  , updateFn
+  , windowCss
+  , updateAppState
+  , RequestFrame(..)
+  , renderApp
+  , mkScaler
   ) where
 
 import Prelude
+import CSS as CSS
 import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype, unwrap)
 import Effect (Effect)
 import Gesso.Dimensions as D
 import Gesso.Time as T
 import Graphics.Canvas as C
+import Halogen (liftEffect)
 
 newtype Application state
   = Application (AppSpec state)
+
+derive instance newtypeApplication :: Newtype (Application state) _
 
 type AppSpec state
   = { name :: String
@@ -42,14 +53,8 @@ defaultApp =
   , update: Nothing
   }
 
-mkApplication ::
-  forall state.
-  String ->
-  WindowStyle ->
-  D.Dimensions D.ViewBox ->
-  Maybe (RenderStyle state) ->
-  Maybe (Update state) -> Application state
-mkApplication name window viewBox render up = Application { name, window, viewBox, render, update: up }
+mkApplication :: forall state. AppSpec state -> Application state
+mkApplication = Application
 
 data WindowStyle
   = Fixed D.Size
@@ -84,5 +89,56 @@ newtype Update state
 type UpdateFunction state
   = T.Delta -> state -> state
 
-update :: forall state. UpdateFunction state -> Update state
-update = Update
+derive instance newtypeUpdate :: Newtype (Update state) _
+
+updateFn :: forall state. UpdateFunction state -> Update state
+updateFn = Update
+
+windowCss :: forall state. Application state -> CSS.CSS
+windowCss (Application { window }) = case window of
+  Fixed size -> pure mempty
+  Stretch -> pure mempty
+  Fullscreen -> full
+  where
+  full = do
+    CSS.width $ CSS.pct 100.0
+    CSS.height $ CSS.pct 100.0
+    CSS.position CSS.absolute
+    CSS.left $ CSS.pct 50.0
+    CSS.top $ CSS.pct 50.0
+    CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
+
+--return Nothing if there's no update function
+updateAppState :: forall state. T.Delta -> state -> Application state -> Maybe state
+updateAppState delta appState (Application app@{ update }) =
+  unwrap
+    <$> update
+    <*> pure delta
+    <*> pure appState
+
+data RequestFrame
+  = Continue
+  | Stop
+
+renderApp ::
+  forall state.
+  state ->
+  T.Delta ->
+  D.Scaler ->
+  C.Context2D ->
+  Application state ->
+  Maybe (Effect RequestFrame)
+renderApp appState delta scaler context (Application { render }) = go <$> render
+  where
+  go = case _ of
+    OnChange fn -> do
+      run fn
+      pure Stop
+    Continuous fn -> do
+      run fn
+      pure Continue
+
+  run fn = liftEffect $ fn appState delta scaler context
+
+mkScaler :: forall state. D.Dimensions D.ClientRect -> Application state -> D.Scaler
+mkScaler clientRect (Application { viewBox }) = D.mkScaler viewBox clientRect

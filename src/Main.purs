@@ -7,6 +7,7 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Debug.Trace (trace, traceM, spy)
 import Effect (Effect)
+import Gesso.Application as App
 import Gesso.AspectRatio as AR
 import Gesso.Canvas as GC
 import Gesso.Dimensions as Dims
@@ -25,7 +26,7 @@ main =
     io.subscribe
       $ CR.consumer
       $ case _ of
-          GC.FrameStart delta -> do
+          GC.StateUpdated appState' -> do
             pure Nothing
           GC.MouseMove p -> do
             let
@@ -48,16 +49,22 @@ initialState = { color: "blue", mouse: Nothing }
 init :: GC.Input AppState
 init =
   GC.Input
-    $ { viewBox:
-          Dims.fromPointAndSize
-            Dims.origin
-            (Dims.fromHeightAndRatio { height: 360.0, aspectRatio: AR.w16h9 })
-      , renderFn
-      , appState: initialState
-      }
+    { name: "test-app"
+    , appState: initialState
+    , app:
+        App.mkApplication
+          $ App.defaultApp
+              { window = App.fullscreen
+              , render = Just renderFn
+              , viewBox =
+                Dims.fromPointAndSize
+                  Dims.origin
+                  (Dims.fromHeightAndRatio { height: 360.0, aspectRatio: AR.w16h9 })
+              }
+    }
 
-renderFn :: GC.RenderStyle AppState
-renderFn = GC.Continuous render
+renderFn :: App.RenderStyle AppState
+renderFn = App.continuous render
   where
   render :: AppState -> T.Delta -> Dims.Scaler -> Canvas.Context2D -> Effect Unit
   render { color, mouse } { now } { x_, y_, w_, h_, screen } context = do
