@@ -19,8 +19,10 @@ module Gesso.Dimensions
   , fromMouseEvent
   , Dimensions
   , ClientRect
+  , ClientRect'
   , fromDOMRect
   , ViewBox
+  , ViewBox'
   , fromPointAndSize
   , Scaler
   , mkScaler
@@ -127,7 +129,7 @@ fromWidthAndRatio = WidthAndRatio
 fromHeightAndRatio :: HR -> Size
 fromHeightAndRatio = HeightAndRatio
 
-largestContainedArea :: AspectRatio -> Dimensions ClientRect -> Size
+largestContainedArea :: AspectRatio -> ClientRect -> Size
 largestContainedArea aspectRatio clientRect = go
   where
   go
@@ -211,26 +213,32 @@ derive instance eqDimensions :: Eq (Dimensions a)
 ---------------------
 -- ClientRect type --
 ---------------------
-data ClientRect
+data ClientRect'
 
-fromDOMRect :: DOMRect -> Dimensions ClientRect
+type ClientRect
+  = Dimensions ClientRect'
+
+instance showClientRect :: Show (Dimensions ClientRect') where
+  show = ("ClientRect " <> _) <<< showDimensioned
+
+fromDOMRect :: DOMRect -> ClientRect
 fromDOMRect { left, top, width, height } =
   Dimensions
     (fromXAndY { x: left, y: top })
     (fromWidthAndHeight { width, height })
 
-instance showClientRect :: Show (Dimensions ClientRect) where
-  show = ("ClientRect " <> _) <<< showDimensioned
-
 ------------------
 -- ViewBox type --
 ------------------
-data ViewBox
+data ViewBox'
 
-instance showViewBox :: Show (Dimensions ViewBox) where
+type ViewBox
+  = Dimensions ViewBox'
+
+instance showViewBox :: Show (Dimensions ViewBox') where
   show = ("ViewBox " <> _) <<< showDimensioned
 
-fromPointAndSize :: Point -> Size -> Dimensions ViewBox
+fromPointAndSize :: Point -> Size -> ViewBox
 fromPointAndSize = Dimensions
 
 -----------------
@@ -253,7 +261,7 @@ type Scaler
         }
     }
 
-mkScaler :: Dimensions ViewBox -> Dimensions ClientRect -> Scaler
+mkScaler :: ViewBox -> ClientRect -> Scaler
 mkScaler viewBox clientRect =
   { x'
   , y'
@@ -300,5 +308,5 @@ origin = fromXAndY { x: 0.0, y: 0.0 }
 sizeless :: Size
 sizeless = fromWidthAndHeight { width: 0.0, height: 0.0 }
 
-null :: Dimensions ViewBox
+null :: ViewBox
 null = Dimensions origin sizeless

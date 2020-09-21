@@ -31,8 +31,8 @@ type State appState
   = { name :: String
     , app :: App.Application appState
     , appState :: appState
-    , viewBox :: Dims.Dimensions Dims.ViewBox
-    , clientRect :: Maybe (Dims.Dimensions Dims.ClientRect)
+    , viewBox :: Dims.ViewBox
+    , clientRect :: Maybe Dims.ClientRect
     , canvas :: Maybe HTMLElement
     , context :: Maybe Context2D
     , scaler :: Maybe Dims.Scaler
@@ -55,7 +55,7 @@ newtype Input appState
   { name :: String
   , app :: App.Application appState
   , appState :: appState
-  , viewBox :: Dims.Dimensions Dims.ViewBox
+  , viewBox :: Dims.ViewBox
   }
 
 data Output appState
@@ -198,7 +198,7 @@ getCanvasElement name = do
   mcanvas <- getElementById name $ toNonElementParentNode doc
   pure $ mcanvas >>= fromElement
 
-getCanvasClientRect :: Maybe HTMLElement -> Effect (Maybe (Dims.Dimensions Dims.ClientRect))
+getCanvasClientRect :: Maybe HTMLElement -> Effect (Maybe Dims.ClientRect)
 getCanvasClientRect mcanvas = do
   (mbounding :: Maybe DOMRect) <- traverse getBoundingClientRect mcanvas
   pure $ Dims.fromDOMRect <$> mbounding
