@@ -56,11 +56,11 @@ init =
           $ App.defaultApp
               { window = App.fullscreen
               , render = Just renderFn
-              , viewBox =
-                Dims.fromPointAndSize
-                  Dims.origin
-                  (Dims.fromHeightAndRatio { height: 360.0, aspectRatio: AR.w16h9 })
               }
+    , viewBox:
+        Dims.fromPointAndSize
+          Dims.origin
+          (Dims.fromHeightAndRatio { height: 360.0, aspectRatio: AR.w16h9 })
     }
 
 renderFn :: App.RenderStyle AppState

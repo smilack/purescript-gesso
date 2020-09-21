@@ -18,7 +18,6 @@ module Gesso.Application
   , updateAppState
   , RequestFrame(..)
   , renderApp
-  , mkScaler
   ) where
 
 import Prelude
@@ -39,7 +38,6 @@ derive instance newtypeApplication :: Newtype (Application state) _
 type AppSpec state
   = { name :: String
     , window :: WindowStyle
-    , viewBox :: D.Dimensions D.ViewBox
     , render :: Maybe (RenderStyle state)
     , update :: Maybe (Update state)
     }
@@ -48,7 +46,6 @@ defaultApp :: forall state. AppSpec state
 defaultApp =
   { name: "screen"
   , window: Fixed D.sizeless
-  , viewBox: D.null
   , render: Nothing
   , update: Nothing
   }
@@ -139,6 +136,3 @@ renderApp appState delta scaler context (Application { render }) = go <$> render
       pure Continue
 
   run fn = liftEffect $ fn appState delta scaler context
-
-mkScaler :: forall state. D.Dimensions D.ClientRect -> Application state -> D.Scaler
-mkScaler clientRect (Application { viewBox }) = D.mkScaler viewBox clientRect

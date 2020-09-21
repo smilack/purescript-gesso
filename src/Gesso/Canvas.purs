@@ -31,6 +31,7 @@ type State appState
   = { name :: String
     , app :: App.Application appState
     , appState :: appState
+    , viewBox :: Dims.Dimensions Dims.ViewBox
     , clientRect :: Maybe (Dims.Dimensions Dims.ClientRect)
     , canvas :: Maybe HTMLElement
     , context :: Maybe Context2D
@@ -54,6 +55,7 @@ newtype Input appState
   { name :: String
   , app :: App.Application appState
   , appState :: appState
+  , viewBox :: Dims.Dimensions Dims.ViewBox
   }
 
 data Output appState
@@ -76,10 +78,11 @@ component =
     }
 
 initialState :: forall appState. Input appState -> State appState
-initialState (Input { name, app, appState }) =
+initialState (Input { name, app, appState, viewBox }) =
   { name
   , app
   , appState
+  , viewBox
   , clientRect: Nothing
   , canvas: Nothing
   , context: Nothing
@@ -130,7 +133,7 @@ handleAction = case _ of
 initialize :: forall appState slots output m. MonadAff m => H.HalogenM (State appState) (Action appState) slots output m Unit
 initialize = do
   resizeSub <- subscribeResize
-  { name, app } <- H.get
+  { name, viewBox } <- H.get
   mcontext <- H.liftEffect $ getContext name
   mcanvas <- H.liftEffect $ getCanvasElement name
   clientRect <- H.liftEffect $ getCanvasClientRect mcanvas
@@ -140,7 +143,7 @@ initialize = do
         , resizeSub = Just resizeSub
         , clientRect = clientRect
         , canvas = mcanvas
-        , scaler = App.mkScaler <$> clientRect <*> pure app
+        , scaler = Dims.mkScaler viewBox <$> clientRect
         }
     )
 
@@ -205,12 +208,12 @@ updateClientRect ::
   MonadAff m =>
   H.HalogenM (State appState) action slots output m Unit
 updateClientRect = do
-  { canvas, app } <- H.get
+  { canvas, viewBox } <- H.get
   clientRect <- H.liftEffect $ getCanvasClientRect canvas
   H.modify_
     ( _
         { clientRect = clientRect
-        , scaler = App.mkScaler <$> clientRect <*> pure app
+        , scaler = Dims.mkScaler viewBox <$> clientRect
         }
     )
 
