@@ -46,7 +46,7 @@ data Action appState
   | Finalize
   | HandleResize
   | Tick (Maybe (T.Timestamp T.Prev))
-  | StateTicked appState
+  | StateUpdatedByApp appState
   | MouseMoveEvent Dims.Point
 
 newtype Input appState
@@ -122,7 +122,9 @@ handleAction = case _ of
     { context, appState, app, scaler } <- H.get
     queueAnimationFrame mLastTime context scaler appState app
   Finalize -> unsubscribeResize
-  StateTicked appState -> H.raise $ StateUpdated appState
+  StateUpdatedByApp appState -> do
+    H.modify_ (_ { appState = appState })
+    H.raise $ StateUpdated appState
   MouseMoveEvent p -> H.raise $ MouseMove p
 
 initialize :: forall appState slots output m. MonadAff m => H.HalogenM (State appState) (Action appState) slots output m Unit
@@ -166,7 +168,7 @@ queueAnimationFrame mLastTime context scaler appState app = do
       mdelta = T.delta timestamp <$> mLastTime
 
       mstate = join $ App.updateAppState <$> mdelta <*> pure appState <*> pure app
-    traverse_ (ES.emit emitter <<< StateTicked) mstate
+    traverse_ (ES.emit emitter <<< StateUpdatedByApp) mstate
     anotherFrame <-
       sequence $ join
         $ App.renderApp
