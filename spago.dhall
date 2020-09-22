@@ -13,6 +13,7 @@ You can edit this file as you like.
   , "halogen-hooks"
   , "newtype"
   , "psci-support"
+  , "record"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

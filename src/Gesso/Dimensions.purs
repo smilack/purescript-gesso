@@ -34,6 +34,7 @@ module Gesso.Dimensions
 import Prelude
 import CSS as CSS
 import Data.Int (round, toNumber)
+import Record (union)
 import Gesso.AspectRatio (AspectRatio)
 import Gesso.AspectRatio as AR
 import Halogen.HTML.Properties as HP
@@ -259,6 +260,12 @@ type Scaler
         , width :: Number
         , height :: Number
         }
+    , toVb ::
+        { x' :: Number -> Number
+        , y' :: Number -> Number
+        , x_ :: Number -> Number
+        , y_ :: Number -> Number
+        }
     }
 
 mkScaler :: ViewBox -> ClientRect -> Scaler
@@ -277,6 +284,7 @@ mkScaler viewBox clientRect =
       , width: getWidth clientRect
       , height: getHeight clientRect
       }
+  , toVb: union toVb' toVb_
   }
   where
   actualVB = largestContainedArea (getRatio viewBox) clientRect
@@ -298,6 +306,16 @@ mkScaler viewBox clientRect =
   y' = (_ + margin.h) <<< h'
 
   h' = (_ / c.y) <<< (_ - getY viewBox)
+
+  toVb' =
+    { x': (_ - getX clientRect)
+    , y': (_ - getY clientRect)
+    }
+
+  toVb_ =
+    { x_: Math.round <<< toVb'.x'
+    , y_: Math.round <<< toVb'.y'
+    }
 
 ---------------
 -- Constants --
