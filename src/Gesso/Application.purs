@@ -94,10 +94,14 @@ updateFn = Update
 
 windowCss :: forall state. Application state -> CSS.CSS
 windowCss (Application { window }) = case window of
-  Fixed size -> pure mempty
-  Stretch -> pure mempty
+  Fixed size -> D.toSizeCss size
+  Stretch -> stretched
   Fullscreen -> full
   where
+  stretched = do
+    CSS.width $ CSS.pct 100.0
+    CSS.height $ CSS.pct 100.0
+
   full = do
     CSS.width $ CSS.pct 100.0
     CSS.height $ CSS.pct 100.0
