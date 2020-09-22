@@ -18,6 +18,7 @@ module Gesso.Application
   , updateAppState
   , RequestFrame(..)
   , renderApp
+  , renderOnUpdate
   ) where
 
 import Prelude
@@ -136,3 +137,9 @@ renderApp appState delta scaler context (Application { render }) = go <$> render
       pure Continue
 
   run fn = liftEffect $ fn appState delta scaler context
+
+renderOnUpdate :: forall state. Application state -> RequestFrame
+renderOnUpdate (Application { render }) = case render of
+  Just (OnChange _) -> Continue
+  Just (Continuous _) -> Stop
+  Nothing -> Stop

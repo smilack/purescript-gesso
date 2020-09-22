@@ -103,12 +103,16 @@ getCursorCoordinates :: forall appState. MouseEvent -> Maybe (Action appState)
 getCursorCoordinates = Just <<< MouseMoveEvent <<< Dims.fromMouseEvent
 
 handleQuery ::
-  forall appState a slots output m.
+  forall appState a slots m.
   MonadAff m =>
   Query appState a ->
-  H.HalogenM (State appState) (Action appState) slots output m (Maybe a)
+  H.HalogenM (State appState) (Action appState) slots (Output appState) m (Maybe a)
 handleQuery (UpdateAppState appState a) = do
   H.modify_ (_ { appState = appState })
+  app <- H.gets _.app
+  case App.renderOnUpdate app of
+    App.Stop -> pure unit
+    App.Continue -> handleAction $ Tick Nothing
   pure $ Just a
 
 handleAction ::
