@@ -46,7 +46,7 @@ data Action appState
   = Initialize
   | Finalize
   | HandleResize
-  | Tick (Maybe (T.Timestamp T.Prev))
+  | Tick (Maybe T.TimestampPrevious)
   | StateUpdatedByApp appState
   | MouseMoveEvent Dims.Point
 
@@ -154,7 +154,7 @@ initialize = do
 queueAnimationFrame ::
   forall appState slots output m.
   MonadAff m =>
-  Maybe (T.Timestamp T.Prev) ->
+  Maybe (T.TimestampPrevious) ->
   Maybe Context2D ->
   Maybe Dims.Scaler ->
   appState ->
@@ -169,7 +169,7 @@ queueAnimationFrame mLastTime context scaler appState app = do
     _ <- T.requestAnimationFrame (rafCallback emitter) =<< window
     mempty
 
-  rafCallback :: ES.Emitter Effect (Action appState) -> T.Timestamp T.Now -> Effect Unit
+  rafCallback :: ES.Emitter Effect (Action appState) -> T.TimestampCurrent -> Effect Unit
   rafCallback emitter timestamp = do
     let
       mdelta = T.delta timestamp <$> mLastTime
