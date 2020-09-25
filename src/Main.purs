@@ -16,11 +16,11 @@ import Effect.Aff.Class (liftAff)
 import Effect.Now (nowTime)
 import Effect.Ref as Ref
 import Gesso.Application as App
-import Gesso.AppM (AppM, runAppM, getState, putState)
+import Gesso.GessoM (GessoM, runGessoM, getState, putState)
 import Gesso.AspectRatio as AR
 import Gesso.Canvas as GC
 import Gesso.Dimensions as Dims
-import Gesso.Env (Env)
+import Gesso.Environment (Environment)
 import Gesso.Time as T
 import Graphics.Canvas as Canvas
 import Halogen as H
@@ -38,17 +38,17 @@ main =
     body <- awaitBody
     appState <- H.liftEffect $ Ref.new initialState
     let
-      environment :: Env AppState
+      environment :: Environment AppState ()
       environment = { appState }
 
       rootComponent :: H.Component HH.HTML (GC.Query AppState) (GC.Input AppState) (GC.Output AppState) Aff
-      rootComponent = H.hoist (runAppM environment) GC.component
+      rootComponent = H.hoist (runGessoM environment) GC.component
     -- mio <- traverse (runUI rootComponent init) mdiv
     io <- runUI rootComponent init body
-    io.subscribe $ CR.consumer $ runAppM environment <<< (subCallback io.query)
+    io.subscribe $ CR.consumer $ runGessoM environment <<< (subCallback io.query)
     pure unit
   where
-  subCallback :: forall r. (GC.Query AppState Unit -> Aff (Maybe Unit)) -> GC.Output AppState -> AppM AppState (Maybe r)
+  subCallback :: forall r. (GC.Query AppState Unit -> Aff (Maybe Unit)) -> GC.Output AppState -> GessoM AppState () (Maybe r)
   subCallback query = case _ of
     GC.StateUpdated appState' -> do
       putState appState'

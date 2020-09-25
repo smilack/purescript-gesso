@@ -1,4 +1,4 @@
-module Gesso.GessoM where
+module Gesso.GessoM (GessoM, runGessoM, class ManageState, getState, putState) where
 
 import Prelude
 import Control.Monad.Reader.Trans (ReaderT, runReaderT, class MonadAsk, asks, ask)
