@@ -2,7 +2,6 @@ module Main where
 
 import Prelude
 import Control.Coroutine as CR
-import Control.Monad.Free.Trans (hoistFreeT)
 import Data.Array (range)
 import Data.Enum (fromEnum)
 import Data.Foldable (traverse_, sequence_)
@@ -13,11 +12,11 @@ import Data.Time as Time
 import Debug.Trace (trace, traceM, spy)
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Effect.Aff.Class (liftAff, class MonadAff)
+import Effect.Aff.Class (liftAff)
 import Effect.Now (nowTime)
 import Effect.Ref as Ref
 import Gesso.Application as App
-import Gesso.AppM (AppM, runAppM, getState, putState, class ManageState)
+import Gesso.AppM (AppM, runAppM, getState, putState)
 import Gesso.AspectRatio as AR
 import Gesso.Canvas as GC
 import Gesso.Dimensions as Dims
@@ -28,23 +27,9 @@ import Halogen as H
 import Halogen.Aff (awaitBody, runHalogenAff)
 -- import Halogen.Aff (runHalogenAff, awaitLoad, selectElement)
 import Halogen.HTML as HH
-import Halogen.Query.HalogenM as HalM
 import Halogen.VDom.Driver (runUI)
 import Math (cos, sin)
 
--- import Web.DOM.ParentNode (QuerySelector(..))
--- runUI :: 
---   forall query input output. 
---   Component HTML query input output Aff -> 
---   input -> 
---   HTMLElement -> 
---   Aff (HalogenIO query output Aff)
--- hoist ::
---   forall surface query input output m Aff.
---   Bifunctor surface => Functor Aff =>
---   (m ~> Aff) ->
---   Component surface query input output m -> 
---   Component surface query input output Aff
 main :: Effect Unit
 main =
   runHalogenAff do
@@ -60,41 +45,25 @@ main =
       rootComponent = H.hoist (runAppM environment) GC.component
     -- mio <- traverse (runUI rootComponent init) mdiv
     io <- runUI rootComponent init body
-    -- ( (runAppM environment :: AppM AppState ~> Aff)
-    -- $ 
-    (io.subscribe :: CR.Consumer (GC.Output AppState) Aff Unit -> Aff Unit)
-      $ (CR.consumer :: (GC.Output AppState -> Aff (Maybe Unit)) -> CR.Consumer (GC.Output AppState) Aff Unit)
-      $ (subCallback (runAppM environment) io.query :: GC.Output AppState -> Aff (Maybe Unit))
+    io.subscribe $ CR.consumer $ runAppM environment <<< (subCallback io.query)
     pure unit
   where
-  --
-  -- subscribe :: Control.Coroutine.Consumer (GC.Output AppState) (AppM AppState) Unit -> AppM AppState Unit
-  -- consumer :: forall r. (GC.Output AppState -> AppM AppState (Maybe r)) -> Consumer (GC.Output AppState) (AppM AppState) r
-  -- consumer :: H.HalogenIO (GC.Query AppState) (GC.Output AppState) (AppM AppState) -> CR.Consumer (GC.Output AppState) (AppM AppState) Unit
-  -- consumer = CR.consumer <<< subCallback
-  subCallback :: (AppM AppState ~> Aff) -> (GC.Query AppState Unit -> Aff (Maybe Unit)) -> GC.Output AppState -> Aff (Maybe Unit)
-  subCallback nat query out =
-    nat
-      $ case out of
-          GC.StateUpdated appState' -> do
-            (putState appState' :: AppM AppState Unit)
-            pure Nothing
-          GC.MouseMove p -> do
-            let
-              x = Dims.getX p
+  subCallback :: forall r. (GC.Query AppState Unit -> Aff (Maybe Unit)) -> GC.Output AppState -> AppM AppState (Maybe r)
+  subCallback query = case _ of
+    GC.StateUpdated appState' -> do
+      putState appState'
+      pure Nothing
+    GC.MouseMove p -> do
+      let
+        x = Dims.getX p
 
-              y = Dims.getY p
-            appState <- (getState :: AppM AppState AppState)
-            let
-              appState' = appState { mouse = Just { x, y } }
-            (putState appState' :: AppM AppState Unit)
-            _ <-
-              (liftAff :: Aff (Maybe Unit) -> AppM AppState (Maybe Unit))
-                $ (query :: GC.Query AppState Unit -> Aff (Maybe Unit))
-                $ (H.tell :: (Unit -> GC.Query AppState Unit) -> GC.Query AppState Unit)
-                $ (GC.UpdateAppState :: AppState -> Unit -> GC.Query AppState Unit)
-                $ (appState' :: AppState)
-            pure Nothing
+        y = Dims.getY p
+      appState <- getState
+      let
+        appState' = appState { mouse = Just { x, y } }
+      putState appState'
+      _ <- liftAff $ query $ H.tell $ GC.UpdateAppState appState'
+      pure Nothing
 
 type AppState
   = { color :: String
@@ -124,7 +93,7 @@ init =
     }
 
 renderFn :: App.RenderStyle AppState
-renderFn = App.continuous render
+renderFn = App.onChange render
   where
   render :: AppState -> T.Delta -> Dims.Scaler -> Canvas.Context2D -> Effect Unit
   render { color, mouse } { now } { x_, y_, w_, h_, screen, toVb } context = do
