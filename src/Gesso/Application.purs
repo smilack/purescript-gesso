@@ -37,16 +37,14 @@ newtype Application state
 derive instance newtypeApplication :: Newtype (Application state) _
 
 type AppSpec state
-  = { name :: String
-    , window :: WindowStyle
+  = { window :: WindowStyle
     , render :: Maybe (RenderStyle state)
     , update :: Maybe (Update state)
     }
 
 defaultApp :: forall state. AppSpec state
 defaultApp =
-  { name: "screen"
-  , window: Fixed D.sizeless
+  { window: Fixed D.sizeless
   , render: Nothing
   , update: Nothing
   }
