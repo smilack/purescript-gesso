@@ -1,4 +1,8 @@
-module Gesso.Canvas where
+module Gesso.Canvas
+  ( component
+  , Input
+  , Action
+  ) where
 
 import Prelude
 import Control.Alt ((<|>))
@@ -44,9 +48,6 @@ type State appState
     , interactions :: GI.Interactions appState (Action appState)
     }
 
-data Query appState a
-  = UpdateAppState appState a
-
 data Action appState
   = Initialize
   | HandleStateBus appState
@@ -57,23 +58,19 @@ data Action appState
   | InteractionTriggered (appState -> appState)
   | MaybeTick
 
-newtype Input appState
-  = Input
-  { name :: String
-  , app :: App.Application appState
-  , appState :: appState
-  , viewBox :: Dims.ViewBox
-  , interactions :: GI.Interactions appState (Action appState)
-  }
-
-data Output appState
-  = StateUpdated appState
+type Input appState
+  = { name :: String
+    , app :: App.Application appState
+    , appState :: appState
+    , viewBox :: Dims.ViewBox
+    , interactions :: GI.Interactions appState (Action appState)
+    }
 
 component ::
-  forall appState m.
+  forall appState query output m.
   MonadAff m =>
   ManageState m appState =>
-  H.Component HTML (Query appState) (Input appState) (Output appState) m
+  H.Component HTML query (Input appState) output m
 component =
   H.mkComponent
     { initialState
@@ -82,7 +79,6 @@ component =
         H.mkEval
           $ H.defaultEval
               { handleAction = handleAction
-              , handleQuery = handleQuery
               , initialize = Just Initialize
               , finalize = Just Finalize
               }
@@ -92,7 +88,7 @@ initialState ::
   forall appState.
   Input appState ->
   State appState
-initialState (Input { name, app, appState, viewBox, interactions }) =
+initialState { name, app, appState, viewBox, interactions } =
   { name
   , app
   , appState
@@ -115,23 +111,12 @@ render { name, clientRect, app, interactions } =
     <> GI.toProps (Just <<< InteractionTriggered) interactions
     <> maybe [] Dims.toSizeProps clientRect
 
-handleQuery ::
-  forall appState a slots m.
-  MonadAff m =>
-  ManageState m appState =>
-  Query appState a ->
-  H.HalogenM (State appState) (Action appState) slots (Output appState) m (Maybe a)
-handleQuery (UpdateAppState appState a) = do
-  H.modify_ (_ { appState = appState })
-  handleAction MaybeTick
-  pure $ Just a
-
 handleAction ::
-  forall appState slots m.
+  forall appState slots output m.
   MonadAff m =>
   ManageState m appState =>
   (Action appState) ->
-  H.HalogenM (State appState) (Action appState) slots (Output appState) m Unit
+  H.HalogenM (State appState) (Action appState) slots output m Unit
 handleAction = case _ of
   Initialize -> do
     initialize

@@ -42,7 +42,7 @@ main =
       environment :: Environment AppState ()
       environment = { appState, stateBus }
 
-      rootComponent :: H.Component HH.HTML (GC.Query AppState) (GC.Input AppState) (GC.Output AppState) Aff
+      rootComponent :: forall q o. H.Component HH.HTML q (GC.Input AppState) o Aff
       rootComponent = H.hoist (runGessoM environment) GC.component
     -- mio <- traverse (runUI rootComponent init) mdiv
     io <- runUI rootComponent init body
@@ -65,23 +65,22 @@ initialState = { color: "blue", mousePos: Nothing }
 
 init :: GC.Input AppState
 init =
-  GC.Input
-    { name: "test-app"
-    , appState: initialState
-    , app:
-        App.mkApplication
-          $ App.defaultApp
-              -- { window = App.stretch 
-              { window = App.fullscreen
-              -- { window = App.fixed (Dims.fromWidthAndHeight { width: 100.0, height: 100.0 })
-              , render = Just renderFn
-              }
-    , viewBox:
-        Dims.fromPointAndSize
-          Dims.origin
-          (Dims.fromHeightAndRatio { height: 360.0, aspectRatio: AR.w16h9 })
-    , interactions: GI.default { mouse = [ GI.mousePosition ] }
-    }
+  { name: "test-app"
+  , appState: initialState
+  , app:
+      App.mkApplication
+        $ App.defaultApp
+            -- { window = App.stretch
+            { window = App.fullscreen
+            -- { window = App.fixed (Dims.fromWidthAndHeight { width: 100.0, height: 100.0 })
+            , render = Just renderFn
+            }
+  , viewBox:
+      Dims.fromPointAndSize
+        Dims.origin
+        (Dims.fromHeightAndRatio { height: 360.0, aspectRatio: AR.w16h9 })
+  , interactions: GI.default { mouse = [ GI.mousePosition ] }
+  }
 
 renderFn :: App.RenderStyle AppState
 renderFn = App.continuous render
