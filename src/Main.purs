@@ -14,6 +14,7 @@ import Effect.Aff (Aff)
 import Effect.Aff.Bus as Bus
 import Effect.Now (nowTime)
 import Effect.Ref as Ref
+import Gesso as G
 import Gesso.Application as App
 import Gesso.GessoM (runGessoM)
 import Gesso.AspectRatio as AR
@@ -32,29 +33,33 @@ import Math (cos, sin)
 
 main :: Effect Unit
 main =
-  runHalogenAff do
-    -- awaitLoad
-    -- mdiv <- selectElement $ QuerySelector "#app"
-    body <- awaitBody
-    appState <- H.liftEffect $ Ref.new initialState
-    stateBus <- H.liftEffect Bus.make
-    let
-      environment :: Environment AppState ()
-      environment = { appState, stateBus }
+  G.runGessoAff do
+    body <- G.awaitBody
+    G.run GC.component init body
 
-      rootComponent :: forall q o. H.Component HH.HTML q (GC.Input AppState) o Aff
-      rootComponent = H.hoist (runGessoM environment) GC.component
-    -- mio <- traverse (runUI rootComponent init) mdiv
-    io <- runUI rootComponent init body
-    -- runGessoM environment do
-    --   state <- getState
-    --   putState $ state { color = "green" }
-    --   bus <- getBus
-    --   nextState <- liftAff $ Bus.read bus
-    --   putState $ nextState { color = "purple" }
-    --   traceM nextState
-    pure unit
-
+-- main :: Effect Unit
+-- main =
+--   runHalogenAff do
+--     -- awaitLoad
+--     -- mdiv <- selectElement $ QuerySelector "#app"
+--     body <- awaitBody
+--     appState <- H.liftEffect $ Ref.new initialState
+--     stateBus <- H.liftEffect Bus.make
+--     let
+--       environment :: Environment AppState ()
+--       environment = { appState, stateBus }
+--       rootComponent :: forall q o. H.Component HH.HTML q (GC.Input AppState) o Aff
+--       rootComponent = H.hoist (runGessoM environment) GC.component
+--     -- mio <- traverse (runUI rootComponent init) mdiv
+--     io <- runUI rootComponent init body
+--     -- runGessoM environment do
+--     --   state <- getState
+--     --   putState $ state { color = "green" }
+--     --   bus <- getBus
+--     --   nextState <- liftAff $ Bus.read bus
+--     --   putState $ nextState { color = "purple" }
+--     --   traceM nextState
+--     pure unit
 type AppState
   = { color :: String
     , mousePos :: Maybe { x :: Number, y :: Number }
