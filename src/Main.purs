@@ -12,6 +12,7 @@ import Data.Time as Time
 import Debug.Trace (trace, traceM, spy)
 import Effect (Effect)
 import Effect.Aff (Aff)
+import Effect.Aff.Bus as Bus
 import Effect.Aff.Class (liftAff)
 import Effect.Now (nowTime)
 import Effect.Ref as Ref
@@ -38,9 +39,10 @@ main =
     -- mdiv <- selectElement $ QuerySelector "#app"
     body <- awaitBody
     appState <- H.liftEffect $ Ref.new initialState
+    stateBus <- H.liftEffect Bus.make
     let
       environment :: Environment AppState ()
-      environment = { appState }
+      environment = { appState, stateBus }
 
       rootComponent :: H.Component HH.HTML (GC.Query AppState) (GC.Input AppState) (GC.Output AppState) Aff
       rootComponent = H.hoist (runGessoM environment) GC.component

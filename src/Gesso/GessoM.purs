@@ -4,7 +4,8 @@ import Prelude
 import Control.Monad.Reader.Trans (ReaderT, runReaderT, class MonadAsk, asks, ask)
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Aff (Aff)
-import Effect.Aff.Class (class MonadAff)
+import Effect.Aff.Bus as Bus
+import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Ref as Ref
 import Gesso.Environment (Environment)
 import Halogen (HalogenM, lift)
@@ -49,3 +50,4 @@ instance manageStateGessoM :: ManageState (GessoM appState more) appState where
   putState appState' = do
     env <- ask
     liftEffect $ Ref.write appState' env.appState
+    liftAff $ Bus.write appState' env.stateBus
