@@ -1,4 +1,11 @@
-module Gesso.GessoM (GessoM, runGessoM, class ManageState, getState, putState) where
+module Gesso.GessoM
+  ( GessoM
+  , runGessoM
+  , class ManageState
+  , getBus
+  , getState
+  , putState
+  ) where
 
 import Prelude
 import Control.Monad.Reader.Trans (ReaderT, runReaderT, class MonadAsk, asks, ask)
@@ -36,14 +43,19 @@ instance monadAskGessoM :: TypeEquals e (Environment appState more) => MonadAsk 
 
 class
   Monad m <= ManageState m a | m -> a where
+  getBus :: m (Bus.BusRW a)
   getState :: m a
   putState :: a -> m Unit
 
 instance manageStateHalogenM :: ManageState m appState => ManageState (HalogenM state action slots output m) appState where
+  getBus = lift getBus
   getState = lift getState
   putState = lift <<< putState
 
 instance manageStateGessoM :: ManageState (GessoM appState more) appState where
+  getBus = do
+    env <- ask
+    pure env.stateBus
   getState = do
     env <- ask
     liftEffect $ Ref.read env.appState
