@@ -2,12 +2,15 @@ module Gesso.Canvas where
 
 import Prelude
 import Control.Alt ((<|>))
+import Control.Monad.Rec.Class (forever)
 import Data.Foldable (traverse_)
 import Data.Function (on)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Traversable (traverse, sequence)
 import Debug.Trace (trace, traceM, spy)
 import Effect (Effect)
+import Effect.Aff as Aff
+import Effect.Aff.Bus as Bus
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as App
 import Gesso.Dimensions as Dims
@@ -46,9 +49,10 @@ data Query appState a
 
 data Action appState
   = Initialize
-  | Finalize
+  | HandleStateBus appState
   | HandleResize
   | Tick (Maybe T.TimestampPrevious)
+  | Finalize
   | StateUpdatedInTick appState
   | InteractionTriggered (appState -> appState)
   | MaybeTick
@@ -132,6 +136,7 @@ handleAction = case _ of
   Initialize -> do
     initialize
     handleAction $ Tick Nothing
+  HandleStateBus appState -> H.modify_ (_ { appState = appState })
   HandleResize -> updateClientRect
   Tick mLastTime -> do
     { context, appState, app, scaler } <- H.get
@@ -160,6 +165,8 @@ initialize ::
   ManageState m appState =>
   H.HalogenM (State appState) (Action appState) slots output m Unit
 initialize = do
+  stateBus <- GM.getBus
+  _ <- H.subscribe $ HandleStateBus <$> busEventSource stateBus
   resizeSub <- subscribeResize
   { name, viewBox } <- H.get
   mcontext <- H.liftEffect $ getContext name
@@ -264,3 +271,14 @@ subscribeResize = do
         (EventType "resize")
         (toEventTarget wnd)
         (const $ Just HandleResize)
+
+busEventSource ::
+  forall appState m r.
+  MonadAff m =>
+  ManageState m appState =>
+  Bus.BusR' r appState ->
+  ES.EventSource m appState
+busEventSource bus =
+  ES.affEventSource \emitter -> do
+    fiber <- Aff.forkAff $ forever $ ES.emit emitter =<< Bus.read bus
+    pure $ ES.Finalizer (Aff.killFiber (Aff.error "Event source closed") fiber)

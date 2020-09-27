@@ -48,14 +48,14 @@ main =
       rootComponent = H.hoist (runGessoM environment) GC.component
     -- mio <- traverse (runUI rootComponent init) mdiv
     io <- runUI rootComponent init body
-    io.subscribe $ CR.consumer $ runGessoM environment <<< (subCallback io.query)
+    -- io.subscribe $ CR.consumer $ runGessoM environment <<< (subCallback io.query)
     pure unit
-  where
-  subCallback :: forall r. (GC.Query AppState Unit -> Aff (Maybe Unit)) -> GC.Output AppState -> GessoM AppState () (Maybe r)
-  subCallback query = case _ of
-    GC.StateUpdated appState' -> do
-      pure Nothing
 
+-- where
+-- subCallback :: forall r. (GC.Query AppState Unit -> Aff (Maybe Unit)) -> GC.Output AppState -> GessoM AppState () (Maybe r)
+-- subCallback query = case _ of
+--   GC.StateUpdated appState' -> do
+--     pure Nothing
 type AppState
   = { color :: String
     , mousePos :: Maybe { x :: Number, y :: Number }
