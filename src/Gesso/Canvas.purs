@@ -11,12 +11,14 @@ import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as App
 import Gesso.Dimensions as Dims
+import Gesso.GessoM (class ManageState)
+import Gesso.GessoM as GM
+import Gesso.Interactions as GI
 import Gesso.Time as T
 import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
 import Halogen as H
 import Halogen.HTML (HTML, memoized, canvas)
 import Halogen.HTML.CSS (style)
-import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties (id_)
 import Halogen.Query.EventSource as ES
 import Web.DOM.NonElementParentNode (getElementById)
@@ -25,7 +27,6 @@ import Web.HTML (window)
 import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.HTMLElement (getBoundingClientRect, fromElement, HTMLElement, DOMRect)
 import Web.HTML.Window (toEventTarget, document)
-import Web.UIEvent.MouseEvent (MouseEvent)
 
 type State appState
   = { name :: String
@@ -37,6 +38,7 @@ type State appState
     , context :: Maybe Context2D
     , scaler :: Maybe Dims.Scaler
     , resizeSub :: Maybe H.SubscriptionId
+    , interactions :: GI.Interactions appState (Action appState)
     }
 
 data Query appState a
@@ -47,8 +49,9 @@ data Action appState
   | Finalize
   | HandleResize
   | Tick (Maybe T.TimestampPrevious)
-  | StateUpdatedByApp appState
-  | MouseMoveEvent Dims.Point
+  | StateUpdatedInTick appState
+  | InteractionTriggered (appState -> appState)
+  | MaybeTick
 
 newtype Input appState
   = Input
@@ -56,13 +59,17 @@ newtype Input appState
   , app :: App.Application appState
   , appState :: appState
   , viewBox :: Dims.ViewBox
+  , interactions :: GI.Interactions appState (Action appState)
   }
 
 data Output appState
   = StateUpdated appState
-  | MouseMove Dims.Point
 
-component :: forall appState m. MonadAff m => H.Component HTML (Query appState) (Input appState) (Output appState) m
+component ::
+  forall appState m.
+  MonadAff m =>
+  ManageState m appState =>
+  H.Component HTML (Query appState) (Input appState) (Output appState) m
 component =
   H.mkComponent
     { initialState
@@ -77,8 +84,11 @@ component =
               }
     }
 
-initialState :: forall appState. Input appState -> State appState
-initialState (Input { name, app, appState, viewBox }) =
+initialState ::
+  forall appState.
+  Input appState ->
+  State appState
+initialState (Input { name, app, appState, viewBox, interactions }) =
   { name
   , app
   , appState
@@ -88,36 +98,34 @@ initialState (Input { name, app, appState, viewBox }) =
   , context: Nothing
   , scaler: Nothing
   , resizeSub: Nothing
+  , interactions
   }
 
-render :: forall appState slots m. State appState -> H.ComponentHTML (Action appState) slots m
-render { name, clientRect, app } =
+render ::
+  forall appState slots m.
+  State appState ->
+  H.ComponentHTML (Action appState) slots m
+render { name, clientRect, app, interactions } =
   canvas
-    $ [ id_ name
-      , HE.onMouseMove getCursorCoordinates
-      , style $ App.windowCss app
-      ]
+    $ [ id_ name, style $ App.windowCss app ]
+    <> GI.toProps (Just <<< InteractionTriggered) interactions
     <> maybe [] Dims.toSizeProps clientRect
-
-getCursorCoordinates :: forall appState. MouseEvent -> Maybe (Action appState)
-getCursorCoordinates = Just <<< MouseMoveEvent <<< Dims.fromMouseEvent
 
 handleQuery ::
   forall appState a slots m.
   MonadAff m =>
+  ManageState m appState =>
   Query appState a ->
   H.HalogenM (State appState) (Action appState) slots (Output appState) m (Maybe a)
 handleQuery (UpdateAppState appState a) = do
   H.modify_ (_ { appState = appState })
-  app <- H.gets _.app
-  case App.renderOnUpdate app of
-    App.Stop -> pure unit
-    App.Continue -> handleAction $ Tick Nothing
+  handleAction MaybeTick
   pure $ Just a
 
 handleAction ::
   forall appState slots m.
   MonadAff m =>
+  ManageState m appState =>
   (Action appState) ->
   H.HalogenM (State appState) (Action appState) slots (Output appState) m Unit
 handleAction = case _ of
@@ -129,12 +137,28 @@ handleAction = case _ of
     { context, appState, app, scaler } <- H.get
     queueAnimationFrame mLastTime context scaler appState app
   Finalize -> unsubscribeResize
-  StateUpdatedByApp appState -> do
+  StateUpdatedInTick appState -> do
     H.modify_ (_ { appState = appState })
-    H.raise $ StateUpdated appState
-  MouseMoveEvent p -> H.raise $ MouseMove p
+    GM.putState appState
+    handleAction MaybeTick
+  InteractionTriggered updateFn -> do
+    appState <- H.gets _.appState
+    let
+      appState' = updateFn appState
+    H.modify_ (_ { appState = appState' })
+    GM.putState appState'
+    handleAction MaybeTick
+  MaybeTick -> do
+    app <- H.gets _.app
+    case App.renderOnUpdate app of
+      App.Stop -> pure unit
+      App.Continue -> handleAction $ Tick Nothing
 
-initialize :: forall appState slots output m. MonadAff m => H.HalogenM (State appState) (Action appState) slots output m Unit
+initialize ::
+  forall appState slots output m.
+  MonadAff m =>
+  ManageState m appState =>
+  H.HalogenM (State appState) (Action appState) slots output m Unit
 initialize = do
   resizeSub <- subscribeResize
   { name, viewBox } <- H.get
@@ -175,7 +199,7 @@ queueAnimationFrame mLastTime context scaler appState app = do
       mdelta = T.delta timestamp <$> mLastTime
 
       mstate = join $ App.updateAppState <$> mdelta <*> pure appState <*> pure app
-    traverse_ (ES.emit emitter <<< StateUpdatedByApp) mstate
+    traverse_ (ES.emit emitter <<< StateUpdatedInTick) mstate
     anotherFrame <-
       sequence $ join
         $ App.renderApp

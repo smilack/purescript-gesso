@@ -21,6 +21,7 @@ import Gesso.AspectRatio as AR
 import Gesso.Canvas as GC
 import Gesso.Dimensions as Dims
 import Gesso.Environment (Environment)
+import Gesso.Interactions as GI
 import Gesso.Time as T
 import Graphics.Canvas as Canvas
 import Halogen as H
@@ -51,27 +52,26 @@ main =
   subCallback :: forall r. (GC.Query AppState Unit -> Aff (Maybe Unit)) -> GC.Output AppState -> GessoM AppState () (Maybe r)
   subCallback query = case _ of
     GC.StateUpdated appState' -> do
-      putState appState'
-      pure Nothing
-    GC.MouseMove p -> do
-      let
-        x = Dims.getX p
-
-        y = Dims.getY p
-      appState <- getState
-      let
-        appState' = appState { mouse = Just { x, y } }
-      putState appState'
-      _ <- liftAff $ query $ H.tell $ GC.UpdateAppState appState'
+      -- putState appState'
       pure Nothing
 
+-- GC.MouseMove p -> do
+--   let
+--     x = Dims.getX p
+--     y = Dims.getY p
+--   appState <- getState
+--   let
+--     appState' = appState { mousePos = Just { x, y } }
+--   putState appState'
+--   _ <- liftAff $ query $ H.tell $ GC.UpdateAppState appState'
+--   pure Nothing
 type AppState
   = { color :: String
-    , mouse :: Maybe { x :: Number, y :: Number }
+    , mousePos :: Maybe { x :: Number, y :: Number }
     }
 
 initialState :: AppState
-initialState = { color: "blue", mouse: Nothing }
+initialState = { color: "blue", mousePos: Nothing }
 
 init :: GC.Input AppState
 init =
@@ -90,13 +90,14 @@ init =
         Dims.fromPointAndSize
           Dims.origin
           (Dims.fromHeightAndRatio { height: 360.0, aspectRatio: AR.w16h9 })
+    , interactions: GI.default { mouse = [ GI.mousePosition ] }
     }
 
 renderFn :: App.RenderStyle AppState
 renderFn = App.onChange render
   where
   render :: AppState -> T.Delta -> Dims.Scaler -> Canvas.Context2D -> Effect Unit
-  render { color, mouse } { now } { x_, y_, w_, h_, screen, toVb } context = do
+  render { color, mousePos } { now } { x_, y_, w_, h_, screen, toVb } context = do
     Canvas.setLineWidth context 3.0
     Canvas.setFillStyle context "#FFDDDD"
     Canvas.setStrokeStyle context "#00FF00"
@@ -114,7 +115,7 @@ renderFn = App.onChange render
       , width: w_ 10.0
       , height: h_ 10.0
       }
-    traverse_ (Canvas.fillRect context) (mouseRect <$> mouse)
+    traverse_ (Canvas.fillRect context) (mouseRect <$> mousePos)
     time <- nowTime
     let
       clock = { x: x_ 300.0, y: y_ 175.0 }
@@ -149,6 +150,7 @@ renderFn = App.onChange render
       Canvas.moveTo context clock.x clock.y
       Canvas.lineTo context min.x min.y
     Canvas.setStrokeStyle context "red"
+    Canvas.setLineWidth context 1.0
     Canvas.strokePath context do
       Canvas.moveTo context clock.x clock.y
       Canvas.lineTo context sec.x sec.y
