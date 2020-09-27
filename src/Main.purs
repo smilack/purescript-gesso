@@ -1,7 +1,6 @@
 module Main where
 
 import Prelude
-import Control.Coroutine as CR
 import Data.Array (range)
 import Data.Enum (fromEnum)
 import Data.Foldable (traverse_, sequence_)
@@ -13,11 +12,10 @@ import Debug.Trace (trace, traceM, spy)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff.Bus as Bus
-import Effect.Aff.Class (liftAff)
 import Effect.Now (nowTime)
 import Effect.Ref as Ref
 import Gesso.Application as App
-import Gesso.GessoM (GessoM, runGessoM, getState, putState)
+import Gesso.GessoM (runGessoM)
 import Gesso.AspectRatio as AR
 import Gesso.Canvas as GC
 import Gesso.Dimensions as Dims
@@ -48,14 +46,15 @@ main =
       rootComponent = H.hoist (runGessoM environment) GC.component
     -- mio <- traverse (runUI rootComponent init) mdiv
     io <- runUI rootComponent init body
-    -- io.subscribe $ CR.consumer $ runGessoM environment <<< (subCallback io.query)
+    -- runGessoM environment do
+    --   state <- getState
+    --   putState $ state { color = "green" }
+    --   bus <- getBus
+    --   nextState <- liftAff $ Bus.read bus
+    --   putState $ nextState { color = "purple" }
+    --   traceM nextState
     pure unit
 
--- where
--- subCallback :: forall r. (GC.Query AppState Unit -> Aff (Maybe Unit)) -> GC.Output AppState -> GessoM AppState () (Maybe r)
--- subCallback query = case _ of
---   GC.StateUpdated appState' -> do
---     pure Nothing
 type AppState
   = { color :: String
     , mousePos :: Maybe { x :: Number, y :: Number }
