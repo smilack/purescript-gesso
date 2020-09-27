@@ -52,19 +52,8 @@ main =
   subCallback :: forall r. (GC.Query AppState Unit -> Aff (Maybe Unit)) -> GC.Output AppState -> GessoM AppState () (Maybe r)
   subCallback query = case _ of
     GC.StateUpdated appState' -> do
-      -- putState appState'
       pure Nothing
 
--- GC.MouseMove p -> do
---   let
---     x = Dims.getX p
---     y = Dims.getY p
---   appState <- getState
---   let
---     appState' = appState { mousePos = Just { x, y } }
---   putState appState'
---   _ <- liftAff $ query $ H.tell $ GC.UpdateAppState appState'
---   pure Nothing
 type AppState
   = { color :: String
     , mousePos :: Maybe { x :: Number, y :: Number }
@@ -94,7 +83,8 @@ init =
     }
 
 renderFn :: App.RenderStyle AppState
-renderFn = App.onChange render
+renderFn = App.continuous render
+  -- renderFn = App.onChange render
   where
   render :: AppState -> T.Delta -> Dims.Scaler -> Canvas.Context2D -> Effect Unit
   render { color, mousePos } { now } { x_, y_, w_, h_, screen, toVb } context = do
