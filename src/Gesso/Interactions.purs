@@ -26,44 +26,6 @@ type Handler event appState
 data Interaction event appState i
   = Interaction (EventProp event i) (Handler event appState)
 
-mkInteraction ::
-  forall event appState i.
-  EventProp event i -> Handler event appState -> Interaction event appState i
-mkInteraction = Interaction
-
-mousePosition ::
-  forall moreState i.
-  Interaction MouseEvent { mousePos :: Maybe { x :: Number, y :: Number } | moreState } i
-mousePosition = mkInteraction Events.onMouseMove getMousePos
-  where
-  getMousePos event state =
-    let
-      point = Dims.fromMouseEvent event
-    in
-      state
-        { mousePos = Just { x: Dims.getX point, y: Dims.getY point } }
-
-toProps ::
-  forall appState i.
-  ((appState -> appState) -> Maybe i) ->
-  Interactions appState i -> Array (IProp HTMLcanvas i)
-toProps toCallback interactions =
-  -- I tried to put these all in an array and foldMap it,
-  --   but it didn't work since they're different types
-  map toProp base
-    <> map toProp clipboard
-    <> map toProp focus
-    <> map toProp keyboard
-    <> map toProp touch
-    <> map toProp drag
-    <> map toProp mouse
-    <> map toProp wheel
-  where
-  { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } = interactions
-
-  toProp :: forall e. Interaction e appState i -> IProp HTMLcanvas i
-  toProp (Interaction onEvent handler) = onEvent $ toCallback <<< handler
-
 -- Originally I wanted to have `Interaction event appState i` and a
 --   list of interactions, but because two interactions could have
 --   different event types, the list wouldn't typecheck.
@@ -85,6 +47,25 @@ type Interactions appState i
     , wheel :: Array (Interaction WheelEvent appState i)
     }
 
+toProps ::
+  forall appState i.
+  ((appState -> appState) -> Maybe i) ->
+  Interactions appState i -> Array (IProp HTMLcanvas i)
+toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
+  -- I tried to put these all in an array and foldMap it,
+  --   but it didn't work since they're different types
+  map toProp base
+    <> map toProp clipboard
+    <> map toProp focus
+    <> map toProp keyboard
+    <> map toProp touch
+    <> map toProp drag
+    <> map toProp mouse
+    <> map toProp wheel
+  where
+  toProp :: forall e. Interaction e appState i -> IProp HTMLcanvas i
+  toProp (Interaction onEvent handler) = onEvent $ toCallback <<< handler
+
 default :: forall appState i. Interactions appState i
 default =
   { base: []
@@ -96,3 +77,19 @@ default =
   , mouse: []
   , wheel: []
   }
+
+mkInteraction ::
+  forall event appState i.
+  EventProp event i -> Handler event appState -> Interaction event appState i
+mkInteraction = Interaction
+
+mousePosition ::
+  forall moreState i.
+  Interaction MouseEvent { mousePos :: Maybe { x :: Number, y :: Number } | moreState } i
+mousePosition = mkInteraction Events.onMouseMove getMousePos
+  where
+  getMousePos event state =
+    let
+      point = Dims.fromMouseEvent event
+    in
+      state { mousePos = Just { x: Dims.getX point, y: Dims.getY point } }
