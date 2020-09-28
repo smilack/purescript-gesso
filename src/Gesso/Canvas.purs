@@ -2,6 +2,7 @@ module Gesso.Canvas
   ( component
   , Input
   , Action
+  , Slot
   ) where
 
 import Prelude
@@ -34,6 +35,9 @@ import Web.HTML (window)
 import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.HTMLElement (getBoundingClientRect, fromElement, HTMLElement, DOMRect)
 import Web.HTML.Window (toEventTarget, document)
+
+type Slot slot
+  = forall q. H.Slot q Void slot
 
 type State appState
   = { name :: String
