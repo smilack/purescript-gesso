@@ -29,6 +29,8 @@ module Gesso.Dimensions
   , origin
   , sizeless
   , null
+  , p720
+  , p1080
   ) where
 
 import Prelude
@@ -339,3 +341,9 @@ sizeless = fromWidthAndHeight { width: 0.0, height: 0.0 }
 
 null :: ViewBox
 null = Dimensions origin sizeless
+
+p720 :: ViewBox
+p720 = fromPointAndSize origin $ fromHeightAndRatio { height: 720.0, aspectRatio: AR.w16h9 }
+
+p1080 :: ViewBox
+p1080 = fromPointAndSize origin $ fromHeightAndRatio { height: 1080.0, aspectRatio: AR.w16h9 }
