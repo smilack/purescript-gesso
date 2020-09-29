@@ -79,6 +79,8 @@ onChange = OnChange
 continuous :: forall state. RenderFunction state -> RenderStyle state
 continuous = Continuous
 
+-- Considering making an Effectful variant, i.e.
+-- data Update state = Pure (Delta -> state -> state) | Effectful (Delta -> state -> Effect state)
 newtype Update state
   = Update (UpdateFunction state)
 

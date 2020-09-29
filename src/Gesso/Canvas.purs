@@ -134,6 +134,9 @@ handleAction = case _ of
     H.modify_ (_ { appState = appState })
     GM.putState appState
     handleAction MaybeTick
+  -- If effectful interactions become necessary, updateFn could return
+  --   m (Maybe appState) - Just if appState is changed, or Nothing if
+  --   appState is not changed or it's saved within the function
   InteractionTriggered updateFn -> do
     appState <- H.gets _.appState
     let
