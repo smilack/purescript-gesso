@@ -3,22 +3,20 @@ module Main where
 import Prelude
 import Data.Array (range)
 import Data.Enum (fromEnum)
-import Data.Foldable (traverse_, sequence_)
-import Data.Int (toNumber)
+import Data.Foldable (sequence_)
+import Data.Int (toNumber, floor)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
 import Data.Time as Time
 import Effect (Effect)
-import Effect.Now (nowTime)
+import Effect.Now (nowTime) as Now
 import Gesso (runGessoAff, awaitBody, run) as G
 import Gesso.Application as GApp
-import Gesso.AspectRatio as GAR
 import Gesso.Canvas (component, Input) as GC
 import Gesso.Dimensions as GDim
 import Gesso.Interactions as GInt
 import Gesso.Time as GTime
 import Graphics.Canvas as Canvas
-import Math (cos, sin)
+import Math (cos, sin, pi, tau)
 
 main :: Effect Unit
 main =
@@ -27,96 +25,144 @@ main =
     G.run GC.component input body
 
 type AppState
-  = { color :: String
-    , mousePos :: Maybe { x :: Number, y :: Number }
-    }
-
-initialState :: AppState
-initialState = { color: "blue", mousePos: Nothing }
+  = {}
 
 input :: GC.Input AppState
 input =
   { name: "test-app"
-  , appState: initialState
+  , appState: {}
   , app:
       GApp.mkApplication
         $ GApp.defaultApp
             { window = GApp.fullscreen
-            , render = Just $ GApp.continuous renderFn
+            , render = Just $ GApp.continuous render
             }
-  , viewBox:
-      GDim.fromPointAndSize
-        GDim.origin
-        (GDim.fromHeightAndRatio { height: 360.0, aspectRatio: GAR.w16h9 })
-  , interactions:
-      GInt.default { mouse = [ GInt.mousePosition ] }
+  , viewBox: GDim.p1080
+  , interactions: GInt.default
   }
 
-renderFn :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
-renderFn { color, mousePos } { now } { x_, y_, w_, h_, screen, toVb } context = do
-  Canvas.setLineWidth context 3.0
-  Canvas.setFillStyle context "#FFDDDD"
-  Canvas.setStrokeStyle context "#00FF00"
+render :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
+render _ { now } { x_, y_, w_, h_, screen, viewBox } context = do
+  -- Clear background
+  Canvas.setFillStyle context "white"
   Canvas.fillRect context { x: screen.x, y: screen.y, width: screen.width, height: screen.height }
-  Canvas.strokeRect context { x: screen.x, y: screen.y, width: screen.width, height: screen.height }
-  Canvas.setFillStyle context "#DDFFDD"
-  Canvas.setStrokeStyle context "#FF0000"
-  Canvas.fillRect context { x: x_ 0.0, y: y_ 0.0, width: w_ 640.0, height: h_ 360.0 }
-  Canvas.strokeRect context { x: x_ 0.0, y: y_ 0.0, width: w_ 640.0, height: h_ 360.0 }
-  Canvas.setFillStyle context color
-  Canvas.fillRect context { x: x_ 100.0, y: y_ 50.0, width: w_ 200.0, height: h_ 25.0 }
-  Canvas.fillRect context
-    { x: x_ $ 150.0 + 50.0 * cos t
-    , y: y_ $ 150.0 + 50.0 * sin t
-    , width: w_ 10.0
-    , height: h_ 10.0
-    }
-  traverse_ (Canvas.fillRect context) (mouseRect <$> mousePos)
-  time <- nowTime
-  let
-    clock = { x: x_ 300.0, y: y_ 175.0 }
-
-    hour = toNumber $ (_ `mod` 12) $ (_ + 7) $ fromEnum $ Time.hour time
-
-    hrAng = (_ - 1.571) $ (_ * 6.283) $ (_ / 12.0) $ hour
-
-    hr = { x: clock.x + w_ (cos hrAng * 40.0), y: clock.y + h_ (sin hrAng * 40.0) }
-
-    minute = toNumber $ fromEnum $ Time.minute time
-
-    mnAng = (_ - 1.571) $ (_ * 6.283) $ (_ / 60.0) $ minute
-
-    min = { x: clock.x + w_ (cos mnAng * 60.0), y: clock.y + h_ (sin mnAng * 60.0) }
-
-    second = toNumber $ fromEnum $ Time.second time
-
-    scAng = (_ - 1.571) $ (_ * 6.283) $ (_ / 60.0) $ second
-
-    sec = { x: clock.x + w_ (cos scAng * 60.0), y: clock.y + h_ (sin scAng * 60.0) }
-  Canvas.setStrokeStyle context "black"
-  Canvas.fillText context (show hour) (x_ 30.0) (y_ 30.0)
-  Canvas.fillText context (show minute) (x_ 30.0) (y_ 40.0)
-  Canvas.fillText context (show second) (x_ 30.0) (y_ 50.0)
-  Canvas.strokePath context do
-    Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: 6.283, radius: w_ 75.0 }
-  Canvas.strokePath context do
-    Canvas.moveTo context clock.x clock.y
-    Canvas.lineTo context hr.x hr.y
-  Canvas.strokePath context do
-    Canvas.moveTo context clock.x clock.y
-    Canvas.lineTo context min.x min.y
-  Canvas.setStrokeStyle context "red"
-  Canvas.setLineWidth context 1.0
-  Canvas.strokePath context do
-    Canvas.moveTo context clock.x clock.y
-    Canvas.lineTo context sec.x sec.y
-  sequence_ $ map drawNum $ range 1 12
+  drawFrame
+  drawNumbers
+  drawHashes
+  { hour, minute, second } <- getTime
+  drawHourHand hour minute
+  drawMinuteHand minute second
+  drawSecondHand second
+  -- Center dot
+  Canvas.setFillStyle context "#888888"
+  Canvas.fillPath context do
+    Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: w_ 15.0 }
   where
-  mouseRect { x, y } = { x: toVb.x_ x, y: toVb.y_ y, width: w_ 30.0, height: h_ 30.0 }
+  clock =
+    { x: x_ $ viewBox.width / 2.0
+    , y: y_ $ viewBox.height / 2.0
+    , r: w_ $ 500.0
+    }
 
-  drawNum i = do
+  eta = pi / 2.0
+
+  getTime :: Effect { hour :: Number, minute :: Number, second :: Number }
+  getTime = do
+    t <- Now.nowTime
     let
-      ang = (_ - 1.571) $ (_ * 6.283) $ (_ / 12.0) $ toNumber $ (_ `mod` 12) $ i
-    Canvas.fillText context (show i) (x_ $ 299.0 + 70.0 * cos ang) (y_ $ 177.0 + 70.0 * sin ang)
+      hour = toNumber $ (_ `mod` 12) $ (_ + 7) $ fromEnum $ Time.hour t
 
-  t = (unwrap now) * 6.28 / 1000.0 / 2.0
+      minute = toNumber $ fromEnum $ Time.minute t
+
+      second = toNumber $ fromEnum $ Time.second t
+    pure { hour, minute, second }
+
+  drawFrame :: Effect Unit
+  drawFrame = do
+    Canvas.setFillStyle context "#eeeeee"
+    Canvas.fillPath context do
+      Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r }
+    Canvas.setStrokeStyle context "#888888"
+    Canvas.setLineWidth context $ w_ 25.0
+    Canvas.strokePath context do
+      Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r }
+
+  drawNumbers :: Effect Unit
+  drawNumbers = do
+    let
+      size = floor $ w_ 78.0
+    Canvas.setFillStyle context "black"
+    Canvas.setFont context $ show size <> "pt Georgia"
+    Canvas.setTextAlign context Canvas.AlignCenter
+    sequence_ $ map drawNumber $ range 1 12
+
+  drawNumber :: Int -> Effect Unit
+  drawNumber i = do
+    let
+      angle = (_ - eta) <<< (_ * tau / 12.0) <<< toNumber $ i `mod` 12
+
+      x = clock.x + (0.775 * clock.r * cos angle)
+
+      -- Graphics.Canvas doesn't have setTextBaseline, so push the numbers down a little
+      y = clock.y + (0.775 * clock.r * sin angle + h_ 30.0)
+    Canvas.fillText context (show i) x y
+
+  drawHashes :: Effect Unit
+  drawHashes = do
+    Canvas.setStrokeStyle context "black"
+    Canvas.setLineCap context Canvas.Square
+    sequence_ $ map drawHash $ range 0 59
+
+  drawHash :: Int -> Effect Unit
+  drawHash i = do
+    if i `mod` 5 == 0 then
+      Canvas.setLineWidth context $ w_ 9.0
+    else
+      Canvas.setLineWidth context $ w_ 3.0
+    let
+      angle = (_ * tau / 60.0) <<< toNumber $ i
+    drawLineSegment angle 0.9 0.95
+
+  drawHourHand :: Number -> Number -> Effect Unit
+  drawHourHand hour minute = do
+    let
+      angle = (_ - eta) <<< (_ * tau / 12.0) $ (_ + minute / 60.0) $ hour
+    Canvas.setLineCap context Canvas.Round
+    Canvas.setStrokeStyle context "black"
+    Canvas.setLineWidth context $ w_ 16.0
+    drawLineSegment angle (-0.1) 0.5
+
+  drawMinuteHand :: Number -> Number -> Effect Unit
+  drawMinuteHand minute second = do
+    let
+      angle = (_ - eta) <<< (_ * tau / 60.0) $ (_ + second / 60.0) $ minute
+    Canvas.setLineCap context Canvas.Round
+    Canvas.setStrokeStyle context "black"
+    Canvas.setLineWidth context $ w_ 16.0
+    drawLineSegment angle (-0.1) 0.7
+
+  drawSecondHand :: Number -> Effect Unit
+  drawSecondHand second = do
+    let
+      angle = (_ - eta) <<< (_ * tau / 60.0) $ second
+    Canvas.setLineCap context Canvas.Square
+    Canvas.setStrokeStyle context "#DD0000"
+    Canvas.setLineWidth context $ w_ 7.0
+    drawLineSegment angle (-0.2) 0.7
+    Canvas.setLineWidth context $ w_ 16.0
+    Canvas.setLineCap context Canvas.Round
+    drawLineSegment angle (-0.2) (-0.1)
+
+  drawLineSegment :: Number -> Number -> Number -> Effect Unit
+  drawLineSegment angle r1 r2 = do
+    let
+      x = clock.x + (r1 * clock.r * cos angle)
+
+      x' = clock.x + (r2 * clock.r * cos angle)
+
+      y = clock.y + (r1 * clock.r * sin angle)
+
+      y' = clock.y + (r2 * clock.r * sin angle)
+    Canvas.strokePath context do
+      Canvas.moveTo context x y
+      Canvas.lineTo context x' y'
