@@ -42,7 +42,7 @@ input =
   }
 
 render :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
-render _ { now } { x_, y_, w_, h_, screen, viewBox } context = do
+render _ _ { x_, y_, w_, h_, screen, viewBox } context = do
   -- Clear background
   Canvas.setFillStyle context "white"
   Canvas.fillRect context { x: screen.x, y: screen.y, width: screen.width, height: screen.height }
