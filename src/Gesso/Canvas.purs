@@ -12,7 +12,6 @@ import Data.Foldable (traverse_)
 import Data.Function (on)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Traversable (traverse, sequence)
-import Debug.Trace (trace, traceM, spy)
 import Effect (Effect)
 import Effect.Aff as Aff
 import Effect.Aff.Bus as Bus

@@ -13,7 +13,6 @@ import Effect.Aff.Bus as Bus
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (liftEffect)
 import Effect.Ref as Ref
-import Gesso.Canvas as GC
 import Gesso.Environment (Environment)
 import Gesso.GessoM (GessoM, runGessoM, class ManageState)
 import Halogen as H
@@ -49,7 +48,7 @@ run component config element = do
     pure { appState, stateBus }
 
   hoist ::
-    forall appState q i o e.
+    forall i e.
     Environment appState e ->
     H.Component HTML q i o (GessoM appState e) ->
     H.Component HTML q i o Aff
