@@ -255,6 +255,12 @@ type Scaler
     , w_ :: Number -> Number
     , h_ :: Number -> Number
     , scale :: Number
+    , viewBox ::
+        { x :: Number
+        , y :: Number
+        , width :: Number
+        , height :: Number
+        }
     , screen ::
         { x :: Number
         , y :: Number
@@ -280,6 +286,12 @@ mkScaler viewBox clientRect =
   , w_: Math.round <<< w'
   , h_: Math.round <<< h'
   , scale: c
+  , viewBox:
+      { x: getX viewBox
+      , y: getY viewBox
+      , width: getWidth viewBox
+      , height: getHeight viewBox
+  }
   , screen:
       { x: 0.0
       , y: 0.0
