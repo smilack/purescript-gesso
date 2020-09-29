@@ -299,13 +299,13 @@ mkScaler viewBox clientRect =
     , y: getHeight viewBox / getHeight actualVB
     }
 
-  x' = (_ + margin.w) <<< w'
+  x' = (_ - w' $ getX viewBox) <<< (_ + margin.w) <<< w'
 
-  w' = (_ / c.x) <<< (_ - getX viewBox)
+  w' = (_ / c.x)
 
-  y' = (_ + margin.h) <<< h'
+  y' = (_ - h' $ getY viewBox) <<< (_ + margin.h) <<< h'
 
-  h' = (_ / c.y) <<< (_ - getY viewBox)
+  h' = (_ / c.y)
 
   toVb' =
     { x': (_ - getX clientRect)
