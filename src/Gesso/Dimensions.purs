@@ -321,8 +321,8 @@ mkScaler viewBox clientRect =
   h' = (_ / c)
 
   toVb' =
-    { x': (_ - getX clientRect)
-    , y': (_ - getY clientRect)
+    { x': (_ + getX viewBox) <<< (_ * c) <<< (_ - getX clientRect + margin.w)
+    , y': (_ + getY viewBox) <<< (_ * c) <<< (_ - getY clientRect + margin.h)
     }
 
   toVb_ =
