@@ -254,6 +254,7 @@ type Scaler
     , y_ :: Number -> Number
     , w_ :: Number -> Number
     , h_ :: Number -> Number
+    , scale :: Number
     , screen ::
         { x :: Number
         , y :: Number
@@ -278,6 +279,7 @@ mkScaler viewBox clientRect =
   , y_: Math.round <<< y'
   , w_: Math.round <<< w'
   , h_: Math.round <<< h'
+  , scale: c
   , screen:
       { x: 0.0
       , y: 0.0
@@ -294,18 +296,15 @@ mkScaler viewBox clientRect =
     , h: (getHeight clientRect - getHeight actualVB) / 2.0
     }
 
-  c =
-    { x: getWidth viewBox / getWidth actualVB
-    , y: getHeight viewBox / getHeight actualVB
-    }
+  c = getWidth viewBox / getWidth actualVB
 
   x' = (_ - w' $ getX viewBox) <<< (_ + margin.w) <<< w'
 
-  w' = (_ / c.x)
+  w' = (_ / c)
 
   y' = (_ - h' $ getY viewBox) <<< (_ + margin.h) <<< h'
 
-  h' = (_ / c.y)
+  h' = (_ / c)
 
   toVb' =
     { x': (_ - getX clientRect)
