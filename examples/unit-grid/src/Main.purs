@@ -49,7 +49,7 @@ mouseDown ::
   GInt.Interaction GEv.MouseEvent { clicked :: Maybe { x :: Number, y :: Number } | r } i
 mouseDown = GInt.mkInteraction GEv.onMouseDown getMousePos
   where
-  getMousePos event state =
+  getMousePos event _  state =
     let
       point = GDim.fromMouseEvent event
     in
