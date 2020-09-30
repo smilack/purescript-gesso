@@ -3,6 +3,7 @@ module Gesso.Canvas
   , Input
   , Action
   , Slot
+  , _gessoCanvas
   ) where
 
 import Prelude
@@ -11,6 +12,7 @@ import Control.Monad.Rec.Class (forever)
 import Data.Foldable (traverse_)
 import Data.Function (on)
 import Data.Maybe (Maybe(..), maybe)
+import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse, sequence)
 import Effect (Effect)
 import Effect.Aff as Aff
@@ -37,6 +39,8 @@ import Web.HTML.Window (toEventTarget, document)
 
 type Slot slot
   = forall q. H.Slot q Void slot
+
+_gessoCanvas = SProxy :: SProxy "gessoCanvas"
 
 type State appState
   = { name :: String
