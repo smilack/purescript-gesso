@@ -21,7 +21,7 @@ type EventProp event i
   = (event -> Maybe i) -> IProp HTMLcanvas i
 
 type Handler event appState
-  = event -> appState -> appState
+  = event -> Dims.Scaler -> appState -> appState
 
 data Interaction event appState i
   = Interaction (EventProp event i) (Handler event appState)
@@ -49,7 +49,7 @@ type Interactions appState i
 
 toProps ::
   forall appState i.
-  ((appState -> appState) -> Maybe i) ->
+  ((Dims.Scaler -> appState -> appState) -> Maybe i) ->
   Interactions appState i -> Array (IProp HTMLcanvas i)
 toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
   -- I tried to put these all in an array and foldMap it,
@@ -88,7 +88,7 @@ mousePosition ::
   Interaction MouseEvent { mousePos :: Maybe { x :: Number, y :: Number } | moreState } i
 mousePosition = mkInteraction Events.onMouseMove getMousePos
   where
-  getMousePos event state =
+  getMousePos event _ state =
     let
       point = Dims.fromMouseEvent event
     in

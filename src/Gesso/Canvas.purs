@@ -58,7 +58,7 @@ data Action appState
   | Tick (Maybe T.TimestampPrevious)
   | Finalize
   | StateUpdatedInTick appState
-  | InteractionTriggered (appState -> appState)
+  | InteractionTriggered (Dims.Scaler -> appState -> appState)
   | MaybeTick
 
 type Input appState
@@ -138,12 +138,15 @@ handleAction = case _ of
   --   m (Maybe appState) - Just if appState is changed, or Nothing if
   --   appState is not changed or it's saved within the function
   InteractionTriggered updateFn -> do
-    appState <- H.gets _.appState
-    let
-      appState' = updateFn appState
-    H.modify_ (_ { appState = appState' })
-    GM.putState appState'
-    handleAction MaybeTick
+    { scaler, appState } <- H.get
+    case scaler of
+      Nothing -> pure unit
+      Just s -> do
+        let
+          appState' = updateFn s appState
+        H.modify_ (_ { appState = appState' })
+        GM.putState appState'
+        handleAction MaybeTick
   MaybeTick -> do
     app <- H.gets _.app
     case App.renderOnUpdate app of
