@@ -2,6 +2,8 @@ module Gesso
   ( module Halogen.Aff
   , runGessoAff
   , run
+  , mkPlainEnv
+  , hoist
   , runWith
   , Input
   ) where
@@ -37,22 +39,22 @@ run ::
   HTMLElement ->
   Aff (Environment appState ())
 run component config element = do
-  env <- liftEffect mkPlainEnv
+  env <- liftEffect $ mkPlainEnv config.appState
   io <- runUI (hoist env component) config element
   pure env
-  where
-  mkPlainEnv :: Effect (Environment appState ())
-  mkPlainEnv = do
-    appState <- Ref.new config.appState
-    stateBus <- Bus.make
-    pure { appState, stateBus }
 
-  hoist ::
-    forall i e.
-    Environment appState e ->
-    H.Component HTML q i o (GessoM appState e) ->
-    H.Component HTML q i o Aff
-  hoist = H.hoist <<< runGessoM
+mkPlainEnv :: forall appState. appState -> Effect (Environment appState ())
+mkPlainEnv initialState = do
+  appState <- Ref.new initialState
+  stateBus <- Bus.make
+  pure { appState, stateBus }
+
+hoist ::
+  forall appState q i o e.
+  Environment appState e ->
+  H.Component HTML q i o (GessoM appState e) ->
+  H.Component HTML q i o Aff
+hoist = H.hoist <<< runGessoM
 
 --Supply your own ManageState monad
 runWith ::
