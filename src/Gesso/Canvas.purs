@@ -128,7 +128,9 @@ handleAction = case _ of
   Initialize -> do
     initialize
     handleAction $ Tick Nothing
-  HandleStateBus appState -> H.modify_ (_ { appState = appState })
+  HandleStateBus appState -> do
+    H.modify_ (_ { appState = appState })
+    handleAction MaybeTick
   HandleResize -> updateClientRect
   Tick mLastTime -> do
     { context, appState, app, scaler } <- H.get
