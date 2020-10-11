@@ -73,18 +73,25 @@ component =
 render :: forall m. MonadAff m => ManageState m AppState => AppState -> H.ComponentHTML Action Slots m
 render state =
   HH.div
-    []
-    [ HH.slot CB._colorButton 0 CB.component "black" (Just <<< ButtonClicked)
-    , HH.slot CB._colorButton 1 CB.component "#888" (Just <<< ButtonClicked)
-    , HH.slot CB._colorButton 2 CB.component "#ccc" (Just <<< ButtonClicked)
-    , HH.slot CB._colorButton 3 CB.component "white" (Just <<< ButtonClicked)
-    , HH.button [ HE.onClick (Just <<< const Undo) ] [ HH.text "undo" ]
-    , HH.button [ HE.onClick (Just <<< const Redo) ] [ HH.text "redo" ]
+    [ style rootStyle ]
+    [ HH.div [ style colorPickerStyle ]
+        [ HH.slot CB._colorButton 0 CB.component { selected: state.color, color: "black" } (Just <<< ButtonClicked)
+        , HH.slot CB._colorButton 1 CB.component { selected: state.color, color: "#888" } (Just <<< ButtonClicked)
+        , HH.slot CB._colorButton 2 CB.component { selected: state.color, color: "#ccc" } (Just <<< ButtonClicked)
+        , HH.slot CB._colorButton 3 CB.component { selected: state.color, color: "white" } (Just <<< ButtonClicked)
+        ]
     , HH.div []
         [ HH.slot GC._gessoCanvas unit GC.component (canvasInput state) absurd ]
     , history $ reverse state.redo
     , history state.pixels
     ]
+  where
+  rootStyle =
+    "display: flex;"
+      <> "font-family: sans-serif;"
+      <> "justify-content: center;"
+
+  colorPickerStyle = "display: flex; flex-direction: column;"
 
 history :: forall a b. List Pixel -> HH.HTML a b
 history pixels = HH.ul [] $ fromFoldable $ map go pixels
