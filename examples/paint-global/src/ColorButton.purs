@@ -34,7 +34,9 @@ component =
     , eval:
         H.mkEval
           $ H.defaultEval
-              { handleAction = handleAction, receive = Just <<< Update }
+              { handleAction = handleAction
+              , receive = Just <<< Update
+              }
     }
 
 render :: forall s m. State -> H.ComponentHTML Action s m
@@ -57,8 +59,8 @@ render { color, selected } =
     else
       ""
 
-style :: forall r i. String -> HP.IProp r i
-style = HP.attr (HH.AttrName "style")
+  style :: forall r i. String -> HP.IProp r i
+  style = HP.attr (HH.AttrName "style")
 
 handleAction :: forall s m. Action -> H.HalogenM State Action s Output m Unit
 handleAction = case _ of
