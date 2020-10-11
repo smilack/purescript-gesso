@@ -2,7 +2,7 @@ module Root where
 
 import Prelude
 import ColorButton as CB
-import Data.Array (range)
+import Data.Array (range, fromFoldable)
 import Data.Int (floor, toNumber)
 import Data.List (List(..), (:), tail, reverse)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -22,6 +22,7 @@ import Graphics.Canvas as Canvas
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties as HP
 
 type AppState
   = { mouseCell :: Maybe { x :: Int, y :: Int }
@@ -77,7 +78,17 @@ render state =
     , HH.button [ HE.onClick (Just <<< const Undo) ] [ HH.text "undo" ]
     , HH.div []
         [ HH.slot GC._gessoCanvas unit GC.component (canvasInput state) absurd ]
+    , history state.pixels
     ]
+
+history :: forall a b. List Pixel -> HH.HTML a b
+history pixels = HH.ul [] $ fromFoldable $ map go pixels
+  where
+  go (Pixel { x, y, color }) = HH.li [] [ pix color, HH.text $ " (" <> show x <> ", " <> show y <> ")" ]
+
+  pix color = HH.span [ style $ "display: inline-block; width: 10px; height: 10px; border: 1px black solid; background-color: " <> color ] []
+
+  style = HP.attr (HH.AttrName "style")
 
 handleAction ::
   forall s o m.
