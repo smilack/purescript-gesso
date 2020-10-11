@@ -42,6 +42,8 @@ type Slots
 data Action
   = ButtonClicked CB.Output
   | Undo
+  | Initialize
+  | StateUpdated AppState
 
 initialState :: forall i. i -> AppState
 initialState _ =
@@ -61,7 +63,7 @@ component =
   H.mkComponent
     { initialState
     , render
-    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
+    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction, initialize = Just Initialize }
     }
 
 render :: forall m. MonadAff m => ManageState m AppState => AppState -> H.ComponentHTML Action Slots m
@@ -83,6 +85,11 @@ handleAction ::
   ManageState m AppState =>
   Action -> H.HalogenM AppState Action s o m Unit
 handleAction = case _ of
+  Initialize -> do
+    stateEventSource <- GM.getEventSource
+    _ <- H.subscribe $ StateUpdated <$> stateEventSource
+    pure unit
+  StateUpdated appState' -> H.put appState'
   ButtonClicked (CB.Clicked color) -> do
     appState <- GM.getState
     GM.putState $ appState { color = color }
