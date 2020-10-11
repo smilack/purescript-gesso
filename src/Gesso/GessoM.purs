@@ -3,6 +3,7 @@ module Gesso.GessoM
   , runGessoM
   , class ManageState
   , getBus
+  , getEventSource
   , getState
   , putState
   ) where
@@ -14,8 +15,9 @@ import Effect.Aff (Aff)
 import Effect.Aff.Bus as Bus
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Ref as Ref
-import Gesso.Environment (Environment)
+import Gesso.Environment (Environment, busEventSource)
 import Halogen (HalogenM, lift)
+import Halogen.Query.EventSource (EventSource)
 import Type.Equality (class TypeEquals, from)
 
 newtype GessoM appState more a
@@ -44,11 +46,13 @@ instance monadAskGessoM :: TypeEquals e (Environment appState more) => MonadAsk 
 class
   Monad m <= ManageState m a | m -> a where
   getBus :: m (Bus.BusRW a)
+  getEventSource :: forall n. MonadAff n => m (EventSource n a)
   getState :: m a
   putState :: a -> m Unit
 
 instance manageStateHalogenM :: ManageState m appState => ManageState (HalogenM state action slots output m) appState where
   getBus = lift getBus
+  getEventSource = lift getEventSource
   getState = lift getState
   putState = lift <<< putState
 
@@ -56,6 +60,9 @@ instance manageStateGessoM :: ManageState (GessoM appState more) appState where
   getBus = do
     env <- ask
     pure env.stateBus
+  getEventSource = do
+    env <- ask
+    pure $ busEventSource env.stateBus
   getState = do
     env <- ask
     liftEffect $ Ref.read env.appState

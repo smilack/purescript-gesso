@@ -8,15 +8,12 @@ module Gesso.Canvas
 
 import Prelude
 import Control.Alt ((<|>))
-import Control.Monad.Rec.Class (forever)
 import Data.Foldable (traverse_)
 import Data.Function (on)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse, sequence)
 import Effect (Effect)
-import Effect.Aff as Aff
-import Effect.Aff.Bus as Bus
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as App
 import Gesso.Dimensions as Dims
@@ -165,8 +162,8 @@ initialize ::
   ManageState m appState =>
   H.HalogenM (State appState) (Action appState) slots output m Unit
 initialize = do
-  stateBus <- GM.getBus
-  _ <- H.subscribe $ HandleStateBus <$> busEventSource stateBus
+  stateEventSource <- GM.getEventSource
+  _ <- H.subscribe $ HandleStateBus <$> stateEventSource
   resizeSub <- subscribeResize
   { name, viewBox } <- H.get
   mcontext <- H.liftEffect $ getContext name
@@ -271,14 +268,3 @@ subscribeResize = do
         (EventType "resize")
         (toEventTarget wnd)
         (const $ Just HandleResize)
-
-busEventSource ::
-  forall appState m r.
-  MonadAff m =>
-  ManageState m appState =>
-  Bus.BusR' r appState ->
-  ES.EventSource m appState
-busEventSource bus =
-  ES.affEventSource \emitter -> do
-    fiber <- Aff.forkAff $ forever $ ES.emit emitter =<< Bus.read bus
-    pure $ ES.Finalizer (Aff.killFiber (Aff.error "Event source closed") fiber)
