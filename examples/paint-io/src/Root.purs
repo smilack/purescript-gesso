@@ -4,7 +4,7 @@ import Prelude
 import ColorButton as CB
 import Data.Array (range, fromFoldable)
 import Data.Int (floor, toNumber)
-import Data.List (List(..), (:), tail, reverse)
+import Data.List (List(..), (:), tail, reverse, head)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Foldable (sequence_, traverse_)
 import Effect (Effect)
@@ -30,6 +30,7 @@ type AppState
     , showGrid :: Boolean
     , color :: String
     , pixels :: List Pixel
+    , redo :: List Pixel
     }
 
 newtype Pixel
@@ -43,6 +44,7 @@ type Slots
 data Action
   = ButtonClicked CB.Output
   | Undo
+  | Redo
   | Initialize
   | StateUpdated AppState
 
@@ -53,6 +55,7 @@ initialState _ =
   , showGrid: true
   , color: "black"
   , pixels: Nil
+  , redo: Nil
   }
 
 component ::
@@ -76,8 +79,10 @@ render state =
     , HH.slot CB._colorButton 2 CB.component "#ccc" (Just <<< ButtonClicked)
     , HH.slot CB._colorButton 3 CB.component "white" (Just <<< ButtonClicked)
     , HH.button [ HE.onClick (Just <<< const Undo) ] [ HH.text "undo" ]
+    , HH.button [ HE.onClick (Just <<< const Redo) ] [ HH.text "redo" ]
     , HH.div []
         [ HH.slot GC._gessoCanvas unit GC.component (canvasInput state) absurd ]
+    , history $ reverse state.redo
     , history state.pixels
     ]
 
@@ -107,8 +112,26 @@ handleAction = case _ of
   Undo -> do
     appState <- GM.getState
     let
+      step = head appState.pixels
+
       pixels' = fromMaybe Nil $ tail appState.pixels
-    GM.putState $ appState { pixels = pixels' }
+
+      appState' = appState { pixels = pixels' }
+    case step of
+      Nothing -> GM.putState appState'
+      Just pixel -> GM.putState $ appState' { redo = pixel : appState.redo }
+  Redo -> do
+    appState <- GM.getState
+    let
+      step = head appState.redo
+
+      redo' = fromMaybe Nil $ tail appState.redo
+    case step of
+      Nothing -> pure unit
+      Just pixel -> do
+        let
+          pixels' = pixel : appState.pixels
+        GM.putState $ appState { pixels = pixels', redo = redo' }
 
 canvasInput :: AppState -> GC.Input AppState
 canvasInput appState =
@@ -163,7 +186,7 @@ mouseDown = GInt.mkInteraction GEv.onMouseDown getMousePos
 
       p = Pixel { x, y, color: state.color }
     in
-      state { pixels = p : state.pixels }
+      state { pixels = p : state.pixels, redo = Nil }
 
 renderApp :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
 renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, screen, toVb } context = do
