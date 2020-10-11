@@ -82,8 +82,16 @@ render state =
         ]
     , HH.div []
         [ HH.slot GC._gessoCanvas unit GC.component (canvasInput state) absurd ]
-    , history $ reverse state.redo
-    , history state.pixels
+    , HH.div
+        [ style historyStyle ]
+        [ HH.button [ HE.onClick (Just <<< const Undo), style controlStyle ] [ HH.text "⟲ Undo" ]
+        , HH.button [ HE.onClick (Just <<< const Redo), style controlStyle ] [ HH.text "⟳ Redo" ]
+        , HH.ul
+            [ style "list-style-type: none;" ]
+            $ history redoStyle (reverse state.redo)
+            <> [ HH.li [ style placeStyle ] [ HH.span [ style lineStyle ] [] ] ]
+            <> history "" state.pixels
+        ]
     ]
   where
   rootStyle =
@@ -93,14 +101,46 @@ render state =
 
   colorPickerStyle = "display: flex; flex-direction: column;"
 
-history :: forall a b. List Pixel -> HH.HTML a b
-history pixels = HH.ul [] $ fromFoldable $ map go pixels
+  historyStyle = "margin: 6px 12px;"
+
+  controlStyle = "font-size: 24px;"
+
+  redoStyle = "opacity: 0.33;"
+
+  placeStyle = "padding-left: 3px; list-style-type: '⮞';"
+
+  lineStyle =
+    "display: inline-block;"
+      <> "width: 100%;"
+      <> "height: 2px;"
+      <> "background-color: black;"
+      <> "vertical-align: middle;"
+      <> "margin-bottom: 2px;"
+
+history :: forall a b. String -> List Pixel -> Array (HH.HTML a b)
+history sty pixels = fromFoldable $ map go pixels
   where
-  go (Pixel { x, y, color }) = HH.li [] [ pix color, HH.text $ " (" <> show x <> ", " <> show y <> ")" ]
+  go (Pixel { x, y, color }) =
+    HH.li []
+      [ pixelBlock color
+      , HH.span [ style sty ]
+          [ HH.text $ " (" <> show x <> ", " <> show y <> ")" ]
+      ]
 
-  pix color = HH.span [ style $ "display: inline-block; width: 10px; height: 10px; border: 1px black solid; background-color: " <> color ] []
+style :: forall r i. String -> HP.IProp r i
+style = HP.attr (HH.AttrName "style")
 
-  style = HP.attr (HH.AttrName "style")
+pixelBlock :: forall a b. String -> HH.HTML a b
+pixelBlock color =
+  HH.span
+    [ style
+        $ "display: inline-block;"
+        <> "width: 10px;"
+        <> "height: 10px;"
+        <> "border: 1px black solid;"
+        <> ("background-color: " <> color)
+    ]
+    []
 
 handleAction ::
   forall s o m.
