@@ -79,49 +79,43 @@ component =
 render :: forall m. MonadAff m => ManageState m AppState => AppState -> H.ComponentHTML Action Slots m
 render state =
   HH.div
-    [ style rootStyle ]
-    [ HH.div [ style colorPickerStyle ]
+    [ style styles.root ]
+    [ HH.div [ style styles.colorPicker ]
         [ HH.slot CB._colorButton 0 CB.component { selected: state.color, color: "black" } (Just <<< ButtonClicked)
         , HH.slot CB._colorButton 1 CB.component { selected: state.color, color: "#888" } (Just <<< ButtonClicked)
         , HH.slot CB._colorButton 2 CB.component { selected: state.color, color: "#ccc" } (Just <<< ButtonClicked)
         , HH.slot CB._colorButton 3 CB.component { selected: state.color, color: "white" } (Just <<< ButtonClicked)
         ]
-    , HH.div [ style canvasStyle ]
+    , HH.div [ style styles.canvas ]
         [ HH.slot GC._gessoCanvas unit GC.component (canvasInput state) absurd
-        , HH.label [ style labelStyle ]
+        , HH.label [ style styles.label ]
             [ HH.input [ HP.type_ InputCheckbox, HE.onClick (Just <<< const ToggleGrid), HP.checked state.showGrid ]
             , HH.span_ [ HH.text "Show Grid" ]
             ]
         ]
     , HH.div
-        [ style historyStyle ]
-        [ HH.button [ HE.onClick (Just <<< const Undo), style controlStyle ] [ HH.text "⟲ Undo" ]
-        , HH.button [ HE.onClick (Just <<< const Redo), style controlStyle ] [ HH.text "⟳ Redo" ]
+        [ style styles.history ]
+        [ HH.button [ HE.onClick (Just <<< const Undo), style styles.control ] [ HH.text "⟲ Undo" ]
+        , HH.button [ HE.onClick (Just <<< const Redo), style styles.control ] [ HH.text "⟳ Redo" ]
         , HH.ul
             [ style "list-style-type: none;" ]
-            $ history redoStyle (reverse state.redo)
-            <> [ HH.li [ style placeStyle ] [ HH.span [ style lineStyle ] [] ] ]
+            $ history styles.redo (reverse state.redo)
+            <> [ HH.li [ style styles.place ] [ HH.span [ style styles.line ] [] ] ]
             <> history "" state.pixels
         ]
     ]
   where
-  rootStyle = "display: flex; font-family: sans-serif; justify-content: center;"
-
-  colorPickerStyle = "display: flex; flex-direction: column;"
-
-  canvasStyle = "display: flex; flex-direction: column; margin: 6px 0; align-items: center;"
-
-  labelStyle = "display: block; margin: 6px 0; font-size: 24px; cursor: pointer;"
-
-  historyStyle = "margin: 6px 12px;"
-
-  controlStyle = "font-size: 24px;"
-
-  redoStyle = "opacity: 0.33;"
-
-  placeStyle = "padding-left: 3px; list-style-type: '⮞';"
-
-  lineStyle = "display: inline-block; width: 100%; height: 2px; background-color: black; vertical-align: middle; margin-bottom: 2px;"
+  styles =
+    { root: "display: flex; font-family: sans-serif; justify-content: center;"
+    , colorPicker: "display: flex; flex-direction: column;"
+    , canvas: "display: flex; flex-direction: column; margin: 6px 0; align-items: center;"
+    , label: "display: block; margin: 6px 0; font-size: 24px; cursor: pointer;"
+    , history: "margin: 6px 12px; max-height: 600px; overflow: hidden scroll;"
+    , control: "font-size: 24px;"
+    , redo: "opacity: 0.33;"
+    , place: "padding-left: 3px; list-style-type: '⮞';"
+    , line: "display: inline-block; width: 100%; height: 2px; background-color: black; vertical-align: middle; margin-bottom: 2px;"
+    }
 
 history :: forall a b. String -> List Pixel -> Array (HH.HTML a b)
 history sty pixels = fromFoldable $ map go pixels
