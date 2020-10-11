@@ -32,10 +32,13 @@ type AppState
     , color :: String
     , pixels :: List Pixel
     , redo :: List Pixel
+    , mouseDown :: Boolean
     }
 
 newtype Pixel
   = Pixel { x :: Int, y :: Int, color :: String }
+
+derive instance eqPixel :: Eq Pixel
 
 type Slots
   = ( colorButton :: CB.Slot Int
@@ -58,6 +61,7 @@ initialState _ =
   , color: "black"
   , pixels: Nil
   , redo: Nil
+  , mouseDown: false
   }
 
 component ::
@@ -199,7 +203,7 @@ canvasInput appState =
       GDim.fromPointAndSize
         GDim.origin
         (GDim.fromWidthAndRatio { width: 32.0, aspectRatio: GAR.w1h1 })
-  , interactions: GInt.default { mouse = [ highlightCell, clearHighlight, mouseDown ] }
+  , interactions: GInt.default { mouse = [ highlightCell, clearHighlight, mouseDown, mouseUp ] }
   }
 
 highlightCell ::
@@ -207,7 +211,21 @@ highlightCell ::
   GInt.Interaction GEv.MouseEvent AppState i
 highlightCell = GInt.mkInteraction GEv.onMouseMove getMousePos
   where
-  getMousePos event scaler = (_ { mouseCell = Just $ toXY event scaler })
+  getMousePos event scaler state =
+    let
+      { x, y } = toXY event scaler
+
+      p = Pixel { x, y, color: state.color }
+    in
+      if state.mouseDown then case head state.pixels of
+        Nothing -> state { mouseCell = Just { x, y }, pixels = p : state.pixels }
+        Just pixel ->
+          if p == pixel then
+            state { mouseCell = Just { x, y } }
+          else
+            state { mouseCell = Just { x, y }, pixels = p : state.pixels }
+      else
+        state { mouseCell = Just { x, y } }
 
 toXY :: GEv.MouseEvent -> GDim.Scaler -> { x :: Int, y :: Int }
 toXY event { toVb } =
@@ -230,15 +248,20 @@ clearHighlight = GInt.mkInteraction GEv.onMouseOut (\_ _ s -> s { mouseCell = No
 mouseDown ::
   forall i.
   GInt.Interaction GEv.MouseEvent AppState i
-mouseDown = GInt.mkInteraction GEv.onMouseDown getMousePos
+mouseDown = GInt.mkInteraction GEv.onMouseDown startDrawing
   where
-  getMousePos event scaler state =
+  startDrawing event scaler state =
     let
       { x, y } = toXY event scaler
 
       p = Pixel { x, y, color: state.color }
     in
-      state { pixels = p : state.pixels, redo = Nil }
+      state { pixels = p : state.pixels, redo = Nil, mouseDown = true }
+
+mouseUp ::
+  forall i.
+  GInt.Interaction GEv.MouseEvent AppState i
+mouseUp = GInt.mkInteraction GEv.onMouseUp (\_ _ s -> s { mouseDown = false })
 
 renderApp :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
 renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, screen, toVb } context = do
