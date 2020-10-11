@@ -101,10 +101,7 @@ render state =
         ]
     ]
   where
-  rootStyle =
-    "display: flex;"
-      <> "font-family: sans-serif;"
-      <> "justify-content: center;"
+  rootStyle = "display: flex; font-family: sans-serif; justify-content: center;"
 
   colorPickerStyle = "display: flex; flex-direction: column;"
 
@@ -120,13 +117,7 @@ render state =
 
   placeStyle = "padding-left: 3px; list-style-type: '⮞';"
 
-  lineStyle =
-    "display: inline-block;"
-      <> "width: 100%;"
-      <> "height: 2px;"
-      <> "background-color: black;"
-      <> "vertical-align: middle;"
-      <> "margin-bottom: 2px;"
+  lineStyle = "display: inline-block; width: 100%; height: 2px; background-color: black; vertical-align: middle; margin-bottom: 2px;"
 
 history :: forall a b. String -> List Pixel -> Array (HH.HTML a b)
 history sty pixels = fromFoldable $ map go pixels
