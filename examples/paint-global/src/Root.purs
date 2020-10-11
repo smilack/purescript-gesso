@@ -7,6 +7,7 @@ import Data.Int (floor, toNumber)
 import Data.List (List(..), (:), tail, reverse, head)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Foldable (sequence_, traverse_)
+import DOM.HTML.Indexed.InputType (InputType(..))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as GApp
@@ -47,6 +48,7 @@ data Action
   | Redo
   | Initialize
   | StateUpdated AppState
+  | ToggleGrid
 
 initialState :: forall i. i -> AppState
 initialState _ =
@@ -80,8 +82,13 @@ render state =
         , HH.slot CB._colorButton 2 CB.component { selected: state.color, color: "#ccc" } (Just <<< ButtonClicked)
         , HH.slot CB._colorButton 3 CB.component { selected: state.color, color: "white" } (Just <<< ButtonClicked)
         ]
-    , HH.div []
-        [ HH.slot GC._gessoCanvas unit GC.component (canvasInput state) absurd ]
+    , HH.div [ style canvasStyle ]
+        [ HH.slot GC._gessoCanvas unit GC.component (canvasInput state) absurd
+        , HH.label [ style labelStyle ]
+            [ HH.input [ HP.type_ InputCheckbox, HE.onClick (Just <<< const ToggleGrid), HP.checked state.showGrid ]
+            , HH.span_ [ HH.text "Show Grid" ]
+            ]
+        ]
     , HH.div
         [ style historyStyle ]
         [ HH.button [ HE.onClick (Just <<< const Undo), style controlStyle ] [ HH.text "⟲ Undo" ]
@@ -100,6 +107,10 @@ render state =
       <> "justify-content: center;"
 
   colorPickerStyle = "display: flex; flex-direction: column;"
+
+  canvasStyle = "display: flex; flex-direction: column; margin: 6px 0; align-items: center;"
+
+  labelStyle = "display: block; margin: 6px 0; font-size: 24px; cursor: pointer;"
 
   historyStyle = "margin: 6px 12px;"
 
@@ -152,6 +163,9 @@ handleAction = case _ of
     stateEventSource <- GM.getEventSource
     _ <- H.subscribe $ StateUpdated <$> stateEventSource
     pure unit
+  ToggleGrid -> do
+    appState <- GM.getState
+    GM.putState $ appState { showGrid = not appState.showGrid }
   StateUpdated appState' -> H.put appState'
   ButtonClicked (CB.Clicked color) -> do
     appState <- GM.getState
@@ -238,6 +252,7 @@ mouseDown = GInt.mkInteraction GEv.onMouseDown getMousePos
 renderApp :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
 renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, screen, toVb } context = do
   clearBackground
+  drawOutline
   when showGrid drawGrid
   drawImage
   traverse_ drawCursor mouseCell
@@ -247,11 +262,14 @@ renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, sc
     Canvas.setFillStyle context "white"
     Canvas.fillRect context screen
 
-  drawGrid :: Effect Unit
-  drawGrid = do
+  drawOutline :: Effect Unit
+  drawOutline = do
     Canvas.setLineWidth context $ w_ 0.05
     Canvas.setStrokeStyle context "#888"
     Canvas.strokeRect context screen
+
+  drawGrid :: Effect Unit
+  drawGrid = do
     Canvas.setStrokeStyle context "#ccc"
     sequence_ $ map drawGridLine $ range 1 31
 
