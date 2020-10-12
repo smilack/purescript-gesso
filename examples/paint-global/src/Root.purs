@@ -80,31 +80,65 @@ render :: forall m. MonadAff m => ManageState m AppState => AppState -> H.Compon
 render state =
   HH.div
     [ style styles.root ]
-    [ HH.div [ style styles.colorPicker ]
-        [ HH.slot CB._colorButton 0 CB.component { selected: state.color, color: "black" } (Just <<< ButtonClicked)
-        , HH.slot CB._colorButton 1 CB.component { selected: state.color, color: "#888" } (Just <<< ButtonClicked)
-        , HH.slot CB._colorButton 2 CB.component { selected: state.color, color: "#ccc" } (Just <<< ButtonClicked)
-        , HH.slot CB._colorButton 3 CB.component { selected: state.color, color: "white" } (Just <<< ButtonClicked)
-        ]
-    , HH.div [ style styles.canvas ]
-        [ HH.slot GC._gessoCanvas unit GC.component (canvasInput state) absurd
-        , HH.label [ style styles.label ]
-            [ HH.input [ HP.type_ InputCheckbox, HE.onClick (Just <<< const ToggleGrid), HP.checked state.showGrid ]
-            , HH.span_ [ HH.text "Show Grid" ]
-            ]
-        ]
-    , HH.div
-        [ style styles.history ]
-        [ HH.button [ HE.onClick (Just <<< const Undo), style styles.control ] [ HH.text "⟲ Undo" ]
-        , HH.button [ HE.onClick (Just <<< const Redo), style styles.control ] [ HH.text "⟳ Redo" ]
-        , HH.ul
-            [ style "list-style-type: none;" ]
-            $ history styles.redo (reverse state.redo)
-            <> [ HH.li [ style styles.place ] [ HH.span [ style styles.line ] [] ] ]
-            <> history "" state.pixels
-        ]
+    [ colorPicker
+    , drawing
+    , undoRedoHistory
     ]
   where
+  colorPicker =
+    HH.div [ style styles.colorPicker ]
+      [ HH.slot CB._colorButton 0 CB.component (picker "black") (Just <<< ButtonClicked)
+      , HH.slot CB._colorButton 1 CB.component (picker "#888") (Just <<< ButtonClicked)
+      , HH.slot CB._colorButton 2 CB.component (picker "#ccc") (Just <<< ButtonClicked)
+      , HH.slot CB._colorButton 3 CB.component (picker "white") (Just <<< ButtonClicked)
+      ]
+
+  picker = { selected: state.color, color: _ }
+
+  drawing =
+    HH.div [ style styles.canvas ]
+      [ HH.slot GC._gessoCanvas unit GC.component (canvasInput state) absurd
+      , HH.label [ style styles.label ]
+          [ HH.input [ HP.type_ InputCheckbox, HE.onClick (Just <<< const ToggleGrid), HP.checked state.showGrid ]
+          , HH.span_ [ HH.text "Show Grid" ]
+          ]
+      ]
+
+  undoRedoHistory =
+    HH.div
+      [ style styles.history ]
+      [ HH.button [ HE.onClick (Just <<< const Undo), style styles.control ] [ HH.text "⟲ Undo" ]
+      , HH.button [ HE.onClick (Just <<< const Redo), style styles.control ] [ HH.text "⟳ Redo" ]
+      , HH.ul
+          [ style "list-style-type: none;" ]
+          $ history styles.redo (reverse state.redo)
+          <> [ HH.li [ style styles.place ] [ HH.span [ style styles.line ] [] ] ]
+          <> history "" state.pixels
+      ]
+
+  history sty pixels = fromFoldable $ map listItem pixels
+    where
+    listItem (Pixel { x, y, color }) =
+      HH.li []
+        [ pixelBlock color
+        , HH.span [ style sty ]
+            [ HH.text $ " (" <> show x <> ", " <> show y <> ")" ]
+        ]
+
+  pixelBlock color =
+    HH.span
+      [ style
+          $ "display: inline-block;"
+          <> "width: 10px;"
+          <> "height: 10px;"
+          <> "border: 1px black solid;"
+          <> ("background-color: " <> color)
+      ]
+      []
+
+  style :: forall r i. String -> HP.IProp r i
+  style = HP.attr (HH.AttrName "style")
+
   styles =
     { root: "display: flex; font-family: sans-serif; justify-content: center;"
     , colorPicker: "display: flex; flex-direction: column;"
@@ -116,31 +150,6 @@ render state =
     , place: "padding-left: 3px; list-style-type: '⮞';"
     , line: "display: inline-block; width: 100%; height: 2px; background-color: black; vertical-align: middle; margin-bottom: 2px;"
     }
-
-history :: forall a b. String -> List Pixel -> Array (HH.HTML a b)
-history sty pixels = fromFoldable $ map go pixels
-  where
-  go (Pixel { x, y, color }) =
-    HH.li []
-      [ pixelBlock color
-      , HH.span [ style sty ]
-          [ HH.text $ " (" <> show x <> ", " <> show y <> ")" ]
-      ]
-
-style :: forall r i. String -> HP.IProp r i
-style = HP.attr (HH.AttrName "style")
-
-pixelBlock :: forall a b. String -> HH.HTML a b
-pixelBlock color =
-  HH.span
-    [ style
-        $ "display: inline-block;"
-        <> "width: 10px;"
-        <> "height: 10px;"
-        <> "border: 1px black solid;"
-        <> ("background-color: " <> color)
-    ]
-    []
 
 handleAction ::
   forall s o m.
@@ -292,9 +301,7 @@ renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, sc
     n = toNumber i
 
   drawCursor :: { x :: Int, y :: Int } -> Effect Unit
-  drawCursor { x, y } = do
-    Canvas.setFillStyle context color
-    Canvas.fillRect context { x: x_ (toNumber x), y: y_ (toNumber y), width: w_ 1.0, height: h_ 1.0 }
+  drawCursor { x, y } = drawPixel $ Pixel { x, y, color }
 
   drawImage :: Effect Unit
   drawImage = sequence_ $ map drawPixel $ reverse pixels
