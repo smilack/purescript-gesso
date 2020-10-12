@@ -49,11 +49,11 @@ mouseDown ::
   GInt.Interaction GEv.MouseEvent { clicked :: Maybe { x :: Number, y :: Number } | r } i
 mouseDown = GInt.mkInteraction GEv.onMouseDown getMousePos
   where
-  getMousePos event _  state =
+  getMousePos event _ state =
     let
       point = GDim.fromMouseEvent event
     in
-      state { clicked = Just { x: GDim.getX point, y: GDim.getY point } }
+      Just state { clicked = Just { x: GDim.getX point, y: GDim.getY point } }
 
 render :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
 render { clicked, mousePos } _ { x_, y_, w_, h_, screen, toVb } context = do
