@@ -1,6 +1,7 @@
 module Gesso.Interactions
   ( EventProp
   , Handler
+  , FullHandler
   , Interaction
   , Interactions
   , default
@@ -20,8 +21,11 @@ import Halogen.HTML.Properties (IProp)
 type EventProp event i
   = (event -> Maybe i) -> IProp HTMLcanvas i
 
+type FullHandler appState
+  = Dims.Scaler -> appState -> Maybe appState
+
 type Handler event appState
-  = event -> Dims.Scaler -> appState -> appState
+  = event -> FullHandler appState
 
 data Interaction event appState i
   = Interaction (EventProp event i) (Handler event appState)
@@ -49,7 +53,7 @@ type Interactions appState i
 
 toProps ::
   forall appState i.
-  ((Dims.Scaler -> appState -> appState) -> Maybe i) ->
+  (FullHandler appState -> Maybe i) ->
   Interactions appState i -> Array (IProp HTMLcanvas i)
 toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
   -- I tried to put these all in an array and foldMap it,
@@ -92,4 +96,4 @@ mousePosition = mkInteraction Events.onMouseMove getMousePos
     let
       point = Dims.fromMouseEvent event
     in
-      state { mousePos = Just { x: Dims.getX point, y: Dims.getY point } }
+      Just state { mousePos = Just { x: Dims.getX point, y: Dims.getY point } }

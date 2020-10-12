@@ -59,7 +59,7 @@ data Action appState
   | Tick (Maybe T.TimestampPrevious)
   | Finalize
   | StateUpdatedInTick appState
-  | InteractionTriggered (Dims.Scaler -> appState -> appState)
+  | InteractionTriggered (GI.FullHandler appState)
   | MaybeTick
 
 type Input appState
@@ -142,11 +142,9 @@ handleAction = case _ of
   --   appState is not changed or it's saved within the function
   InteractionTriggered updateFn -> do
     { scaler, appState } <- H.get
-    case scaler of
+    case scaler >>= \s -> updateFn s appState of
       Nothing -> pure unit
-      Just s -> do
-        let
-          appState' = updateFn s appState
+      Just appState' -> do
         H.modify_ (_ { appState = appState' })
         GM.putState appState'
         handleAction MaybeTick
