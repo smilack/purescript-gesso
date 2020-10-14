@@ -125,7 +125,7 @@ handleAction = case _ of
   Initialize -> do
     initialize
     handleAction $ Tick Nothing
-  HandleStateBus appState -> do
+  HandleStateBus appState -> do -- I think this can stay the same with the output changes
     H.modify_ (_ { appState = appState })
     handleAction MaybeTick
   HandleResize -> updateClientRect
@@ -135,6 +135,11 @@ handleAction = case _ of
   Finalize -> unsubscribeResize
   StateUpdatedInTick appState -> do
     H.modify_ (_ { appState = appState })
+    -- This will have to change to something like:
+    --   App.getOutput (H.gets _.appState) appState' (H.gets _.app)
+    --     >>= \out -> App.sendOutput saveGlobal sendOutput out
+    -- Also getOutput might have to return a new thing like (SaveGlobal output | SendOutput output)
+    -- Actually those functions could just be sent straight to getOutput I think
     GM.putState appState
     handleAction MaybeTick
   -- If effectful interactions become necessary, updateFn could return
@@ -146,6 +151,11 @@ handleAction = case _ of
       Nothing -> pure unit
       Just appState' -> do
         H.modify_ (_ { appState = appState' })
+        -- This will have to change to something like:
+        --   App.getOutput (H.gets _.appState) appState' (H.gets _.app)
+        --     >>= \out -> App.sendOutput saveGlobal sendOutput out
+        -- Also getOutput might have to return a new thing like (SaveGlobal output | SendOutput output)
+        -- Actually those functions could just be sent straight to getOutput I think
         GM.putState appState'
         handleAction MaybeTick
   MaybeTick -> do
@@ -266,3 +276,9 @@ subscribeResize = do
         (EventType "resize")
         (toEventTarget wnd)
         (const $ Just HandleResize)
+
+saveGlobalState ::
+saveGlobalState 
+
+sendOutput ::
+sendOutput
