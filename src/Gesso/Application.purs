@@ -27,7 +27,7 @@ module Gesso.Application
 import Prelude
 import CSS as CSS
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype, unwrap)
+import Data.Newtype (class Newtype)
 import Effect (Effect)
 import Gesso.Dimensions as D
 import Gesso.Time as T
@@ -129,11 +129,7 @@ windowCss (Application { window }) = case window of
 
 --return Nothing if there's no update function
 updateAppState :: forall state output. T.Delta -> state -> Application state output -> Maybe state
-updateAppState delta appState (Application app@{ update }) =
-  unwrap
-    <$> update
-    <*> pure delta
-    <*> pure appState
+updateAppState delta appState (Application { update }) = update >>= \(Update fn) -> Just $ fn delta appState
 
 data RequestFrame
   = Continue
