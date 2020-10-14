@@ -14,8 +14,10 @@ module Gesso.Application
   , Update
   , UpdateFunction
   , updateFn
-  , Output
+  , OutputStyle
+  , noOutput
   , outputFn
+  , globalState
   , getOutput
   , windowCss
   , updateAppState
@@ -43,15 +45,15 @@ type AppSpec state output
   = { window :: WindowStyle
     , render :: Maybe (RenderStyle state)
     , update :: Maybe (Update state)
-    , output :: Maybe (Output state output)
+    , output :: OutputStyle state output
     }
 
 defaultApp :: forall state output. AppSpec state output
 defaultApp =
-  { window: Fixed D.sizeless
+  { window: fixed D.sizeless
   , render: Nothing
   , update: Nothing
-  , output: Nothing
+  , output: noOutput
   }
 
 mkApplication :: forall state output. AppSpec state output -> Application state output
@@ -97,17 +99,31 @@ derive instance newtypeUpdate :: Newtype (Update state) _
 updateFn :: forall state. UpdateFunction state -> Update state
 updateFn = Update
 
-newtype Output state output
-  = Output (OutputProducer state output)
+data OutputStyle state output
+  = NoOutput
+  | OutputFn (OutputProducer state output)
+  | GlobalState
 
 type OutputProducer state output
   = state -> state -> Maybe output
 
-outputFn :: forall state output. OutputProducer state output -> Output state output
-outputFn = Output
+noOutput :: forall state output. OutputStyle state output
+noOutput = NoOutput
+
+outputFn :: forall state output. OutputProducer state output -> OutputStyle state output
+outputFn = OutputFn
+
+globalState :: forall state output. OutputStyle state output
+globalState = GlobalState
 
 getOutput :: forall state output. state -> state -> Application state output -> Maybe output
-getOutput state state' (Application { output }) = output >>= \(Output fn) -> fn state state'
+getOutput state state' (Application { output }) = go output
+  where
+  go (OutputFn fn) = fn state state'
+
+  go NoOutput = Nothing
+
+  go GlobalState = Nothing
 
 windowCss :: forall state output. Application state output -> CSS.CSS
 windowCss (Application { window }) = case window of
