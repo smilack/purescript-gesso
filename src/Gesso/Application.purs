@@ -14,6 +14,9 @@ module Gesso.Application
   , Update
   , UpdateFunction
   , updateFn
+  , Output
+  , outputFn
+  , getOutput
   , windowCss
   , updateAppState
   , RequestFrame(..)
@@ -31,25 +34,27 @@ import Gesso.Time as T
 import Graphics.Canvas as C
 import Halogen (liftEffect)
 
-newtype Application state
-  = Application (AppSpec state)
+newtype Application state output
+  = Application (AppSpec state output)
 
-derive instance newtypeApplication :: Newtype (Application state) _
+derive instance newtypeApplication :: Newtype (Application state output) _
 
-type AppSpec state
+type AppSpec state output
   = { window :: WindowStyle
     , render :: Maybe (RenderStyle state)
     , update :: Maybe (Update state)
+    , output :: Maybe (Output state output)
     }
 
-defaultApp :: forall state. AppSpec state
+defaultApp :: forall state output. AppSpec state output
 defaultApp =
   { window: Fixed D.sizeless
   , render: Nothing
   , update: Nothing
+  , output: Nothing
   }
 
-mkApplication :: forall state. AppSpec state -> Application state
+mkApplication :: forall state output. AppSpec state output -> Application state output
 mkApplication = Application
 
 data WindowStyle
@@ -92,7 +97,19 @@ derive instance newtypeUpdate :: Newtype (Update state) _
 updateFn :: forall state. UpdateFunction state -> Update state
 updateFn = Update
 
-windowCss :: forall state. Application state -> CSS.CSS
+newtype Output state output
+  = Output (OutputProducer state output)
+
+type OutputProducer state output
+  = state -> state -> Maybe output
+
+outputFn :: forall state output. OutputProducer state output -> Output state output
+outputFn = Output
+
+getOutput :: forall state output. state -> state -> Application state output -> Maybe output
+getOutput state state' (Application { output }) = output >>= \(Output fn) -> fn state state'
+
+windowCss :: forall state output. Application state output -> CSS.CSS
 windowCss (Application { window }) = case window of
   Fixed size -> D.toSizeCss size
   Stretch -> stretched
@@ -111,7 +128,7 @@ windowCss (Application { window }) = case window of
     CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
 
 --return Nothing if there's no update function
-updateAppState :: forall state. T.Delta -> state -> Application state -> Maybe state
+updateAppState :: forall state output. T.Delta -> state -> Application state output -> Maybe state
 updateAppState delta appState (Application app@{ update }) =
   unwrap
     <$> update
@@ -123,12 +140,12 @@ data RequestFrame
   | Stop
 
 renderApp ::
-  forall state.
+  forall state output.
   state ->
   T.Delta ->
   D.Scaler ->
   C.Context2D ->
-  Application state ->
+  Application state output ->
   Maybe (Effect RequestFrame)
 renderApp appState delta scaler context (Application { render }) = go <$> render
   where
@@ -142,7 +159,7 @@ renderApp appState delta scaler context (Application { render }) = go <$> render
 
   run fn = liftEffect $ fn appState delta scaler context
 
-renderOnUpdate :: forall state. Application state -> RequestFrame
+renderOnUpdate :: forall state output. Application state output -> RequestFrame
 renderOnUpdate (Application { render }) = case render of
   Just (OnChange _) -> Continue
   Just (Continuous _) -> Stop
