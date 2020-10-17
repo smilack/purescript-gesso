@@ -20,27 +20,27 @@ import Halogen (HalogenM, lift)
 import Halogen.Query.EventSource (EventSource)
 import Type.Equality (class TypeEquals, from)
 
-newtype GessoM appState more a
-  = GessoM (ReaderT (Environment appState more) Aff a)
+newtype GessoM globalState more a
+  = GessoM (ReaderT (Environment globalState more) Aff a)
 
-runGessoM :: forall appState more. Environment appState more -> GessoM appState more ~> Aff
+runGessoM :: forall globalState more. Environment globalState more -> GessoM globalState more ~> Aff
 runGessoM env (GessoM m) = runReaderT m env
 
-derive newtype instance functorGessoM :: Functor (GessoM appState more)
+derive newtype instance functorGessoM :: Functor (GessoM globalState more)
 
-derive newtype instance applyGessoM :: Apply (GessoM appState more)
+derive newtype instance applyGessoM :: Apply (GessoM globalState more)
 
-derive newtype instance applicativeGessoM :: Applicative (GessoM appState more)
+derive newtype instance applicativeGessoM :: Applicative (GessoM globalState more)
 
-derive newtype instance bindGessoM :: Bind (GessoM appState more)
+derive newtype instance bindGessoM :: Bind (GessoM globalState more)
 
-derive newtype instance monadGessoM :: Monad (GessoM appState more)
+derive newtype instance monadGessoM :: Monad (GessoM globalState more)
 
-derive newtype instance monadEffectGessoM :: MonadEffect (GessoM appState more)
+derive newtype instance monadEffectGessoM :: MonadEffect (GessoM globalState more)
 
-derive newtype instance monadAffGessoM :: MonadAff (GessoM appState more)
+derive newtype instance monadAffGessoM :: MonadAff (GessoM globalState more)
 
-instance monadAskGessoM :: TypeEquals e (Environment appState more) => MonadAsk e (GessoM appState more) where
+instance monadAskGessoM :: TypeEquals e (Environment globalState more) => MonadAsk e (GessoM globalState more) where
   ask = GessoM $ asks from
 
 class
@@ -50,13 +50,13 @@ class
   getState :: m a
   putState :: a -> m Unit
 
-instance manageStateHalogenM :: ManageState m appState => ManageState (HalogenM state action slots output m) appState where
+instance manageStateHalogenM :: ManageState m globalState => ManageState (HalogenM state action slots output m) globalState where
   getBus = lift getBus
   getEventSource = lift getEventSource
   getState = lift getState
   putState = lift <<< putState
 
-instance manageStateGessoM :: ManageState (GessoM appState more) appState where
+instance manageStateGessoM :: ManageState (GessoM globalState more) globalState where
   getBus = do
     env <- ask
     pure env.stateBus
@@ -65,8 +65,8 @@ instance manageStateGessoM :: ManageState (GessoM appState more) appState where
     pure $ busEventSource env.stateBus
   getState = do
     env <- ask
-    liftEffect $ Ref.read env.appState
-  putState appState' = do
+    liftEffect $ Ref.read env.globalState
+  putState globalState' = do
     env <- ask
-    liftEffect $ Ref.write appState' env.appState
-    liftAff $ Bus.write appState' env.stateBus
+    liftEffect $ Ref.write globalState' env.globalState
+    liftAff $ Bus.write globalState' env.stateBus

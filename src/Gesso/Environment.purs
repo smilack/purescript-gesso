@@ -8,17 +8,17 @@ import Effect.Aff.Class (class MonadAff)
 import Effect.Ref (Ref)
 import Halogen.Query.EventSource (EventSource, affEventSource, Finalizer(..), emit)
 
-type Environment appState more
-  = { appState :: Ref appState
-    , stateBus :: BusRW appState
+type Environment globalState more
+  = { globalState :: Ref globalState
+    , stateBus :: BusRW globalState
     | more
     }
 
 busEventSource ::
-  forall appState m r.
+  forall globalState m r.
   MonadAff m =>
-  BusR' r appState ->
-  EventSource m appState
+  BusR' r globalState ->
+  EventSource m globalState
 busEventSource bus =
   affEventSource \emitter -> do
     fiber <- forkAff $ forever $ emit emitter =<< read bus
