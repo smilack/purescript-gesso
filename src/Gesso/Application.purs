@@ -21,7 +21,7 @@ module Gesso.Application
   , updateLocal
   , handleOutput
   , windowCss
-  , updateAppState
+  , updateLocalState
   , RequestFrame(..)
   , renderApp
   , renderOnUpdate
@@ -40,23 +40,23 @@ import Gesso.Time as T
 import Graphics.Canvas as C
 import Halogen (liftEffect)
 
-newtype Application state output global
-  = Application (AppSpec state output global)
+newtype Application local output global
+  = Application (AppSpec local output global)
 
-derive instance newtypeApplication :: Newtype (Application state output global) _
+derive instance newtypeApplication :: Newtype (Application local output global) _
 
-type AppSpec state output global
+type AppSpec local output global
   = { window :: WindowMode
-    , render :: Maybe (RenderMode state)
-    , update :: Maybe (Update state)
-    , output :: OutputMode state output
+    , render :: Maybe (RenderMode local)
+    , update :: Maybe (Update local)
+    , output :: OutputMode local output
     , global ::
-        { toLocal :: global -> state -> state
-        , fromLocal :: state -> global -> global
+        { toLocal :: global -> local -> local
+        , fromLocal :: local -> global -> global
         }
     }
 
-defaultApp :: forall state output global. AppSpec state output global
+defaultApp :: forall local output global. AppSpec local output global
 defaultApp =
   { window: fixed D.sizeless
   , render: Nothing
@@ -65,7 +65,7 @@ defaultApp =
   , global: { toLocal: const identity, fromLocal: const identity }
   }
 
-mkApplication :: forall state output global. AppSpec state output global -> Application state output global
+mkApplication :: forall local output global. AppSpec local output global -> Application local output global
 mkApplication = Application
 
 data WindowMode
@@ -82,78 +82,78 @@ stretch = Stretch
 fullscreen :: WindowMode
 fullscreen = Fullscreen
 
-data RenderMode state
-  = OnChange (RenderFunction state)
-  | Continuous (RenderFunction state)
+data RenderMode local
+  = OnChange (RenderFunction local)
+  | Continuous (RenderFunction local)
 
-type RenderFunction state
-  = state -> T.Delta -> D.Scaler -> C.Context2D -> Effect Unit
+type RenderFunction local
+  = local -> T.Delta -> D.Scaler -> C.Context2D -> Effect Unit
 
-onChange :: forall state. RenderFunction state -> RenderMode state
+onChange :: forall local. RenderFunction local -> RenderMode local
 onChange = OnChange
 
-continuous :: forall state. RenderFunction state -> RenderMode state
+continuous :: forall local. RenderFunction local -> RenderMode local
 continuous = Continuous
 
 -- Considering making an Effectful variant, i.e.
 -- data Update state = Pure (Delta -> state -> state) | Effectful (Delta -> state -> Effect state)
-newtype Update state
-  = Update (UpdateFunction state)
+newtype Update local
+  = Update (UpdateFunction local)
 
-type UpdateFunction state
-  = T.Delta -> state -> state
+type UpdateFunction local
+  = T.Delta -> local -> local
 
-derive instance newtypeUpdate :: Newtype (Update state) _
+derive instance newtypeUpdate :: Newtype (Update local) _
 
-updateFn :: forall state. UpdateFunction state -> Update state
+updateFn :: forall local. UpdateFunction local -> Update local
 updateFn = Update
 
-data OutputMode state output
+data OutputMode local output
   = NoOutput
-  | OutputFn (OutputProducer state output)
+  | OutputFn (OutputProducer local output)
   | GlobalState
 
-type OutputProducer state output
-  = state -> state -> Maybe output
+type OutputProducer local output
+  = local -> local -> Maybe output
 
-noOutput :: forall state output. OutputMode state output
+noOutput :: forall local output. OutputMode local output
 noOutput = NoOutput
 
-outputFn :: forall state output. OutputProducer state output -> OutputMode state output
+outputFn :: forall local output. OutputProducer local output -> OutputMode local output
 outputFn = OutputFn
 
-globalState :: forall state output. OutputMode state output
+globalState :: forall local output. OutputMode local output
 globalState = GlobalState
 
 handleOutput ::
-  forall state output global m.
+  forall local output global m.
   MonadAff m =>
   ManageState m global =>
-  (state -> Maybe output -> m Unit) ->
-  state ->
-  state ->
-  Application state output global ->
+  (local -> Maybe output -> m Unit) ->
+  local ->
+  local ->
+  Application local output global ->
   m Unit
-handleOutput sendOutput state state' (Application { output, global }) = go output
+handleOutput sendOutput local local' (Application { output, global }) = go output
   where
   go (OutputFn fn) = do
-    sendOutput state' $ fn state state'
+    sendOutput local' $ fn local local'
 
   go GlobalState = do
     gState <- GM.getState
-    GM.putState $ global.fromLocal state' gState
+    GM.putState $ global.fromLocal local' gState
 
   go NoOutput = pure unit
 
 updateLocal ::
-  forall state output global.
-  state ->
+  forall local output global.
+  local ->
   global ->
-  Application state output global ->
-  state
-updateLocal state globalState' (Application { global }) = global.toLocal globalState' state
+  Application local output global ->
+  local
+updateLocal local globalState' (Application { global }) = global.toLocal globalState' local
 
-windowCss :: forall state output global. Application state output global -> CSS.CSS
+windowCss :: forall local output global. Application local output global -> CSS.CSS
 windowCss (Application { window }) = case window of
   Fixed size -> D.toSizeCss size
   Stretch -> stretched
@@ -172,22 +172,22 @@ windowCss (Application { window }) = case window of
     CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
 
 --return Nothing if there's no update function
-updateAppState :: forall state output global. T.Delta -> state -> Application state output global -> Maybe state
-updateAppState delta appState (Application { update }) = update >>= \(Update fn) -> Just $ fn delta appState
+updateLocalState :: forall local output global. T.Delta -> local -> Application local output global -> Maybe local
+updateLocalState delta localState (Application { update }) = update >>= \(Update fn) -> Just $ fn delta localState
 
 data RequestFrame
   = Continue
   | Stop
 
 renderApp ::
-  forall state output global.
-  state ->
+  forall local output global.
+  local ->
   T.Delta ->
   D.Scaler ->
   C.Context2D ->
-  Application state output global ->
+  Application local output global ->
   Maybe (Effect RequestFrame)
-renderApp appState delta scaler context (Application { render }) = go <$> render
+renderApp localState delta scaler context (Application { render }) = go <$> render
   where
   go = case _ of
     OnChange fn -> do
@@ -197,9 +197,9 @@ renderApp appState delta scaler context (Application { render }) = go <$> render
       run fn
       pure Continue
 
-  run fn = liftEffect $ fn appState delta scaler context
+  run fn = liftEffect $ fn localState delta scaler context
 
-renderOnUpdate :: forall state output global. Application state output global -> RequestFrame
+renderOnUpdate :: forall local output global. Application local output global -> RequestFrame
 renderOnUpdate (Application { render }) = case render of
   Just (OnChange _) -> Continue
   Just (Continuous _) -> Stop

@@ -204,7 +204,7 @@ queueAnimationFrame mLastTime context scaler appState app = do
     let
       mdelta = T.delta timestamp <$> mLastTime
 
-      mstate = join $ App.updateAppState <$> mdelta <*> pure appState <*> pure app
+      mstate = join $ App.updateLocalState <$> mdelta <*> pure appState <*> pure app
     traverse_ (ES.emit emitter <<< StateUpdated) mstate
     anotherFrame <-
       sequence $ join
