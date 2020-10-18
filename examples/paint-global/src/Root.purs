@@ -221,14 +221,20 @@ highlightCell = GInt.mkInteraction GEv.onMouseMove getMousePos
       p = Pixel { x, y, color: state.color }
     in
       if state.mouseDown then case head state.pixels of
-        Nothing -> state { mouseCell = Just { x, y }, pixels = p : state.pixels }
+        Nothing -> Just state { mouseCell = Just { x, y }, pixels = p : state.pixels }
         Just pixel ->
           if p == pixel then
-            state { mouseCell = Just { x, y } }
+            if state.mouseCell == Just { x, y } then
+              Nothing
+            else
+              Just state { mouseCell = Just { x, y } }
           else
-            state { mouseCell = Just { x, y }, pixels = p : state.pixels }
+            Just state { mouseCell = Just { x, y }, pixels = p : state.pixels }
       else
-        state { mouseCell = Just { x, y } }
+        if state.mouseCell == Just { x, y } then
+          Nothing
+        else
+          Just state { mouseCell = Just { x, y } }
 
 toXY :: GEv.MouseEvent -> GDim.Scaler -> { x :: Int, y :: Int }
 toXY event { toVb } =
@@ -246,7 +252,7 @@ toXY event { toVb } =
 clearHighlight ::
   forall i.
   GInt.Interaction GEv.MouseEvent AppState i
-clearHighlight = GInt.mkInteraction GEv.onMouseOut (\_ _ s -> s { mouseCell = Nothing })
+clearHighlight = GInt.mkInteraction GEv.onMouseOut (\_ _ s -> Just s { mouseCell = Nothing })
 
 mouseDown ::
   forall i.
@@ -259,12 +265,12 @@ mouseDown = GInt.mkInteraction GEv.onMouseDown startDrawing
 
       p = Pixel { x, y, color: state.color }
     in
-      state { pixels = p : state.pixels, redo = Nil, mouseDown = true }
+      Just state { pixels = p : state.pixels, redo = Nil, mouseDown = true }
 
 mouseUp ::
   forall i.
   GInt.Interaction GEv.MouseEvent AppState i
-mouseUp = GInt.mkInteraction GEv.onMouseUp (\_ _ s -> s { mouseDown = false })
+mouseUp = GInt.mkInteraction GEv.onMouseUp (\_ _ s -> Just s { mouseDown = false })
 
 renderApp :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
 renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, screen, toVb } context = do
