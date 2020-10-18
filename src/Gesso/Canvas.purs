@@ -36,8 +36,8 @@ import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.HTMLElement (getBoundingClientRect, fromElement, HTMLElement, DOMRect)
 import Web.HTML.Window (toEventTarget, document)
 
-type Slot output slot
-  = forall q. H.Slot q (Output output) slot
+type Slot input output slot
+  = H.Slot (Query input) (Output output) slot
 
 _gessoCanvas = SProxy :: SProxy "gessoCanvas"
 
