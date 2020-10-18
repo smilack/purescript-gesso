@@ -6,6 +6,8 @@ module Gesso.GessoM
   , getEventSource
   , getState
   , putState
+  , modifyState
+  , modifyState_
   ) where
 
 import Prelude
@@ -49,12 +51,16 @@ class
   getEventSource :: forall n. MonadAff n => m (EventSource n a)
   getState :: m a
   putState :: a -> m Unit
+  modifyState :: (a -> a) -> m a
+  modifyState_ :: (a -> a) -> m Unit
 
 instance manageStateHalogenM :: ManageState m globalState => ManageState (HalogenM state action slots output m) globalState where
   getBus = lift getBus
   getEventSource = lift getEventSource
   getState = lift getState
   putState = lift <<< putState
+  modifyState = lift <<< modifyState
+  modifyState_ = lift <<< modifyState_
 
 instance manageStateGessoM :: ManageState (GessoM globalState more) globalState where
   getBus = do
@@ -70,3 +76,13 @@ instance manageStateGessoM :: ManageState (GessoM globalState more) globalState 
     env <- ask
     liftEffect $ Ref.write globalState' env.globalState
     liftAff $ Bus.write globalState' env.stateBus
+  modifyState fn = do
+    env <- ask
+    globalState' <- liftEffect $ Ref.modify fn env.globalState
+    liftAff $ Bus.write globalState' env.stateBus
+    pure globalState'
+  modifyState_ fn = do
+    env <- ask
+    globalState' <- liftEffect $ Ref.modify fn env.globalState
+    liftAff $ Bus.write globalState' env.stateBus
+    pure unit
