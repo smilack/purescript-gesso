@@ -40,12 +40,12 @@ import Gesso.Time as T
 import Graphics.Canvas as C
 import Halogen (liftEffect)
 
-newtype Application local output global
-  = Application (AppSpec local output global)
+newtype Application local global output
+  = Application (AppSpec local global output)
 
-derive instance newtypeApplication :: Newtype (Application local output global) _
+derive instance newtypeApplication :: Newtype (Application local global output) _
 
-type AppSpec local output global
+type AppSpec local global output
   = { window :: WindowMode
     , render :: Maybe (RenderMode local)
     , update :: Maybe (Update local)
@@ -56,7 +56,7 @@ type AppSpec local output global
         }
     }
 
-defaultApp :: forall local output global. AppSpec local output global
+defaultApp :: forall local global output. AppSpec local global output
 defaultApp =
   { window: fixed D.sizeless
   , render: Nothing
@@ -65,7 +65,7 @@ defaultApp =
   , global: { toLocal: const identity, fromLocal: const identity }
   }
 
-mkApplication :: forall local output global. AppSpec local output global -> Application local output global
+mkApplication :: forall local global output. AppSpec local global output -> Application local global output
 mkApplication = Application
 
 data WindowMode
@@ -126,13 +126,13 @@ globalState :: forall local output. OutputMode local output
 globalState = GlobalState
 
 handleOutput ::
-  forall local output global m.
+  forall local global output m.
   MonadAff m =>
   ManageState m global =>
   (local -> Maybe output -> m Unit) ->
   local ->
   local ->
-  Application local output global ->
+  Application local global output ->
   m Unit
 handleOutput sendOutput local local' (Application { output, global }) = go output
   where
@@ -146,14 +146,14 @@ handleOutput sendOutput local local' (Application { output, global }) = go outpu
   go NoOutput = pure unit
 
 updateLocal ::
-  forall local output global.
+  forall local global output.
   local ->
   global ->
-  Application local output global ->
+  Application local global output ->
   local
 updateLocal local globalState' (Application { global }) = global.toLocal globalState' local
 
-windowCss :: forall local output global. Application local output global -> CSS.CSS
+windowCss :: forall local global output. Application local global output -> CSS.CSS
 windowCss (Application { window }) = case window of
   Fixed size -> D.toSizeCss size
   Stretch -> stretched
@@ -172,7 +172,7 @@ windowCss (Application { window }) = case window of
     CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
 
 --return Nothing if there's no update function
-updateLocalState :: forall local output global. T.Delta -> local -> Application local output global -> Maybe local
+updateLocalState :: forall local global output. T.Delta -> local -> Application local global output -> Maybe local
 updateLocalState delta localState (Application { update }) = update >>= \(Update fn) -> Just $ fn delta localState
 
 data RequestFrame
@@ -180,12 +180,12 @@ data RequestFrame
   | Stop
 
 renderApp ::
-  forall local output global.
+  forall local global output.
   local ->
   T.Delta ->
   D.Scaler ->
   C.Context2D ->
-  Application local output global ->
+  Application local global output ->
   Maybe (Effect RequestFrame)
 renderApp localState delta scaler context (Application { render }) = go <$> render
   where
@@ -199,7 +199,7 @@ renderApp localState delta scaler context (Application { render }) = go <$> rend
 
   run fn = liftEffect $ fn localState delta scaler context
 
-renderOnUpdate :: forall local output global. Application local output global -> RequestFrame
+renderOnUpdate :: forall local global output. Application local global output -> RequestFrame
 renderOnUpdate (Application { render }) = case render of
   Just (OnChange _) -> Continue
   Just (Continuous _) -> Stop
