@@ -18,7 +18,8 @@ module Gesso.Application
   , noOutput
   , outputFn
   , globalState
-  , getOutput
+  , updateLocal
+  , handleOutput
   , windowCss
   , updateAppState
   , RequestFrame(..)
@@ -31,32 +32,40 @@ import CSS as CSS
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Effect (Effect)
+import Effect.Aff.Class (class MonadAff)
 import Gesso.Dimensions as D
+import Gesso.GessoM (class ManageState)
+import Gesso.GessoM as GM
 import Gesso.Time as T
 import Graphics.Canvas as C
 import Halogen (liftEffect)
 
-newtype Application state output
-  = Application (AppSpec state output)
+newtype Application state output global
+  = Application (AppSpec state output global)
 
-derive instance newtypeApplication :: Newtype (Application state output) _
+derive instance newtypeApplication :: Newtype (Application state output global) _
 
-type AppSpec state output
+type AppSpec state output global
   = { window :: WindowStyle
     , render :: Maybe (RenderStyle state)
     , update :: Maybe (Update state)
     , output :: OutputStyle state output
+    , global ::
+        { toLocal :: global -> state -> state
+        , fromLocal :: state -> global -> global
+        }
     }
 
-defaultApp :: forall state output. AppSpec state output
+defaultApp :: forall state output global. AppSpec state output global
 defaultApp =
   { window: fixed D.sizeless
   , render: Nothing
   , update: Nothing
   , output: noOutput
+  , global: { toLocal: const identity, fromLocal: const identity }
   }
 
-mkApplication :: forall state output. AppSpec state output -> Application state output
+mkApplication :: forall state output global. AppSpec state output global -> Application state output global
 mkApplication = Application
 
 data WindowStyle
@@ -116,16 +125,35 @@ outputFn = OutputFn
 globalState :: forall state output. OutputStyle state output
 globalState = GlobalState
 
-getOutput :: forall state output. state -> state -> Application state output -> Maybe output
-getOutput state state' (Application { output }) = go output
+handleOutput ::
+  forall state output global m.
+  MonadAff m =>
+  ManageState m global =>
+  (state -> Maybe output -> m Unit) ->
+  state ->
+  state ->
+  Application state output global ->
+  m Unit
+handleOutput sendOutput state state' (Application { output, global }) = go output
   where
-  go (OutputFn fn) = fn state state'
+  go (OutputFn fn) = do
+    sendOutput state' $ fn state state'
 
-  go NoOutput = Nothing
+  go GlobalState = do
+    gState <- GM.getState
+    GM.putState $ global.fromLocal state' gState
 
-  go GlobalState = Nothing
+  go NoOutput = pure unit
 
-windowCss :: forall state output. Application state output -> CSS.CSS
+updateLocal ::
+  forall state output global.
+  state ->
+  global ->
+  Application state output global ->
+  state
+updateLocal state globalState' (Application { global }) = global.toLocal globalState' state
+
+windowCss :: forall state output global. Application state output global -> CSS.CSS
 windowCss (Application { window }) = case window of
   Fixed size -> D.toSizeCss size
   Stretch -> stretched
@@ -144,7 +172,7 @@ windowCss (Application { window }) = case window of
     CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
 
 --return Nothing if there's no update function
-updateAppState :: forall state output. T.Delta -> state -> Application state output -> Maybe state
+updateAppState :: forall state output global. T.Delta -> state -> Application state output global -> Maybe state
 updateAppState delta appState (Application { update }) = update >>= \(Update fn) -> Just $ fn delta appState
 
 data RequestFrame
@@ -152,12 +180,12 @@ data RequestFrame
   | Stop
 
 renderApp ::
-  forall state output.
+  forall state output global.
   state ->
   T.Delta ->
   D.Scaler ->
   C.Context2D ->
-  Application state output ->
+  Application state output global ->
   Maybe (Effect RequestFrame)
 renderApp appState delta scaler context (Application { render }) = go <$> render
   where
@@ -171,7 +199,7 @@ renderApp appState delta scaler context (Application { render }) = go <$> render
 
   run fn = liftEffect $ fn appState delta scaler context
 
-renderOnUpdate :: forall state output. Application state output -> RequestFrame
+renderOnUpdate :: forall state output global. Application state output global -> RequestFrame
 renderOnUpdate (Application { render }) = case render of
   Just (OnChange _) -> Continue
   Just (Continuous _) -> Stop

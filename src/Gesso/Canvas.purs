@@ -2,6 +2,7 @@ module Gesso.Canvas
   ( component
   , Input
   , Action
+  , Output(..)
   , Slot
   , _gessoCanvas
   ) where
@@ -34,14 +35,14 @@ import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.HTMLElement (getBoundingClientRect, fromElement, HTMLElement, DOMRect)
 import Web.HTML.Window (toEventTarget, document)
 
-type Slot slot
-  = forall q. H.Slot q Void slot
+type Slot output slot
+  = forall q. H.Slot q (Output output) slot
 
 _gessoCanvas = SProxy :: SProxy "gessoCanvas"
 
-type State appState
+type State appState appOutput globalState
   = { name :: String
-    , app :: App.Application appState
+    , app :: App.Application appState appOutput globalState
     , appState :: appState
     , viewBox :: Dims.ViewBox
     , clientRect :: Maybe Dims.ClientRect
@@ -49,32 +50,35 @@ type State appState
     , context :: Maybe Context2D
     , scaler :: Maybe Dims.Scaler
     , resizeSub :: Maybe H.SubscriptionId
-    , interactions :: GI.Interactions appState (Action appState)
+    , interactions :: GI.Interactions appState (Action appState globalState)
     }
 
-data Action appState
+data Action appState globalState
   = Initialize
-  | HandleStateBus appState
+  | HandleStateBus globalState
   | HandleResize
   | Tick (Maybe T.TimestampPrevious)
   | Finalize
-  | StateUpdatedInTick appState
+  | StateUpdated appState
   | InteractionTriggered (GI.FullHandler appState)
   | MaybeTick
 
-type Input appState
+newtype Output appOutput
+  = Output appOutput
+
+type Input appState appOutput globalState
   = { name :: String
-    , app :: App.Application appState
+    , app :: App.Application appState appOutput globalState
     , appState :: appState
     , viewBox :: Dims.ViewBox
-    , interactions :: GI.Interactions appState (Action appState)
+    , interactions :: GI.Interactions appState (Action appState globalState)
     }
 
 component ::
-  forall appState query output m.
+  forall appState query appOutput globalState m.
   MonadAff m =>
-  ManageState m appState =>
-  H.Component HTML query (Input appState) output m
+  ManageState m globalState =>
+  H.Component HTML query (Input appState appOutput globalState) (Output appOutput) m
 component =
   H.mkComponent
     { initialState
@@ -89,9 +93,9 @@ component =
     }
 
 initialState ::
-  forall appState.
-  Input appState ->
-  State appState
+  forall appState appOutput globalState.
+  Input appState appOutput globalState ->
+  State appState appOutput globalState
 initialState { name, app, appState, viewBox, interactions } =
   { name
   , app
@@ -106,9 +110,9 @@ initialState { name, app, appState, viewBox, interactions } =
   }
 
 render ::
-  forall appState slots m.
-  State appState ->
-  H.ComponentHTML (Action appState) slots m
+  forall appState appOutput globalState slots m.
+  State appState appOutput globalState ->
+  H.ComponentHTML (Action appState globalState) slots m
 render { name, clientRect, app, interactions } =
   canvas
     $ [ id_ name, style $ App.windowCss app ]
@@ -116,48 +120,38 @@ render { name, clientRect, app, interactions } =
     <> maybe [] Dims.toSizeProps clientRect
 
 handleAction ::
-  forall appState slots output m.
+  forall appState appOutput globalState slots m.
   MonadAff m =>
-  ManageState m appState =>
-  (Action appState) ->
-  H.HalogenM (State appState) (Action appState) slots output m Unit
+  ManageState m globalState =>
+  (Action appState globalState) ->
+  H.HalogenM (State appState appOutput globalState) (Action appState globalState) slots (Output appOutput) m Unit
 handleAction = case _ of
   Initialize -> do
     initialize
     handleAction $ Tick Nothing
-  HandleStateBus appState -> do -- I think this can stay the same with the output changes
-    H.modify_ (_ { appState = appState })
+  HandleStateBus globalState' -> do
+    { app, appState } <- H.get
+    let
+      appState' = App.updateLocal appState globalState' app
+    H.modify_ (_ { appState = appState' })
     handleAction MaybeTick
   HandleResize -> updateClientRect
   Tick mLastTime -> do
     { context, appState, app, scaler } <- H.get
     queueAnimationFrame mLastTime context scaler appState app
   Finalize -> unsubscribeResize
-  StateUpdatedInTick appState -> do
-    H.modify_ (_ { appState = appState })
-    -- This will have to change to something like:
-    --   App.getOutput (H.gets _.appState) appState' (H.gets _.app)
-    --     >>= \out -> App.sendOutput saveGlobal sendOutput out
-    -- Also getOutput might have to return a new thing like (SaveGlobal output | SendOutput output)
-    -- Actually those functions could just be sent straight to getOutput I think
-    GM.putState appState
-    handleAction MaybeTick
   -- If effectful interactions become necessary, updateFn could return
   --   m (Maybe appState) - Just if appState is changed, or Nothing if
-  --   appState is not changed or it's saved within the function
+  --   appState is not changed. Probably should just be Effect because
+  --   ManageState is getting complicated with addition of OutputStyles
   InteractionTriggered updateFn -> do
     { scaler, appState } <- H.get
     case scaler >>= \s -> updateFn s appState of
       Nothing -> pure unit
-      Just appState' -> do
-        H.modify_ (_ { appState = appState' })
-        -- This will have to change to something like:
-        --   App.getOutput (H.gets _.appState) appState' (H.gets _.app)
-        --     >>= \out -> App.sendOutput saveGlobal sendOutput out
-        -- Also getOutput might have to return a new thing like (SaveGlobal output | SendOutput output)
-        -- Actually those functions could just be sent straight to getOutput I think
-        GM.putState appState'
-        handleAction MaybeTick
+      Just appState' -> handleAction $ StateUpdated appState'
+  StateUpdated appState' -> do
+    modifyState appState'
+    handleAction MaybeTick
   MaybeTick -> do
     app <- H.gets _.app
     case App.renderOnUpdate app of
@@ -165,10 +159,10 @@ handleAction = case _ of
       App.Continue -> handleAction $ Tick Nothing
 
 initialize ::
-  forall appState slots output m.
+  forall appState appOutput globalState slots output m.
   MonadAff m =>
-  ManageState m appState =>
-  H.HalogenM (State appState) (Action appState) slots output m Unit
+  ManageState m globalState =>
+  H.HalogenM (State appState appOutput globalState) (Action appState globalState) slots output m Unit
 initialize = do
   stateEventSource <- GM.getEventSource
   _ <- H.subscribe $ HandleStateBus <$> stateEventSource
@@ -188,30 +182,30 @@ initialize = do
     )
 
 queueAnimationFrame ::
-  forall appState slots output m.
+  forall appState appOutput globalState slots output m.
   MonadAff m =>
   Maybe (T.TimestampPrevious) ->
   Maybe Context2D ->
   Maybe Dims.Scaler ->
   appState ->
-  App.Application appState ->
-  H.HalogenM (State appState) (Action appState) slots output m Unit
+  App.Application appState appOutput globalState ->
+  H.HalogenM (State appState appOutput globalState) (Action appState globalState) slots output m Unit
 queueAnimationFrame mLastTime context scaler appState app = do
   _ <- H.subscribe $ ES.effectEventSource rafEventSource
   pure unit
   where
-  rafEventSource :: ES.Emitter Effect (Action appState) -> Effect (ES.Finalizer Effect)
+  rafEventSource :: ES.Emitter Effect (Action appState globalState) -> Effect (ES.Finalizer Effect)
   rafEventSource emitter = do
     _ <- T.requestAnimationFrame (rafCallback emitter) =<< window
     mempty
 
-  rafCallback :: ES.Emitter Effect (Action appState) -> T.TimestampCurrent -> Effect Unit
+  rafCallback :: ES.Emitter Effect (Action appState globalState) -> T.TimestampCurrent -> Effect Unit
   rafCallback emitter timestamp = do
     let
       mdelta = T.delta timestamp <$> mLastTime
 
       mstate = join $ App.updateAppState <$> mdelta <*> pure appState <*> pure app
-    traverse_ (ES.emit emitter <<< StateUpdatedInTick) mstate
+    traverse_ (ES.emit emitter <<< StateUpdated) mstate
     anotherFrame <-
       sequence $ join
         $ App.renderApp
@@ -244,9 +238,9 @@ getCanvasClientRect mcanvas = do
   pure $ Dims.fromDOMRect <$> mbounding
 
 updateClientRect ::
-  forall appState action slots output m.
+  forall appState appOutput globalState action slots output m.
   MonadAff m =>
-  H.HalogenM (State appState) action slots output m Unit
+  H.HalogenM (State appState appOutput globalState) action slots output m Unit
 updateClientRect = do
   { canvas, viewBox } <- H.get
   clientRect <- H.liftEffect $ getCanvasClientRect canvas
@@ -258,17 +252,17 @@ updateClientRect = do
     )
 
 unsubscribeResize ::
-  forall appState action slots output m.
+  forall appState appOutput globalState action slots output m.
   MonadAff m =>
-  H.HalogenM (State appState) action slots output m Unit
+  H.HalogenM (State appState appOutput globalState) action slots output m Unit
 unsubscribeResize = do
   mresizeSub <- H.gets _.resizeSub
   traverse_ H.unsubscribe mresizeSub
 
 subscribeResize ::
-  forall appState slots output m.
+  forall appState appOutput globalState slots output m.
   MonadAff m =>
-  H.HalogenM (State appState) (Action appState) slots output m H.SubscriptionId
+  H.HalogenM (State appState appOutput globalState) (Action appState globalState) slots output m H.SubscriptionId
 subscribeResize = do
   wnd <- H.liftEffect window
   H.subscribe
@@ -277,8 +271,24 @@ subscribeResize = do
         (toEventTarget wnd)
         (const $ Just HandleResize)
 
-saveGlobalState ::
-saveGlobalState 
-
 sendOutput ::
-sendOutput
+  forall appState appOutput globalState slots m.
+  MonadAff m =>
+  ManageState m globalState =>
+  appState ->
+  Maybe appOutput ->
+  H.HalogenM (State appState appOutput globalState) (Action appState globalState) slots (Output appOutput) m Unit
+sendOutput state' moutput = do
+  H.modify_ (_ { appState = state' })
+  traverse_ (H.raise <<< Output) moutput
+
+-- I think I need to be able to make ManageState's state and appState different. What would that take?
+modifyState ::
+  forall appState appOutput globalState slots m.
+  MonadAff m =>
+  ManageState m globalState =>
+  appState ->
+  H.HalogenM (State appState appOutput globalState) (Action appState globalState) slots (Output appOutput) m Unit
+modifyState state' = do
+  { app, appState } <- H.get
+  App.handleOutput sendOutput appState state' app
