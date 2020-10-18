@@ -5,7 +5,6 @@ module Gesso
   , mkPlainEnv
   , hoist
   , runWith
-  , Input
   ) where
 
 import Prelude
@@ -27,40 +26,37 @@ import Web.HTML.HTMLElement (HTMLElement)
 runGessoAff :: forall x. Aff x -> Effect Unit
 runGessoAff = HAff.runHalogenAff
 
--- I don't love this
-type Input appState r
-  = { appState :: appState | r }
-
 -- Top-level app - no other UI. Returns env
 run ::
-  forall appState r q o.
-  H.Component HTML q (Input appState r) o (GessoM appState ()) ->
-  (Input appState r) ->
+  forall input globalState q o.
+  H.Component HTML q input o (GessoM globalState ()) ->
+  input ->
+  globalState ->
   HTMLElement ->
-  Aff (Environment appState ())
-run component config element = do
-  env <- liftEffect $ mkPlainEnv config.appState
+  Aff (Environment globalState ())
+run component config globalState element = do
+  env <- liftEffect $ mkPlainEnv globalState
   io <- runUI (hoist env component) config element
   pure env
 
-mkPlainEnv :: forall appState. appState -> Effect (Environment appState ())
+mkPlainEnv :: forall globalState. globalState -> Effect (Environment globalState ())
 mkPlainEnv initialState = do
-  appState <- Ref.new initialState
+  globalState <- Ref.new initialState
   stateBus <- Bus.make
-  pure { appState, stateBus }
+  pure { globalState, stateBus }
 
 hoist ::
-  forall appState q i o e.
-  Environment appState e ->
-  H.Component HTML q i o (GessoM appState e) ->
+  forall globalState q i o e.
+  Environment globalState e ->
+  H.Component HTML q i o (GessoM globalState e) ->
   H.Component HTML q i o Aff
 hoist = H.hoist <<< runGessoM
 
 --Supply your own ManageState monad
 runWith ::
-  forall appState q i o m.
+  forall globalState q i o m.
   MonadAff m =>
-  ManageState m appState =>
+  ManageState m globalState =>
   m ~> Aff ->
   H.Component HTML q i o m ->
   i ->
