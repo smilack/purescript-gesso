@@ -21,14 +21,14 @@ import Halogen.HTML.Properties (IProp)
 type EventProp event i
   = (event -> Maybe i) -> IProp HTMLcanvas i
 
-type FullHandler appState
-  = Dims.Scaler -> appState -> Maybe appState
+type FullHandler localState
+  = Dims.Scaler -> localState -> Maybe localState
 
-type Handler event appState
-  = event -> FullHandler appState
+type Handler event localState
+  = event -> FullHandler localState
 
-data Interaction event appState i
-  = Interaction (EventProp event i) (Handler event appState)
+data Interaction event localState i
+  = Interaction (EventProp event i) (Handler event localState)
 
 -- Originally I wanted to have `Interaction event appState i` and a
 --   list of interactions, but because two interactions could have
@@ -40,21 +40,21 @@ data Interaction event appState i
 --   while keeping it general enough to match the Canvas function.
 -- I think, barring some trick I'm not aware of, I have to separate the
 --   Interactions into separate lists for each event.
-type Interactions appState i
-  = { base :: Array (Interaction Event appState i)
-    , clipboard :: Array (Interaction ClipboardEvent appState i)
-    , focus :: Array (Interaction FocusEvent appState i)
-    , keyboard :: Array (Interaction KeyboardEvent appState i)
-    , touch :: Array (Interaction TouchEvent appState i)
-    , drag :: Array (Interaction DragEvent appState i)
-    , mouse :: Array (Interaction MouseEvent appState i)
-    , wheel :: Array (Interaction WheelEvent appState i)
+type Interactions localState i
+  = { base :: Array (Interaction Event localState i)
+    , clipboard :: Array (Interaction ClipboardEvent localState i)
+    , focus :: Array (Interaction FocusEvent localState i)
+    , keyboard :: Array (Interaction KeyboardEvent localState i)
+    , touch :: Array (Interaction TouchEvent localState i)
+    , drag :: Array (Interaction DragEvent localState i)
+    , mouse :: Array (Interaction MouseEvent localState i)
+    , wheel :: Array (Interaction WheelEvent localState i)
     }
 
 toProps ::
-  forall appState i.
-  (FullHandler appState -> Maybe i) ->
-  Interactions appState i -> Array (IProp HTMLcanvas i)
+  forall localState i.
+  (FullHandler localState -> Maybe i) ->
+  Interactions localState i -> Array (IProp HTMLcanvas i)
 toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
   -- I tried to put these all in an array and foldMap it,
   --   but it didn't work since they're different types
@@ -67,10 +67,10 @@ toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel
     <> map toProp mouse
     <> map toProp wheel
   where
-  toProp :: forall e. Interaction e appState i -> IProp HTMLcanvas i
+  toProp :: forall e. Interaction e localState i -> IProp HTMLcanvas i
   toProp (Interaction onEvent handler) = onEvent $ toCallback <<< handler
 
-default :: forall appState i. Interactions appState i
+default :: forall localState i. Interactions localState i
 default =
   { base: []
   , clipboard: []
@@ -83,8 +83,8 @@ default =
   }
 
 mkInteraction ::
-  forall event appState i.
-  EventProp event i -> Handler event appState -> Interaction event appState i
+  forall event localState i.
+  EventProp event i -> Handler event localState -> Interaction event localState i
 mkInteraction = Interaction
 
 mousePosition ::
