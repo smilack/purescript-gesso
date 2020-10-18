@@ -22,15 +22,15 @@ main :: Effect Unit
 main =
   G.runGessoAff do
     body <- G.awaitBody
-    G.run GC.component input body
+    G.run GC.component input unit body
 
-type AppState
-  = {}
-
-input :: GC.Input AppState
+-- localState and globalState are unit because they are inputs for
+--   runUI and run and need to be passed in. Output can be Void
+--   because we never need to use it unless OutputMode is OutputFn
+input :: GC.Input Unit Unit Void
 input =
   { name: "test-app"
-  , appState: {}
+  , localState: unit
   , app:
       GApp.mkApplication
         $ GApp.defaultApp
@@ -41,7 +41,7 @@ input =
   , interactions: GInt.default
   }
 
-render :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
+render :: Unit -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
 render _ _ { x_, y_, w_, h_, screen, viewBox } context = do
   -- Clear background
   Canvas.setFillStyle context "white"
