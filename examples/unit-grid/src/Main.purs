@@ -20,17 +20,17 @@ main :: Effect Unit
 main =
   G.runGessoAff do
     body <- G.awaitBody
-    G.run GC.component input body
+    G.run GC.component input unit body
 
-type AppState
+type LocalState
   = { mousePos :: Maybe { x :: Number, y :: Number }
     , clicked :: Maybe { x :: Number, y :: Number }
     }
 
-input :: GC.Input AppState
+input :: GC.Input LocalState Unit Void
 input =
   { name: "test-app"
-  , appState: { mousePos: Nothing, clicked: Nothing }
+  , localState: { mousePos: Nothing, clicked: Nothing }
   , app:
       GApp.mkApplication
         $ GApp.defaultApp
@@ -55,7 +55,7 @@ mouseDown = GInt.mkInteraction GEv.onMouseDown getMousePos
     in
       Just state { clicked = Just { x: GDim.getX point, y: GDim.getY point } }
 
-render :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
+render :: LocalState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
 render { clicked, mousePos } _ { x_, y_, w_, h_, screen, toVb } context = do
   clearBackground
   drawAxes
