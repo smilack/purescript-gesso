@@ -3,10 +3,10 @@ module Root where
 import Prelude
 import ColorButton as CB
 import Data.Array (range, fromFoldable)
+import Data.Foldable (sequence_, traverse_, length)
 import Data.Int (floor, toNumber)
 import Data.List (List(..), (:), tail, reverse, head)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Foldable (sequence_, traverse_)
 import DOM.HTML.Indexed.InputType (InputType(..))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
@@ -63,10 +63,12 @@ type Slots
 
 data Action
   = ButtonClicked CB.Output
+  | Initialize
   | Undo
   | Redo
   | ToggleGrid
   | GotOutput (GC.Output CanvasIO)
+  | GlobalChanged CanvasIO
 
 initialState :: forall i. i -> RootState
 initialState _ =
@@ -93,7 +95,7 @@ component =
   H.mkComponent
     { initialState
     , render
-    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
+    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction, initialize = Just Initialize }
     }
 
 render :: forall m. MonadAff m => ManageState m CanvasIO => RootState -> H.ComponentHTML Action Slots m
@@ -177,8 +179,13 @@ handleAction ::
   ManageState m CanvasIO =>
   Action -> H.HalogenM RootState Action s o m Unit
 handleAction = case _ of
+  Initialize -> do
+    stateEventSource <- GM.getEventSource
+    _ <- H.subscribe $ GlobalChanged <$> stateEventSource
+    pure unit
+  GlobalChanged output' -> H.modify_ $ convertState output'
   ToggleGrid -> GM.modifyState_ (\s -> s { showGrid = not s.showGrid })
-  GotOutput (GC.Output output) -> H.modify_ $ convertState output
+  GotOutput (GC.Output output') -> GM.modifyState_ $ convertState output'
   ButtonClicked (CB.Clicked color') -> GM.modifyState_ (_ { color = color' })
   Undo -> do
     appState <- GM.getState
@@ -232,7 +239,10 @@ convertState { showGrid, color, pixels, redo } = _ { showGrid = showGrid, color 
 
 extractOutput :: CanvasState -> CanvasState -> Maybe CanvasIO
 extractOutput state state'@{ showGrid, color, pixels, redo } =
-  if state /= state' then
+  if (state.showGrid /= showGrid)
+    || (state.color /= color)
+    || (length state.pixels /= (length pixels :: Int))
+    || (length state.redo /= (length redo :: Int)) then
     Just { showGrid, color, pixels, redo }
   else
     Nothing
