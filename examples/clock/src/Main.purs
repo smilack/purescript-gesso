@@ -25,9 +25,10 @@ main =
     G.run GC.component input unit body
 
 -- localState and globalState are unit because they are inputs for
---   runUI and run and need to be passed in. Output can be Void
---   because we never need to use it unless OutputMode is OutputFn
-input :: GC.Input Unit Unit Void
+--   runUI and run and need to be passed in. Input and Output can be
+--   Void because we never need to use them unless we call Query or
+--   set the OutputMode to OutputFn
+input :: GC.Input Unit Unit Void Void
 input =
   { name: "test-app"
   , localState: unit
