@@ -27,7 +27,7 @@ type LocalState
     , clicked :: Maybe { x :: Number, y :: Number }
     }
 
-input :: GC.Input LocalState Unit Void
+input :: GC.Input LocalState Unit Void Void
 input =
   { name: "test-app"
   , localState: { mousePos: Nothing, clicked: Nothing }
