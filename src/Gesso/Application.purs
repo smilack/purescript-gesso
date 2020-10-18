@@ -18,7 +18,7 @@ module Gesso.Application
   , noOutput
   , outputFn
   , globalState
-  , updateLocal
+  , receiveGlobal
   , handleOutput
   , windowCss
   , updateLocalState
@@ -129,29 +129,34 @@ handleOutput ::
   forall local global output m.
   MonadAff m =>
   ManageState m global =>
-  (local -> Maybe output -> m Unit) ->
+  (local -> m Unit) ->
+  (Maybe output -> m Unit) ->
   local ->
   local ->
   Application local global output ->
   m Unit
-handleOutput sendOutput local local' (Application { output, global }) = go output
+handleOutput saveLocal sendOutput local local' (Application { output, global }) = go output
   where
   go (OutputFn fn) = do
-    sendOutput local' $ fn local local'
+    saveLocal local'
+    sendOutput $ fn local local'
 
   go GlobalState = do
     gState <- GM.getState
     GM.putState $ global.fromLocal local' gState
 
-  go NoOutput = pure unit
+  go NoOutput = saveLocal local'
 
-updateLocal ::
-  forall local global output.
+receiveGlobal ::
+  forall local global output m.
+  MonadAff m =>
+  ManageState m global =>
+  (local -> m Unit) ->
   local ->
   global ->
   Application local global output ->
-  local
-updateLocal local globalState' (Application { global }) = global.toLocal globalState' local
+  m Unit
+receiveGlobal saveLocal local globalState' (Application { global }) = saveLocal $ global.toLocal globalState' local
 
 windowCss :: forall local global output. Application local global output -> CSS.CSS
 windowCss (Application { window }) = case window of

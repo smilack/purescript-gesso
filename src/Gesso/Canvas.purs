@@ -131,9 +131,7 @@ handleAction = case _ of
     handleAction $ Tick Nothing
   HandleStateBus globalState' -> do
     { app, localState } <- H.get
-    let
-      localState' = App.updateLocal localState globalState' app
-    H.modify_ (_ { localState = localState' })
+    App.receiveGlobal saveLocal localState globalState' app
     handleAction MaybeTick
   HandleResize -> updateClientRect
   Tick mLastTime -> do
@@ -275,14 +273,18 @@ sendOutput ::
   forall localState globalState appOutput slots m.
   MonadAff m =>
   ManageState m globalState =>
-  localState ->
   Maybe appOutput ->
   H.HalogenM (State localState globalState appOutput) (Action localState globalState) slots (Output appOutput) m Unit
-sendOutput state' moutput = do
-  H.modify_ (_ { localState = state' })
-  traverse_ (H.raise <<< Output) moutput
+sendOutput = traverse_ (H.raise <<< Output)
 
--- I think I need to be able to make ManageState's state and localState different. What would that take?
+saveLocal ::
+  forall localState globalState appOutput slots m.
+  MonadAff m =>
+  ManageState m globalState =>
+  localState ->
+  H.HalogenM (State localState globalState appOutput) (Action localState globalState) slots (Output appOutput) m Unit
+saveLocal state' = H.modify_ (_ { localState = state' })
+
 modifyState ::
   forall localState globalState appOutput slots m.
   MonadAff m =>
@@ -291,4 +293,4 @@ modifyState ::
   H.HalogenM (State localState globalState appOutput) (Action localState globalState) slots (Output appOutput) m Unit
 modifyState state' = do
   { app, localState } <- H.get
-  App.handleOutput sendOutput localState state' app
+  App.handleOutput saveLocal sendOutput localState state' app
