@@ -65,8 +65,6 @@ data Action
   = ButtonClicked CB.Output
   | Undo
   | Redo
-  | Initialize
-  -- | StateUpdated AppState
   | ToggleGrid
   | GotOutput (GC.Output CanvasIO)
 
@@ -86,9 +84,6 @@ canvasInitialState =
     , mouseDown: false
     }
 
-changed :: RootState -> RootState -> Boolean
-changed = eq
-
 component ::
   forall q i o m.
   MonadAff m =>
@@ -97,8 +92,8 @@ component ::
 component =
   H.mkComponent
     { initialState
-    , render: HH.memoized changed render
-    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction, initialize = Just Initialize }
+    , render
+    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
     }
 
 render :: forall m. MonadAff m => ManageState m CanvasIO => RootState -> H.ComponentHTML Action Slots m
@@ -182,17 +177,9 @@ handleAction ::
   ManageState m CanvasIO =>
   Action -> H.HalogenM RootState Action s o m Unit
 handleAction = case _ of
-  Initialize -> do
-    -- stateEventSource <- GM.getEventSource
-    -- _ <- H.subscribe $ StateUpdated <$> stateEventSource
-    pure unit
-  ToggleGrid -> do
-    appState <- GM.getState
-    GM.putState $ appState { showGrid = not appState.showGrid }
-  -- StateUpdated appState' -> H.put appState'
-  GotOutput output -> pure unit
+  ToggleGrid -> GM.modifyState_ (\s -> s { showGrid = not s.showGrid })
+  GotOutput (GC.Output output) -> H.modify_ $ convertState output
   ButtonClicked (CB.Clicked color') -> GM.modifyState_ (_ { color = color' })
-  -- TODO
   Undo -> do
     appState <- GM.getState
     let
