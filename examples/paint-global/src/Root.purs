@@ -58,7 +58,7 @@ derive instance eqPixel :: Eq Pixel
 
 type Slots
   = ( colorButton :: CB.Slot Int
-    , gessoCanvas :: GC.Slot CanvasIO Unit
+    , gessoCanvas :: GC.Slot Void CanvasIO Unit
     )
 
 data Action
@@ -211,7 +211,7 @@ handleAction = case _ of
           pixels' = pixel : appState.pixels
         GM.putState $ appState { pixels = pixels', redo = redo' }
 
-canvasInput :: CanvasState -> GC.Input CanvasState CanvasIO CanvasIO
+canvasInput :: CanvasState -> GC.Input CanvasState CanvasIO Void CanvasIO
 canvasInput localState =
   { name: "canvas"
   , localState
