@@ -3,6 +3,7 @@ module Gesso.Interactions
   , Handler
   , FullHandler
   , Interaction
+  , InteractionList
   , Interactions
   , default
   , mkInteraction
@@ -30,6 +31,9 @@ type Handler event localState
 data Interaction event localState i
   = Interaction (EventProp event i) (Handler event localState)
 
+type InteractionList event localState i
+  = Array (Interaction event localState i)
+
 -- Originally I wanted to have `Interaction event appState i` and a
 --   list of interactions, but because two interactions could have
 --   different event types, the list wouldn't typecheck.
@@ -41,14 +45,14 @@ data Interaction event localState i
 -- I think, barring some trick I'm not aware of, I have to separate the
 --   Interactions into separate lists for each event.
 type Interactions localState i
-  = { base :: Array (Interaction Event localState i)
-    , clipboard :: Array (Interaction ClipboardEvent localState i)
-    , focus :: Array (Interaction FocusEvent localState i)
-    , keyboard :: Array (Interaction KeyboardEvent localState i)
-    , touch :: Array (Interaction TouchEvent localState i)
-    , drag :: Array (Interaction DragEvent localState i)
-    , mouse :: Array (Interaction MouseEvent localState i)
-    , wheel :: Array (Interaction WheelEvent localState i)
+  = { base :: InteractionList Event localState i
+    , clipboard :: InteractionList ClipboardEvent localState i
+    , focus :: InteractionList FocusEvent localState i
+    , keyboard :: InteractionList KeyboardEvent localState i
+    , touch :: InteractionList TouchEvent localState i
+    , drag :: InteractionList DragEvent localState i
+    , mouse :: InteractionList MouseEvent localState i
+    , wheel :: InteractionList WheelEvent localState i
     }
 
 toProps ::
@@ -58,6 +62,8 @@ toProps ::
 toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
   -- I tried to put these all in an array and foldMap it,
   --   but it didn't work since they're different types
+  -- I might be able to make a ToProp typeclass and use
+  --   existential types
   map toProp base
     <> map toProp clipboard
     <> map toProp focus
