@@ -24,16 +24,32 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Record (merge) as Record
 
-type AppState
-  = { mouseCell :: Maybe { x :: Int, y :: Int }
-    , clicked :: Maybe { x :: Number, y :: Number }
-    , showGrid :: Boolean
+type CanvasState
+  = {
+    | CanvasIO'
+      ( mouseCell :: Maybe { x :: Int, y :: Int }
+      , clicked :: Maybe { x :: Number, y :: Number }
+      , mouseDown :: Boolean
+      )
+    }
+
+type RootState
+  = CanvasIO
+
+type CanvasIO
+  = { | CanvasIO' () }
+
+-- These are all the things that Root needs to know. If Root is aware
+--   of mouseCell, it changes the global state too often, causing lag.
+type CanvasIO' r
+  = ( showGrid :: Boolean
     , color :: String
     , pixels :: List Pixel
     , redo :: List Pixel
-    , mouseDown :: Boolean
-    }
+    | r
+    )
 
 newtype Pixel
   = Pixel { x :: Int, y :: Int, color :: String }
@@ -42,7 +58,7 @@ derive instance eqPixel :: Eq Pixel
 
 type Slots
   = ( colorButton :: CB.Slot Int
-    , gessoCanvas :: GC.Slot Unit
+    , gessoCanvas :: GC.Slot CanvasIO Unit
     )
 
 data Action
@@ -50,33 +66,42 @@ data Action
   | Undo
   | Redo
   | Initialize
-  | StateUpdated AppState
+  -- | StateUpdated AppState
   | ToggleGrid
+  | GotOutput (GC.Output CanvasIO)
 
-initialState :: forall i. i -> AppState
+initialState :: forall i. i -> RootState
 initialState _ =
-  { mouseCell: Nothing
-  , clicked: Nothing
-  , showGrid: true
+  { showGrid: true
   , color: "black"
   , pixels: Nil
   , redo: Nil
-  , mouseDown: false
   }
+
+canvasInitialState :: CanvasState
+canvasInitialState =
+  Record.merge (initialState unit)
+    { mouseCell: Nothing
+    , clicked: Nothing
+    , mouseDown: false
+    }
+
+changed :: RootState -> RootState -> Boolean
+changed = eq
 
 component ::
   forall q i o m.
   MonadAff m =>
-  ManageState m AppState =>
+  ManageState m CanvasIO =>
   H.Component HH.HTML q i o m
 component =
   H.mkComponent
     { initialState
-    , render
+    , render: HH.memoized changed render
     , eval: H.mkEval $ H.defaultEval { handleAction = handleAction, initialize = Just Initialize }
     }
 
-render :: forall m. MonadAff m => ManageState m AppState => AppState -> H.ComponentHTML Action Slots m
+render :: forall m. MonadAff m => ManageState m CanvasIO => RootState -> H.ComponentHTML Action Slots m
 render state =
   HH.div
     [ style styles.root ]
@@ -97,7 +122,7 @@ render state =
 
   drawing =
     HH.div [ style styles.canvas ]
-      [ HH.slot GC._gessoCanvas unit GC.component (canvasInput state) absurd
+      [ HH.slot GC._gessoCanvas unit GC.component (canvasInput canvasInitialState) (Just <<< GotOutput)
       , HH.label [ style styles.label ]
           [ HH.input [ HP.type_ InputCheckbox, HE.onClick (Just <<< const ToggleGrid), HP.checked state.showGrid ]
           , HH.span_ [ HH.text "Show Grid" ]
@@ -154,20 +179,20 @@ render state =
 handleAction ::
   forall s o m.
   MonadAff m =>
-  ManageState m AppState =>
-  Action -> H.HalogenM AppState Action s o m Unit
+  ManageState m CanvasIO =>
+  Action -> H.HalogenM RootState Action s o m Unit
 handleAction = case _ of
   Initialize -> do
-    stateEventSource <- GM.getEventSource
-    _ <- H.subscribe $ StateUpdated <$> stateEventSource
+    -- stateEventSource <- GM.getEventSource
+    -- _ <- H.subscribe $ StateUpdated <$> stateEventSource
     pure unit
   ToggleGrid -> do
     appState <- GM.getState
     GM.putState $ appState { showGrid = not appState.showGrid }
-  StateUpdated appState' -> H.put appState'
-  ButtonClicked (CB.Clicked color) -> do
-    appState <- GM.getState
-    GM.putState $ appState { color = color }
+  -- StateUpdated appState' -> H.put appState'
+  GotOutput output -> pure unit
+  ButtonClicked (CB.Clicked color') -> GM.modifyState_ (_ { color = color' })
+  -- TODO
   Undo -> do
     appState <- GM.getState
     let
@@ -192,15 +217,17 @@ handleAction = case _ of
           pixels' = pixel : appState.pixels
         GM.putState $ appState { pixels = pixels', redo = redo' }
 
-canvasInput :: AppState -> GC.Input AppState
-canvasInput appState =
+canvasInput :: CanvasState -> GC.Input CanvasState CanvasIO CanvasIO
+canvasInput localState =
   { name: "canvas"
-  , appState
+  , localState
   , app:
       GApp.mkApplication
         $ GApp.defaultApp
             { window = GApp.fixed $ GDim.fromWidthAndHeight { width: 600.0, height: 600.0 }
             , render = Just $ GApp.onChange renderApp
+            , output = GApp.outputFn extractOutput
+            , global = { toLocal: convertState, fromLocal: convertState }
             }
   , viewBox:
       GDim.fromPointAndSize
@@ -209,9 +236,23 @@ canvasInput appState =
   , interactions: GInt.default { mouse = [ highlightCell, clearHighlight, mouseDown, mouseUp ] }
   }
 
+convertState ::
+  forall r s.
+  { | CanvasIO' r } ->
+  { | CanvasIO' s } ->
+  { | CanvasIO' s }
+convertState { showGrid, color, pixels, redo } = _ { showGrid = showGrid, color = color, pixels = pixels, redo = redo }
+
+extractOutput :: CanvasState -> CanvasState -> Maybe CanvasIO
+extractOutput state state'@{ showGrid, color, pixels, redo } =
+  if state /= state' then
+    Just { showGrid, color, pixels, redo }
+  else
+    Nothing
+
 highlightCell ::
   forall i.
-  GInt.Interaction GEv.MouseEvent AppState i
+  GInt.Interaction GEv.MouseEvent CanvasState i
 highlightCell = GInt.mkInteraction GEv.onMouseMove getMousePos
   where
   getMousePos event scaler state =
@@ -251,12 +292,12 @@ toXY event { toVb } =
 
 clearHighlight ::
   forall i.
-  GInt.Interaction GEv.MouseEvent AppState i
+  GInt.Interaction GEv.MouseEvent CanvasState i
 clearHighlight = GInt.mkInteraction GEv.onMouseOut (\_ _ s -> Just s { mouseCell = Nothing })
 
 mouseDown ::
   forall i.
-  GInt.Interaction GEv.MouseEvent AppState i
+  GInt.Interaction GEv.MouseEvent CanvasState i
 mouseDown = GInt.mkInteraction GEv.onMouseDown startDrawing
   where
   startDrawing event scaler state =
@@ -269,10 +310,10 @@ mouseDown = GInt.mkInteraction GEv.onMouseDown startDrawing
 
 mouseUp ::
   forall i.
-  GInt.Interaction GEv.MouseEvent AppState i
+  GInt.Interaction GEv.MouseEvent CanvasState i
 mouseUp = GInt.mkInteraction GEv.onMouseUp (\_ _ s -> Just s { mouseDown = false })
 
-renderApp :: AppState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
+renderApp :: CanvasState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
 renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, screen, toVb } context = do
   clearBackground
   drawOutline
