@@ -3,6 +3,7 @@ module Gesso.Canvas
   , Input
   , Action
   , Output(..)
+  , Query(..)
   , Slot
   , _gessoCanvas
   ) where
@@ -40,9 +41,9 @@ type Slot output slot
 
 _gessoCanvas = SProxy :: SProxy "gessoCanvas"
 
-type State localState globalState appOutput
+type State localState globalState appInput appOutput
   = { name :: String
-    , app :: App.Application localState globalState appOutput
+    , app :: App.Application localState globalState appInput appOutput
     , localState :: localState
     , viewBox :: Dims.ViewBox
     , clientRect :: Maybe Dims.ClientRect
@@ -66,19 +67,22 @@ data Action localState globalState
 newtype Output appOutput
   = Output appOutput
 
-type Input localState globalState appOutput
+data Query appInput a
+  = Input appInput a
+
+type Input localState globalState appInput appOutput
   = { name :: String
-    , app :: App.Application localState globalState appOutput
+    , app :: App.Application localState globalState appInput appOutput
     , localState :: localState
     , viewBox :: Dims.ViewBox
     , interactions :: GI.Interactions localState (Action localState globalState)
     }
 
 component ::
-  forall localState query appOutput globalState m.
+  forall localState appInput appOutput globalState m.
   MonadAff m =>
   ManageState m globalState =>
-  H.Component HTML query (Input localState globalState appOutput) (Output appOutput) m
+  H.Component HTML (Query appInput) (Input localState globalState appInput appOutput) (Output appOutput) m
 component =
   H.mkComponent
     { initialState
@@ -87,15 +91,16 @@ component =
         H.mkEval
           $ H.defaultEval
               { handleAction = handleAction
+              , handleQuery = handleQuery
               , initialize = Just Initialize
               , finalize = Just Finalize
               }
     }
 
 initialState ::
-  forall localState globalState appOutput.
-  Input localState globalState appOutput ->
-  State localState globalState appOutput
+  forall localState globalState appInput appOutput.
+  Input localState globalState appInput appOutput ->
+  State localState globalState appInput appOutput
 initialState { name, app, localState, viewBox, interactions } =
   { name
   , app
@@ -110,8 +115,8 @@ initialState { name, app, localState, viewBox, interactions } =
   }
 
 render ::
-  forall localState globalState appOutput slots m.
-  State localState globalState appOutput ->
+  forall localState globalState appInput appOutput slots m.
+  State localState globalState appInput appOutput ->
   H.ComponentHTML (Action localState globalState) slots m
 render { name, clientRect, app, interactions } =
   canvas
@@ -120,11 +125,11 @@ render { name, clientRect, app, interactions } =
     <> maybe [] Dims.toSizeProps clientRect
 
 handleAction ::
-  forall localState globalState appOutput slots m.
+  forall localState globalState appInput appOutput slots m.
   MonadAff m =>
   ManageState m globalState =>
   (Action localState globalState) ->
-  H.HalogenM (State localState globalState appOutput) (Action localState globalState) slots (Output appOutput) m Unit
+  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
 handleAction = case _ of
   Initialize -> do
     initialize
@@ -157,10 +162,10 @@ handleAction = case _ of
       App.Continue -> handleAction $ Tick Nothing
 
 initialize ::
-  forall localState globalState appOutput slots output m.
+  forall localState globalState appInput appOutput slots output m.
   MonadAff m =>
   ManageState m globalState =>
-  H.HalogenM (State localState globalState appOutput) (Action localState globalState) slots output m Unit
+  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m Unit
 initialize = do
   stateEventSource <- GM.getEventSource
   _ <- H.subscribe $ HandleStateBus <$> stateEventSource
@@ -180,14 +185,14 @@ initialize = do
     )
 
 queueAnimationFrame ::
-  forall localState globalState appOutput slots output m.
+  forall localState globalState appInput appOutput slots output m.
   MonadAff m =>
   Maybe (T.TimestampPrevious) ->
   Maybe Context2D ->
   Maybe Dims.Scaler ->
   localState ->
-  App.Application localState globalState appOutput ->
-  H.HalogenM (State localState globalState appOutput) (Action localState globalState) slots output m Unit
+  App.Application localState globalState appInput appOutput ->
+  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m Unit
 queueAnimationFrame mLastTime context scaler localState app = do
   _ <- H.subscribe $ ES.effectEventSource rafEventSource
   pure unit
@@ -236,9 +241,9 @@ getCanvasClientRect mcanvas = do
   pure $ Dims.fromDOMRect <$> mbounding
 
 updateClientRect ::
-  forall localState globalState appOutput action slots output m.
+  forall localState globalState appInput appOutput action slots output m.
   MonadAff m =>
-  H.HalogenM (State localState globalState appOutput) action slots output m Unit
+  H.HalogenM (State localState globalState appInput appOutput) action slots output m Unit
 updateClientRect = do
   { canvas, viewBox } <- H.get
   clientRect <- H.liftEffect $ getCanvasClientRect canvas
@@ -250,17 +255,17 @@ updateClientRect = do
     )
 
 unsubscribeResize ::
-  forall localState globalState appOutput action slots output m.
+  forall localState globalState appInput appOutput action slots output m.
   MonadAff m =>
-  H.HalogenM (State localState globalState appOutput) action slots output m Unit
+  H.HalogenM (State localState globalState appInput appOutput) action slots output m Unit
 unsubscribeResize = do
   mresizeSub <- H.gets _.resizeSub
   traverse_ H.unsubscribe mresizeSub
 
 subscribeResize ::
-  forall localState globalState appOutput slots output m.
+  forall localState globalState appInput appOutput slots output m.
   MonadAff m =>
-  H.HalogenM (State localState globalState appOutput) (Action localState globalState) slots output m H.SubscriptionId
+  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m H.SubscriptionId
 subscribeResize = do
   wnd <- H.liftEffect window
   H.subscribe
@@ -270,27 +275,38 @@ subscribeResize = do
         (const $ Just HandleResize)
 
 sendOutput ::
-  forall localState globalState appOutput slots m.
+  forall localState globalState appInput appOutput slots m.
   MonadAff m =>
   ManageState m globalState =>
   Maybe appOutput ->
-  H.HalogenM (State localState globalState appOutput) (Action localState globalState) slots (Output appOutput) m Unit
+  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
 sendOutput = traverse_ (H.raise <<< Output)
 
 saveLocal ::
-  forall localState globalState appOutput slots m.
+  forall localState globalState appInput appOutput slots m.
   MonadAff m =>
   ManageState m globalState =>
   localState ->
-  H.HalogenM (State localState globalState appOutput) (Action localState globalState) slots (Output appOutput) m Unit
+  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
 saveLocal state' = H.modify_ (_ { localState = state' })
 
 modifyState ::
-  forall localState globalState appOutput slots m.
+  forall localState globalState appInput appOutput slots m.
   MonadAff m =>
   ManageState m globalState =>
   localState ->
-  H.HalogenM (State localState globalState appOutput) (Action localState globalState) slots (Output appOutput) m Unit
+  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
 modifyState state' = do
   { app, localState } <- H.get
   App.handleOutput saveLocal sendOutput localState state' app
+
+handleQuery ::
+  forall localState globalState appInput appOutput slots a m.
+  MonadAff m =>
+  ManageState m globalState =>
+  Query appInput a ->
+  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m (Maybe a)
+handleQuery (Input inData a) = do
+  { app, localState } <- H.get
+  App.receiveInput saveLocal localState inData app
+  pure (Just a)

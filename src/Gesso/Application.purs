@@ -15,9 +15,12 @@ module Gesso.Application
   , UpdateFunction
   , updateFn
   , OutputMode
+  , OutputProducer
+  , InputReceiver
   , noOutput
   , outputFn
   , globalState
+  , receiveInput
   , receiveGlobal
   , handleOutput
   , windowCss
@@ -40,32 +43,34 @@ import Gesso.Time as T
 import Graphics.Canvas as C
 import Halogen (liftEffect)
 
-newtype Application local global output
-  = Application (AppSpec local global output)
+newtype Application local global input output
+  = Application (AppSpec local global input output)
 
-derive instance newtypeApplication :: Newtype (Application local global output) _
+derive instance newtypeApplication :: Newtype (Application local global input output) _
 
-type AppSpec local global output
+type AppSpec local global input output
   = { window :: WindowMode
     , render :: Maybe (RenderMode local)
     , update :: Maybe (Update local)
     , output :: OutputMode local output
+    , input :: InputReceiver local input
     , global ::
         { toLocal :: global -> local -> local
         , fromLocal :: local -> global -> global
         }
     }
 
-defaultApp :: forall local global output. AppSpec local global output
+defaultApp :: forall local global input output. AppSpec local global input output
 defaultApp =
   { window: fixed D.sizeless
   , render: Nothing
   , update: Nothing
   , output: noOutput
+  , input: const identity
   , global: { toLocal: const identity, fromLocal: const identity }
   }
 
-mkApplication :: forall local global output. AppSpec local global output -> Application local global output
+mkApplication :: forall local global input output. AppSpec local global input output -> Application local global input output
 mkApplication = Application
 
 data WindowMode
@@ -113,6 +118,9 @@ data OutputMode local output
   | OutputFn (OutputProducer local output)
   | GlobalState
 
+type InputReceiver local input
+  = input -> local -> local
+
 type OutputProducer local output
   = local -> local -> Maybe output
 
@@ -126,14 +134,14 @@ globalState :: forall local output. OutputMode local output
 globalState = GlobalState
 
 handleOutput ::
-  forall local global output m.
+  forall local global input output m.
   MonadAff m =>
   ManageState m global =>
   (local -> m Unit) ->
   (Maybe output -> m Unit) ->
   local ->
   local ->
-  Application local global output ->
+  Application local global input output ->
   m Unit
 handleOutput saveLocal sendOutput local local' (Application { output, global }) = go output
   where
@@ -147,18 +155,29 @@ handleOutput saveLocal sendOutput local local' (Application { output, global }) 
 
   go NoOutput = saveLocal local'
 
+receiveInput ::
+  forall local global input output m.
+  MonadAff m =>
+  ManageState m global =>
+  (local -> m Unit) ->
+  local ->
+  input ->
+  Application local global input output ->
+  m Unit
+receiveInput saveLocal local inData (Application { input }) = saveLocal $ input inData local
+
 receiveGlobal ::
-  forall local global output m.
+  forall local global input output m.
   MonadAff m =>
   ManageState m global =>
   (local -> m Unit) ->
   local ->
   global ->
-  Application local global output ->
+  Application local global input output ->
   m Unit
 receiveGlobal saveLocal local globalState' (Application { global }) = saveLocal $ global.toLocal globalState' local
 
-windowCss :: forall local global output. Application local global output -> CSS.CSS
+windowCss :: forall local global input output. Application local global input output -> CSS.CSS
 windowCss (Application { window }) = case window of
   Fixed size -> D.toSizeCss size
   Stretch -> stretched
@@ -177,7 +196,7 @@ windowCss (Application { window }) = case window of
     CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
 
 --return Nothing if there's no update function
-updateLocalState :: forall local global output. T.Delta -> local -> Application local global output -> Maybe local
+updateLocalState :: forall local global input output. T.Delta -> local -> Application local global input output -> Maybe local
 updateLocalState delta localState (Application { update }) = update >>= \(Update fn) -> Just $ fn delta localState
 
 data RequestFrame
@@ -185,12 +204,12 @@ data RequestFrame
   | Stop
 
 renderApp ::
-  forall local global output.
+  forall local global input output.
   local ->
   T.Delta ->
   D.Scaler ->
   C.Context2D ->
-  Application local global output ->
+  Application local global input output ->
   Maybe (Effect RequestFrame)
 renderApp localState delta scaler context (Application { render }) = go <$> render
   where
@@ -204,7 +223,7 @@ renderApp localState delta scaler context (Application { render }) = go <$> rend
 
   run fn = liftEffect $ fn localState delta scaler context
 
-renderOnUpdate :: forall local global output. Application local global output -> RequestFrame
+renderOnUpdate :: forall local global input output. Application local global input output -> RequestFrame
 renderOnUpdate (Application { render }) = case render of
   Just (OnChange _) -> Continue
   Just (Continuous _) -> Stop
