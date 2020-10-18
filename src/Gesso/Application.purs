@@ -3,18 +3,18 @@ module Gesso.Application
   , AppSpec
   , defaultApp
   , mkApplication
-  , WindowStyle
+  , WindowMode
   , fixed
   , stretch
   , fullscreen
-  , RenderStyle
+  , RenderMode
   , RenderFunction
   , onChange
   , continuous
   , Update
   , UpdateFunction
   , updateFn
-  , OutputStyle
+  , OutputMode
   , noOutput
   , outputFn
   , globalState
@@ -46,10 +46,10 @@ newtype Application state output global
 derive instance newtypeApplication :: Newtype (Application state output global) _
 
 type AppSpec state output global
-  = { window :: WindowStyle
-    , render :: Maybe (RenderStyle state)
+  = { window :: WindowMode
+    , render :: Maybe (RenderMode state)
     , update :: Maybe (Update state)
-    , output :: OutputStyle state output
+    , output :: OutputMode state output
     , global ::
         { toLocal :: global -> state -> state
         , fromLocal :: state -> global -> global
@@ -68,31 +68,31 @@ defaultApp =
 mkApplication :: forall state output global. AppSpec state output global -> Application state output global
 mkApplication = Application
 
-data WindowStyle
+data WindowMode
   = Fixed D.Size
   | Stretch
   | Fullscreen
 
-fixed :: D.Size -> WindowStyle
+fixed :: D.Size -> WindowMode
 fixed = Fixed
 
-stretch :: WindowStyle
+stretch :: WindowMode
 stretch = Stretch
 
-fullscreen :: WindowStyle
+fullscreen :: WindowMode
 fullscreen = Fullscreen
 
-data RenderStyle state
+data RenderMode state
   = OnChange (RenderFunction state)
   | Continuous (RenderFunction state)
 
 type RenderFunction state
   = state -> T.Delta -> D.Scaler -> C.Context2D -> Effect Unit
 
-onChange :: forall state. RenderFunction state -> RenderStyle state
+onChange :: forall state. RenderFunction state -> RenderMode state
 onChange = OnChange
 
-continuous :: forall state. RenderFunction state -> RenderStyle state
+continuous :: forall state. RenderFunction state -> RenderMode state
 continuous = Continuous
 
 -- Considering making an Effectful variant, i.e.
@@ -108,7 +108,7 @@ derive instance newtypeUpdate :: Newtype (Update state) _
 updateFn :: forall state. UpdateFunction state -> Update state
 updateFn = Update
 
-data OutputStyle state output
+data OutputMode state output
   = NoOutput
   | OutputFn (OutputProducer state output)
   | GlobalState
@@ -116,13 +116,13 @@ data OutputStyle state output
 type OutputProducer state output
   = state -> state -> Maybe output
 
-noOutput :: forall state output. OutputStyle state output
+noOutput :: forall state output. OutputMode state output
 noOutput = NoOutput
 
-outputFn :: forall state output. OutputProducer state output -> OutputStyle state output
+outputFn :: forall state output. OutputProducer state output -> OutputMode state output
 outputFn = OutputFn
 
-globalState :: forall state output. OutputStyle state output
+globalState :: forall state output. OutputMode state output
 globalState = GlobalState
 
 handleOutput ::
