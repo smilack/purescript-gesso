@@ -15,7 +15,6 @@ import Gesso.AspectRatio as GAR
 import Gesso.Canvas as GC
 import Gesso.Dimensions as GDim
 import Gesso.GessoM (class ManageState)
-import Gesso.GessoM as GM
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
 import Gesso.Time as GTime
@@ -24,6 +23,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Halogen.Query as HQ
 import Record (merge) as Record
 
 type CanvasState
@@ -58,17 +58,15 @@ derive instance eqPixel :: Eq Pixel
 
 type Slots
   = ( colorButton :: CB.Slot Int
-    , gessoCanvas :: GC.Slot Void CanvasIO Unit
+    , gessoCanvas :: GC.Slot CanvasIO CanvasIO Unit
     )
 
 data Action
   = ButtonClicked CB.Output
-  | Initialize
   | Undo
   | Redo
   | ToggleGrid
   | GotOutput (GC.Output CanvasIO)
-  | GlobalChanged CanvasIO
 
 initialState :: forall i. i -> RootState
 initialState _ =
@@ -87,18 +85,18 @@ canvasInitialState =
     }
 
 component ::
-  forall q i o m.
+  forall g q i o m.
   MonadAff m =>
-  ManageState m CanvasIO =>
+  ManageState m g =>
   H.Component HH.HTML q i o m
 component =
   H.mkComponent
     { initialState
     , render
-    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction, initialize = Just Initialize }
+    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
     }
 
-render :: forall m. MonadAff m => ManageState m CanvasIO => RootState -> H.ComponentHTML Action Slots m
+render :: forall g m. MonadAff m => ManageState m g => RootState -> H.ComponentHTML Action Slots m
 render state =
   HH.div
     [ style styles.root ]
@@ -173,45 +171,49 @@ render state =
     , line: "display: inline-block; width: 100%; height: 2px; background-color: black; vertical-align: middle; margin-bottom: 2px;"
     }
 
+send :: forall g o m. MonadAff m => ManageState m g => RootState -> H.HalogenM RootState Action Slots o m Unit
+send state' = do
+  _ <- H.query GC._gessoCanvas unit $ HQ.tell $ GC.Input $ toIO state'
+  pure unit
+
 handleAction ::
-  forall s o m.
+  forall g o m.
   MonadAff m =>
-  ManageState m CanvasIO =>
-  Action -> H.HalogenM RootState Action s o m Unit
+  ManageState m g =>
+  Action -> H.HalogenM RootState Action Slots o m Unit
 handleAction = case _ of
-  Initialize -> do
-    stateEventSource <- GM.getEventSource
-    _ <- H.subscribe $ GlobalChanged <$> stateEventSource
-    pure unit
-  GlobalChanged output' -> H.modify_ $ convertState output'
-  ToggleGrid -> GM.modifyState_ (\s -> s { showGrid = not s.showGrid })
-  GotOutput (GC.Output output') -> GM.modifyState_ $ convertState output'
-  ButtonClicked (CB.Clicked color') -> GM.modifyState_ (_ { color = color' })
+  ToggleGrid -> (H.modify \s -> s { showGrid = not s.showGrid } :: RootState) >>= send
+  GotOutput (GC.Output output') -> H.modify_ $ convertState output'
+  ButtonClicked (CB.Clicked color') -> H.modify (_ { color = color' }) >>= send
   Undo -> do
-    appState <- GM.getState
+    state <- H.get
     let
-      step = head appState.pixels
+      step = head state.pixels
 
-      pixels' = fromMaybe Nil $ tail appState.pixels
-
-      appState' = appState { pixels = pixels' }
-    case step of
-      Nothing -> GM.putState appState'
-      Just pixel -> GM.putState $ appState' { redo = pixel : appState.redo }
-  Redo -> do
-    appState <- GM.getState
-    let
-      step = head appState.redo
-
-      redo' = fromMaybe Nil $ tail appState.redo
+      pixels' = fromMaybe Nil $ tail state.pixels
     case step of
       Nothing -> pure unit
       Just pixel -> do
         let
-          pixels' = pixel : appState.pixels
-        GM.putState $ appState { pixels = pixels', redo = redo' }
+          redo' = pixel : state.redo
+        H.modify (_ { pixels = pixels', redo = redo' }) >>= send
+  Redo -> do
+    state <- H.get
+    let
+      step = head state.redo
 
-canvasInput :: CanvasState -> GC.Input CanvasState CanvasIO Void CanvasIO
+      redo' = fromMaybe Nil $ tail state.redo
+    case step of
+      Nothing -> pure unit
+      Just pixel -> do
+        let
+          pixels' = pixel : state.pixels
+
+          state' = state { pixels = pixels', redo = redo' }
+        H.put state'
+        send state'
+
+canvasInput :: forall g. CanvasState -> GC.Input CanvasState g CanvasIO CanvasIO
 canvasInput localState =
   { name: "canvas"
   , localState
@@ -221,7 +223,7 @@ canvasInput localState =
             { window = GApp.fixed $ GDim.fromWidthAndHeight { width: 600.0, height: 600.0 }
             , render = Just $ GApp.onChange renderApp
             , output = GApp.outputFn extractOutput
-            , global = { toLocal: convertState, fromLocal: convertState }
+            , input = convertState
             }
   , viewBox:
       GDim.fromPointAndSize
@@ -229,6 +231,9 @@ canvasInput localState =
         (GDim.fromWidthAndRatio { width: 32.0, aspectRatio: GAR.w1h1 })
   , interactions: GInt.default { mouse = [ highlightCell, clearHighlight, mouseDown, mouseUp ] }
   }
+
+toIO :: forall r. { | CanvasIO' r } -> CanvasIO
+toIO { showGrid, color, pixels, redo } = { showGrid, color, pixels, redo }
 
 convertState ::
   forall r s.
