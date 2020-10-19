@@ -172,9 +172,7 @@ render state =
     }
 
 send :: forall g o m. MonadAff m => ManageState m g => RootState -> H.HalogenM RootState Action Slots o m Unit
-send state' = do
-  _ <- H.query GC._gessoCanvas unit $ HQ.tell $ GC.Input $ toIO state'
-  pure unit
+send = (const $ pure unit) <<< H.query GC._gessoCanvas unit <<< HQ.tell <<< GC.Input <<< toIO
 
 handleAction ::
   forall g o m.
