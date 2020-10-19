@@ -2,6 +2,7 @@ module Gesso
   ( module Halogen.Aff
   , runGessoAff
   , run
+  , runWithState
   , mkPlainEnv
   , hoist
   , runWithM
@@ -26,15 +27,27 @@ import Web.HTML.HTMLElement (HTMLElement)
 runGessoAff :: forall x. Aff x -> Effect Unit
 runGessoAff = HAff.runHalogenAff
 
--- Top-level app - no other UI. Returns env
+-- Top-level app - no other UI. Does not expose a state ref
 run ::
+  forall input q o.
+  H.Component HTML q input o (GessoM Unit ()) ->
+  input ->
+  HTMLElement ->
+  Aff Unit
+run component config element = do
+  env <- liftEffect $ mkPlainEnv unit
+  _ <- runUI (hoist env component) config element
+  pure unit
+
+-- Top-level app - no other UI. Returns env
+runWithState ::
   forall input globalState q o.
   H.Component HTML q input o (GessoM globalState ()) ->
   input ->
   globalState ->
   HTMLElement ->
   Aff (Environment globalState ())
-run component config globalState element = do
+runWithState component config globalState element = do
   env <- liftEffect $ mkPlainEnv globalState
   io <- runUI (hoist env component) config element
   pure env
