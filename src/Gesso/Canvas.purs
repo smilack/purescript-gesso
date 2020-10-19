@@ -309,4 +309,5 @@ handleQuery ::
 handleQuery (Input inData a) = do
   { app, localState } <- H.get
   App.receiveInput saveLocal localState inData app
+  handleAction MaybeTick
   pure (Just a)
