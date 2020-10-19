@@ -4,7 +4,7 @@ module Gesso
   , run
   , mkPlainEnv
   , hoist
-  , runWith
+  , runWithM
   ) where
 
 import Prelude
@@ -53,7 +53,7 @@ hoist ::
 hoist = H.hoist <<< runGessoM
 
 --Supply your own ManageState monad
-runWith ::
+runWithM ::
   forall globalState q i o m.
   MonadAff m =>
   ManageState m globalState =>
@@ -62,6 +62,6 @@ runWith ::
   i ->
   HTMLElement ->
   Aff Unit
-runWith runM component config element = do
+runWithM runM component config element = do
   _ <- runUI (H.hoist runM component) config element
   pure unit
