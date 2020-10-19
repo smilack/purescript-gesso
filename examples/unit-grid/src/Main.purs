@@ -20,14 +20,14 @@ main :: Effect Unit
 main =
   G.runGessoAff do
     body <- G.awaitBody
-    G.run GC.component input unit body
+    G.run GC.component input body
 
 type LocalState
   = { mousePos :: Maybe { x :: Number, y :: Number }
     , clicked :: Maybe { x :: Number, y :: Number }
     }
 
-input :: forall i o. GC.Input LocalState Unit i o
+input :: forall g i o. GC.Input LocalState g i o
 input =
   { name: "test-app"
   , localState: { mousePos: Nothing, clicked: Nothing }
