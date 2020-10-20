@@ -22,6 +22,7 @@ import Halogen.Aff (awaitBody, awaitLoad, selectElement) as Halogen.Aff
 import Halogen.Aff as HAff
 import Halogen.HTML (HTML)
 import Halogen.VDom.Driver (runUI)
+import Record (union) as Record
 import Web.HTML.HTMLElement (HTMLElement)
 
 runGessoAff :: forall x. Aff x -> Effect Unit
@@ -41,22 +42,26 @@ run component config element = do
 
 -- Top-level app - no other UI. Returns env
 runWithState ::
-  forall input globalState q o.
-  H.Component HTML q input o (GessoM globalState ()) ->
+  forall input globalState more q o.
+  H.Component HTML q input o (GessoM globalState more) ->
   input ->
   globalState ->
+  { | more } ->
   HTMLElement ->
-  Aff (Environment globalState ())
-runWithState component config globalState element = do
-  env <- liftEffect $ mkPlainEnv globalState
-  io <- runUI (hoist env component) config element
+  Aff (Environment globalState more)
+runWithState component input globalState fields element = do
+  env <- liftEffect $ mkEnv fields $ globalState
+  io <- runUI (hoist env component) input element
   pure env
 
-mkPlainEnv :: forall globalState. globalState -> Effect (Environment globalState ())
-mkPlainEnv initialState = do
+mkEnv :: forall globalState more. { | more } -> globalState -> Effect (Environment globalState more)
+mkEnv fields initialState = do
   globalState <- Ref.new initialState
   stateBus <- Bus.make
-  pure { globalState, stateBus }
+  pure $ Record.union { globalState, stateBus } fields
+
+mkPlainEnv :: forall globalState. globalState -> Effect (Environment globalState ())
+mkPlainEnv = mkEnv {}
 
 hoist ::
   forall globalState q i o e.
