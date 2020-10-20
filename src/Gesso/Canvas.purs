@@ -298,7 +298,8 @@ modifyState ::
   H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
 modifyState state' = do
   { app, localState } <- H.get
-  App.handleOutput saveLocal sendOutput localState state' app
+  saveLocal state'
+  App.handleOutput sendOutput localState state' app
 
 handleQuery ::
   forall localState globalState appInput appOutput slots a m.

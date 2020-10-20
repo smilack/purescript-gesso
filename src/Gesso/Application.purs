@@ -137,23 +137,15 @@ handleOutput ::
   forall local global input output m.
   MonadAff m =>
   ManageState m global =>
-  (local -> m Unit) ->
   (Maybe output -> m Unit) ->
   local ->
   local ->
   Application local global input output ->
   m Unit
-handleOutput saveLocal sendOutput local local' (Application { output, global }) = go output
-  where
-  go (OutputFn fn) = do
-    saveLocal local'
-    sendOutput $ fn local local'
-
-  go GlobalState = do
-    gState <- GM.getState
-    GM.putState $ global.fromLocal local' gState
-
-  go NoOutput = saveLocal local'
+handleOutput sendOutput local local' (Application { output, global }) = case output of
+  OutputFn fn -> sendOutput $ fn local local'
+  GlobalState -> GM.modifyState_ $ global.fromLocal local'
+  NoOutput -> pure unit
 
 receiveInput ::
   forall local global input output m.
