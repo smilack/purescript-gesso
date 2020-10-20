@@ -15,6 +15,7 @@ import Gesso.AspectRatio as GAR
 import Gesso.Canvas as GC
 import Gesso.Dimensions as GDim
 import Gesso.GessoM (class ManageState)
+import Gesso.GessoM as GM
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
 import Gesso.Time as GTime
@@ -23,7 +24,6 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Query as HQ
 import Record (merge) as Record
 
 type CanvasState
@@ -58,7 +58,7 @@ derive instance eqPixel :: Eq Pixel
 
 type Slots
   = ( colorButton :: CB.Slot Int
-    , gessoCanvas :: GC.Slot CanvasIO CanvasIO Unit
+    , gessoCanvas :: forall i o. GC.Slot i o Unit
     )
 
 data Action
@@ -66,7 +66,8 @@ data Action
   | Undo
   | Redo
   | ToggleGrid
-  | GotOutput (GC.Output CanvasIO)
+  | GotGlobal CanvasIO
+  | Initialize
 
 initialState :: forall i. i -> RootState
 initialState _ =
@@ -85,18 +86,18 @@ canvasInitialState =
     }
 
 component ::
-  forall g q i o m.
+  forall q i o m.
   MonadAff m =>
-  ManageState m g =>
+  ManageState m CanvasIO =>
   H.Component HH.HTML q i o m
 component =
   H.mkComponent
     { initialState
     , render
-    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
+    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction, initialize = Just Initialize }
     }
 
-render :: forall g m. MonadAff m => ManageState m g => RootState -> H.ComponentHTML Action Slots m
+render :: forall m. MonadAff m => ManageState m CanvasIO => RootState -> H.ComponentHTML Action Slots m
 render state =
   HH.div
     [ style styles.root ]
@@ -117,7 +118,7 @@ render state =
 
   drawing =
     HH.div [ style styles.canvas ]
-      [ HH.slot GC._gessoCanvas unit GC.component (canvasInput canvasInitialState) (Just <<< GotOutput)
+      [ HH.slot GC._gessoCanvas unit GC.component (canvasInput canvasInitialState) (const Nothing)
       , HH.label [ style styles.label ]
           [ HH.input [ HP.type_ InputCheckbox, HE.onClick (Just <<< const ToggleGrid), HP.checked state.showGrid ]
           , HH.span_ [ HH.text "Show Grid" ]
@@ -171,18 +172,19 @@ render state =
     , line: "display: inline-block; width: 100%; height: 2px; background-color: black; vertical-align: middle; margin-bottom: 2px;"
     }
 
-send :: forall g o m. MonadAff m => ManageState m g => RootState -> H.HalogenM RootState Action Slots o m Unit
-send = (const $ pure unit) <<< H.query GC._gessoCanvas unit <<< HQ.tell <<< GC.Input <<< toIO
-
 handleAction ::
-  forall g o m.
+  forall o m.
   MonadAff m =>
-  ManageState m g =>
+  ManageState m CanvasIO =>
   Action -> H.HalogenM RootState Action Slots o m Unit
 handleAction = case _ of
-  ToggleGrid -> (H.modify \s -> s { showGrid = not s.showGrid } :: RootState) >>= send
-  GotOutput (GC.Output output') -> H.modify_ $ convertState output'
-  ButtonClicked (CB.Clicked color') -> H.modify (_ { color = color' }) >>= send
+  Initialize -> do
+    eventSource <- GM.getEventSource
+    _ <- H.subscribe $ GotGlobal <$> eventSource
+    pure unit
+  GotGlobal state' -> H.modify_ $ convertState state'
+  ToggleGrid -> GM.modifyState_ \s -> s { showGrid = not s.showGrid }
+  ButtonClicked (CB.Clicked color') -> GM.modifyState_ (_ { color = color' })
   Undo -> do
     state <- H.get
     let
@@ -194,7 +196,7 @@ handleAction = case _ of
       Just pixel -> do
         let
           redo' = pixel : state.redo
-        H.modify (_ { pixels = pixels', redo = redo' }) >>= send
+        GM.modifyState_ (_ { pixels = pixels', redo = redo' })
   Redo -> do
     state <- H.get
     let
@@ -206,12 +208,9 @@ handleAction = case _ of
       Just pixel -> do
         let
           pixels' = pixel : state.pixels
+        GM.modifyState_ (_ { pixels = pixels', redo = redo' })
 
-          state' = state { pixels = pixels', redo = redo' }
-        H.put state'
-        send state'
-
-canvasInput :: forall g. CanvasState -> GC.Input CanvasState g CanvasIO CanvasIO
+canvasInput :: forall i o. CanvasState -> GC.Input CanvasState CanvasIO i o
 canvasInput localState =
   { name: "canvas"
   , localState
@@ -220,8 +219,8 @@ canvasInput localState =
         $ GApp.defaultApp
             { window = GApp.fixed $ GDim.fromWidthAndHeight { width: 600.0, height: 600.0 }
             , render = Just $ GApp.onChange renderApp
-            , output = GApp.outputFn extractOutput
-            , input = convertState
+            , output = GApp.globalState
+            , global { toLocal = convertState, fromLocal = convertState }
             }
   , viewBox:
       GDim.fromPointAndSize
