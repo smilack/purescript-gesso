@@ -1,3 +1,4 @@
+-- | A collection of types and functions for specifying sizes and positions.
 module Gesso.Dimensions
   ( class Positioned
   , getX
@@ -47,6 +48,7 @@ import Web.UIEvent.MouseEvent (pageX, pageY, MouseEvent)
 -----------------
 -- Typeclasses --
 -----------------
+-- | A class representing anything with an (x, y) position.
 class Positioned a where
   getX :: a -> Number
   getY :: a -> Number
@@ -58,11 +60,13 @@ showPositioned p = "{ x: " <> x <> ", y: " <> y <> " }"
 
   y = show $ getY p
 
+-- | Convert a `Positioned` item to `left` and `top` CSS attributes.
 toPositionCss :: forall a. Positioned a => a -> CSS.CSS
 toPositionCss positioned = do
   CSS.left $ CSS.px $ getX positioned
   CSS.top $ CSS.px $ getY positioned
 
+-- | A class representing anything with a width and height.
 class Sized a where
   getWidth :: a -> Number
   getHeight :: a -> Number
@@ -77,11 +81,13 @@ showSized s = "{ width: " <> width <> ", height: " <> height <> ", aspectRatio: 
 
   ar = show $ getRatio s
 
+-- | Convert a `Sized` item to `width` and `height` CSS attributes.
 toSizeCss :: forall a. Sized a => a -> CSS.CSS
 toSizeCss sized = do
   CSS.width $ CSS.px $ getWidth sized
   CSS.height $ CSS.px $ getHeight sized
 
+-- | Convert a `Sized` item to `width` and `height` HTML properties.
 toSizeProps ::
   forall a i r.
   Sized a =>
@@ -91,6 +97,7 @@ toSizeProps sized =
   , HP.height $ round $ getHeight sized
   ]
 
+-- | A class representing anything that is both `Sized` and `Positioned`.
 class (Positioned a, Sized a) <= Dimensioned a
 
 showDimensioned :: forall a. Dimensioned a => a -> String
@@ -109,29 +116,43 @@ showDimensioned d = "{ x: " <> x <> ", y: " <> y <> ", width: " <> width <> ", h
 ---------------
 -- Size Type --
 ---------------
+-- | A `Size` can be constructed from any two of `width`, `height`, and
+-- | `aspectRatio`.
 data Size
   = WidthAndHeight WH
   | WidthAndRatio WR
   | HeightAndRatio HR
 
+-- | A shorthand for a record with `width` and `height` fields.
 type WH
   = { width :: Number, height :: Number }
 
+-- | A shorthand for a record with `width` and `aspectRatio` fields.
 type WR
   = { width :: Number, aspectRatio :: AspectRatio }
 
+-- | A shorthand for a record with `height` and `aspectRatio` fields.
 type HR
   = { height :: Number, aspectRatio :: AspectRatio }
 
+-- | Construct a side from `width` and `height`.
 fromWidthAndHeight :: WH -> Size
 fromWidthAndHeight = WidthAndHeight
 
+-- | Construct a side from `width` and `aspectRatio`.
 fromWidthAndRatio :: WR -> Size
 fromWidthAndRatio = WidthAndRatio
 
+-- | Construct a side from `height` and `aspectRatio`.
 fromHeightAndRatio :: HR -> Size
 fromHeightAndRatio = HeightAndRatio
 
+-- | Find the largest rectangle with the given aspect ratio that can fit
+-- | inside the given client rectangle. The client rectangle will be the actual
+-- | size of the drawing element, and the resulting `Size` is the size of the
+-- | drawing area available to the program. There will usually be a margin as
+-- | well. The [`Scaler`](#t:Scaler) type provides functions for dealing with
+-- | the drawing area and margin.
 largestContainedArea :: AspectRatio -> ClientRect -> Size
 largestContainedArea aspectRatio clientRect = go
   where
@@ -169,15 +190,21 @@ derive instance eqSize :: Eq Size
 ----------------
 -- Point type --
 ----------------
+-- | A `Point` is constructed from an `x` and a `y` value.
 newtype Point
   = Point P
 
+-- | A shorthand for a record with `x` and `y` fields.
 type P
   = { x :: Number, y :: Number }
 
+-- | Construct a `Point` from `x` and `y` values.
 fromXAndY :: P -> Point
 fromXAndY = Point
 
+-- | Convert a `MouseEvent` to a `Point` by extracting the `pageX` and `pageY`
+-- | values. The [`Scaler`](#t:Scaler) type provides functions for further
+-- | converting page coordinates to drawing coordinates.
 fromMouseEvent :: MouseEvent -> Point
 fromMouseEvent me =
   fromXAndY
@@ -197,6 +224,10 @@ derive instance eqPoint :: Eq Point
 ---------------------
 -- Dimensions type --
 ---------------------
+-- | `Dimensions` types contain a `Point` and a `Size`. They also have a phantom
+-- | type to identify where the dimensions came from.
+-- | [`ClientRect`](#t:ClientRect) and [`ViewBox`](#t:ViewBox) are the two kinds
+-- | of dimensions.
 data Dimensions a
   = Dimensions Point Size
 
@@ -216,14 +247,19 @@ derive instance eqDimensions :: Eq (Dimensions a)
 ---------------------
 -- ClientRect type --
 ---------------------
+-- | A phantom type for tagging [`Dimensions`](#t:Dimensions) as a
+-- | [`ClientRect`](#t:ClientRect).
 data ClientRect'
 
+-- | `ClientRect` represents the actual size and position of an HTML element.
 type ClientRect
   = Dimensions ClientRect'
 
 instance showClientRect :: Show (Dimensions ClientRect') where
   show = ("ClientRect " <> _) <<< showDimensioned
 
+-- | Create a [`ClientRect`](#t:ClientRect) from a `DOMRect` (from
+-- | `Web.HTML.HTMLElement`).
 fromDOMRect :: DOMRect -> ClientRect
 fromDOMRect { left, top, width, height } =
   Dimensions
@@ -233,20 +269,51 @@ fromDOMRect { left, top, width, height } =
 ------------------
 -- ViewBox type --
 ------------------
+-- | A phantom type for tagging [`Dimensions`](#t:Dimensions) as a
+-- | [`ClientRect`](#t:ClientRect) and [`ViewBox`](#t:ViewBox)
 data ViewBox'
 
+-- | `ViewBox` represents the desired drawing area for an application.
 type ViewBox
   = Dimensions ViewBox'
 
 instance showViewBox :: Show (Dimensions ViewBox') where
   show = ("ViewBox " <> _) <<< showDimensioned
 
+-- | Create a [`ViewBox`](#t:ViewBox) from a `Point` and `Size`
 fromPointAndSize :: Point -> Size -> ViewBox
 fromPointAndSize = Dimensions
 
 -----------------
 -- Scaler type --
 -----------------
+-- | A `Scaler` is given to interaction handlers and the render function to
+-- | convert [`ViewBox`](#t:ViewBox) coordinates to
+-- | [`ClientRect`](#t:ClientRect) coordinates and screen coordinates to
+-- | `ViewBox` coordinates.
+-- |
+-- | The top level `x`, `y`, `w`, `h` functions convert from `ViewBox` to
+-- | `ClientRect`, with the prime (`'`) functions returning the exact conversion
+-- | and the underscore (`_`) functions returning a truncated number. For
+-- | example, if `x' 1.0` returns `2.5` then `x_ 1.0` will return `2.0`.
+-- |
+-- | The `x` and `y` functions account for any margin that may exist (if the
+-- | `ViewBox` and `ClientRect` are not the same size), while the `w` and `h`
+-- | functions just scale.
+-- |
+-- | `scale` is the ratio of `ViewBox` to `ClientRect` units.
+-- |
+-- | `viewBox` contains the user-provided dimensions of the view box, unscaled,
+-- | which are useful for clearing the drawing region, creating a border, or
+-- | checking if something may have gone off-screen.
+-- |
+-- | `screen` contains the coordinates of the entire drawing element, in
+-- | `ClientRect` units, with (0, 0) at the top left. This can be used to clear
+-- | the entire drawing, draw an extended border, or check that something is
+-- | completely off-screen.
+-- |
+-- | `toVb` contains functions for converting a page coordinate to a `ViewBox`
+-- | coordinate, for example, for converting mouse position to drawing position.
 type Scaler
   = { x' :: Number -> Number
     , y' :: Number -> Number
@@ -293,7 +360,7 @@ mkScaler viewBox clientRect =
       , y: getY viewBox
       , width: getWidth viewBox
       , height: getHeight viewBox
-  }
+      }
   , screen:
       { x: 0.0
       , y: 0.0
@@ -333,17 +400,22 @@ mkScaler viewBox clientRect =
 ---------------
 -- Constants --
 ---------------
+-- | A `Point` at (0, 0).
 origin :: Point
 origin = fromXAndY { x: 0.0, y: 0.0 }
 
+-- | A `Size` with no width or height.
 sizeless :: Size
 sizeless = fromWidthAndHeight { width: 0.0, height: 0.0 }
 
+-- | A `ViewBox` at (0, 0) with no size.
 null :: ViewBox
 null = Dimensions origin sizeless
 
+-- | A 1280x720 `ViewBox` at (0, 0).
 p720 :: ViewBox
 p720 = fromPointAndSize origin $ fromHeightAndRatio { height: 720.0, aspectRatio: AR.w16h9 }
 
+-- | A 1920x1080 `ViewBox` at (0, 0).
 p1080 :: ViewBox
 p1080 = fromPointAndSize origin $ fromHeightAndRatio { height: 1080.0, aspectRatio: AR.w16h9 }
