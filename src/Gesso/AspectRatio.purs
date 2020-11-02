@@ -43,6 +43,8 @@ height forWidth (AspectRatio w h) = forWidth * h / w
 
 -- | Although several common ratios are provided, sometimes an arbitrary ratio
 -- | is needed. `custom` creates an `AspectRatio` from any width and height.
+-- |
+-- | w16h9 = AspectRatio.custom 16.0 9.0
 custom :: Number -> Number -> AspectRatio
 custom w h = AspectRatio w h
 
