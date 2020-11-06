@@ -1,3 +1,6 @@
+-- | Capabilities of the `ManageState` typeclass, one of the communication
+-- | methods available between Gesso components and the outside application, and
+-- | implementations of it for `HalogenM` and a new monad called `GessoM`.
 module Gesso.GessoM
   ( GessoM
   , runGessoM
@@ -22,9 +25,11 @@ import Halogen (HalogenM, lift)
 import Halogen.Query.EventSource (EventSource)
 import Type.Equality (class TypeEquals, from)
 
+-- | `GessoM` is a wrapper around a `ReaderT` that reads from an `Environment`.
 newtype GessoM globalState more a
   = GessoM (ReaderT (Environment globalState more) Aff a)
 
+-- | A `NaturalTransformation` from `GessoM` to `Aff`
 runGessoM :: forall globalState more. Environment globalState more -> GessoM globalState more ~> Aff
 runGessoM env (GessoM m) = runReaderT m env
 
@@ -45,6 +50,17 @@ derive newtype instance monadAffGessoM :: MonadAff (GessoM globalState more)
 instance monadAskGessoM :: TypeEquals e (Environment globalState more) => MonadAsk e (GessoM globalState more) where
   ask = GessoM $ asks from
 
+-- | `ManageState` is a typeclass that provides functions for interacting with a
+-- | Gesso `Environment`.
+-- |
+-- | - `getBus` returns the bus that notifies of updates to the global state
+-- | - `getEventSource` returns a Halogen `EventSource` created from the bus
+-- | - `getState` returns the current value of the global state `Ref`
+-- | - `putState` sets the value of the global state `Ref`
+-- | - `modifyState` updates the current value of the global state `Ref` by
+-- |   running a function on the current value, and returns the updated value.
+-- | - `modifyState_` updates the current value of the global state `Ref` by
+-- |   running a function on the current value, and returns `Unit`.
 class
   Monad m <= ManageState m a | m -> a where
   getBus :: m (Bus.BusRW a)
