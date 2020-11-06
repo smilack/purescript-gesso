@@ -344,6 +344,8 @@ type Scaler
         }
     }
 
+-- | Creates a [`Scaler`](#t:Scaler) from a [`ViewBox`](#t:ViewBox) and
+-- | [`ClientRect`](#t:ClientRect).
 mkScaler :: ViewBox -> ClientRect -> Scaler
 mkScaler viewBox clientRect =
   { x'
