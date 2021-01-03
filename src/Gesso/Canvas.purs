@@ -206,13 +206,13 @@ handleAction = case _ of
     { context, localState, app, scaler } <- H.get
     queueAnimationFrame mLastTime context scaler localState app
   Finalize -> unsubscribeResize
-  -- If effectful interactions become necessary, updateFn could return
+  -- If effectful interactions become necessary, handlerFn could return
   --   m (Maybe localState) - Just if localState is changed, or Nothing if
   --   localState is not changed. Probably should just be Effect because
   --   ManageState is getting complicated with addition of OutputStyles
-  InteractionTriggered updateFn -> do
+  InteractionTriggered handlerFn -> do
     { scaler, localState } <- H.get
-    case scaler >>= \s -> updateFn s localState of
+    case scaler >>= \s -> handlerFn s localState of
       Nothing -> pure unit
       Just localState' -> handleAction $ StateUpdated localState'
   StateUpdated localState' -> do
