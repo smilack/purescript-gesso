@@ -109,5 +109,5 @@ let upstream =
       https://github.com/purescript/package-sets/releases/download/psc-0.13.8-20200911-2/packages.dhall sha256:872c06349ed9c8210be43982dc6466c2ca7c5c441129826bcb9bf3672938f16e
 
 in  upstream
-  with css.version = "master"
+  with css.version = "e5beb6b16f14e7d4dc10a0bb930c936fe9dde88a"
   with css.repo = "https://github.com/purescript-contrib/purescript-css.git"
