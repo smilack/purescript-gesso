@@ -12,12 +12,15 @@ module Gesso.Canvas
   ) where
 
 import Prelude
-import Control.Alt ((<|>))
-import Data.Foldable (traverse_)
+import Data.Foldable (foldr, traverse_)
 import Data.Function (on)
+import Data.List (List, (:))
+import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (traverse, sequence)
+import Data.Tuple (Tuple)
+import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as App
@@ -73,6 +76,8 @@ type State localState globalState appInput appOutput
     , scaler :: Maybe Dims.Scaler
     , resizeSub :: Maybe H.SubscriptionId
     , interactions :: GI.Interactions localState (Action localState globalState)
+    , queuedInteractions :: List (GI.FullHandler localState)
+    , processingInteractions :: List (GI.FullHandler localState)
     }
 
 -- | See [`handleAction`](#v:handleAction)
@@ -84,6 +89,7 @@ data Action localState globalState
   | Finalize
   | StateUpdated localState
   | InteractionTriggered (GI.FullHandler localState)
+  | InteractionsProcessed
   | MaybeTick
 
 -- | The component's output type is defined by the `OutputMode` in the
@@ -135,7 +141,8 @@ component =
     }
 
 -- | Get initial state for Canvas. Most values are copied directly from the
--- | input. The rest require Effects and are created in `initialize`.
+-- | input. The rest require Effects and are created in `initialize`, except for
+-- | the interactions queues, which start empty.
 initialState ::
   forall localState globalState appInput appOutput.
   Input localState globalState appInput appOutput ->
@@ -151,6 +158,8 @@ initialState { name, app, localState, viewBox, interactions } =
   , scaler: Nothing
   , resizeSub: Nothing
   , interactions
+  , queuedInteractions: List.Nil
+  , processingInteractions: List.Nil
   }
 
 -- | Canvas component's render function. Size/position CSS comes from
@@ -181,8 +190,11 @@ render { name, clientRect, app, interactions } =
 -- |   animation frame timestamp to itself so it can calculate the delta between
 -- |   frames.
 -- | - `Finalize`: Unsubscribe to window resize events.
--- | - `InteractionTriggered`: An event fired, call the handler and update the
--- |   state if necessary.
+-- | - `InteractionTriggered`: An event fired, add the handler to a queue to be
+-- |   run on the next animation frame.
+-- | - `InteractionsProcessed`: The `processingInteractions` queue was
+-- |   successfully processed in an animation frame, so those interactions can
+-- |   be discarded.
 -- | - `StateUpdated`: The local state is changing. Save it, tell `Application`
 -- |   to handle output, and request animation frame if rendering after updates.
 -- | - `MaybeTick`: Request an animation frame if the application should render
@@ -203,18 +215,31 @@ handleAction = case _ of
     handleAction MaybeTick
   HandleResize -> updateClientRect
   Tick mLastTime -> do
-    { context, localState, app, scaler } <- H.get
-    queueAnimationFrame mLastTime context scaler localState app
+    { context, localState, app, scaler, queuedInteractions, processingInteractions } <- H.get
+    -- Prepend any newly queued interactions to the list of interactions we've
+    --   tried to process, then empty the main queue and replace the processing
+    --   queue with the sum of both.
+    let
+      tryInteractions = queuedInteractions <> processingInteractions
+    H.modify_
+      ( _
+          { queuedInteractions = List.Nil
+          , processingInteractions = tryInteractions
+          }
+      )
+    queueAnimationFrame mLastTime context scaler tryInteractions localState app
   Finalize -> unsubscribeResize
   -- If effectful interactions become necessary, handlerFn could return
   --   m (Maybe localState) - Just if localState is changed, or Nothing if
   --   localState is not changed. Probably should just be Effect because
   --   ManageState is getting complicated with addition of OutputStyles
+  -- Hold on to interactions until the next tick, then pass them into rAF
   InteractionTriggered handlerFn -> do
-    { scaler, localState } <- H.get
-    case scaler >>= \s -> handlerFn s localState of
-      Nothing -> pure unit
-      Just localState' -> handleAction $ StateUpdated localState'
+    queuedInteractions <- H.gets _.queuedInteractions
+    H.modify_ (_ { queuedInteractions = handlerFn : queuedInteractions })
+  -- The interactions passed into an animation frame have been processed and are
+  --   no longer needed.
+  InteractionsProcessed -> H.modify_ (_ { processingInteractions = List.Nil })
   StateUpdated localState' -> do
     modifyState localState'
     handleAction MaybeTick
@@ -256,25 +281,27 @@ initialize = do
 -- | `requestAnimationFrame` with `rafCallback`. `rafCallback` is a closure so
 -- | that it has access to values from the component state.
 -- |
--- | `rafCallback` first calculates the delta based on the current and previous
--- | timestamps. If there is no previous timestamp, the delta is `Nothing` which
--- | results in skipping the update and render functions and requesting another
--- | frame.
+-- | `rafCallback` calculates the time delta based on the current and previous
+-- | timestamps. If there is no previous timestamp, the `updateAndRender` call
+-- | is skipped and another frame requested.
 -- |
--- | If there is a previous timestamp, then the delta, application state, and
--- | application spec are passed to Application to run the update function. If
--- | the state updates successfully, a `StateUpdated` action is emitted.
+-- | The `updateAndRender` call could also be skipped because the client rect
+-- | hasn't been found, so there is no scaler, or the canvas element hasn't
+-- | been found, so there is no context.
 -- |
--- | Next, the render function is called. This could fail for several reasons:
--- | there is no previous timestamp, so no delta; the client rect hasn't been
--- | fount, so no scaler; the canvas element hasn't been found, so no context.
+-- | `updateAndRender` converts the list of queued interaction handlers to
+-- | `localState -> Maybe localState` functions, and prepends a mostly filled-in
+-- | call to `App.updateLocalState` with the same type. This list is folded
+-- | over, keeping track of whether the state is changed by any of the
+-- | functions. If it is, a `StateUpdated` action is emitted. Finally, the
+-- | state (updated or not) is passed to `App.renderApp`.
 -- |
--- | `renderApp` returns a value instructing whether to request another frame.
--- | This varies based on the `RenderMode` of the application and it does so by
--- | emitting a `Tick` action. If the application renders continuously, then it
--- | ticks does; if it renders on update then it does not. It also continues to
--- | request frames if any values were `Nothing`, in the hope that the missing
--- | values will eventually appear.
+-- | `App.renderApp` returns a value instructing whether to request another
+-- | frame, which is passed out to `rafCallback`. It varies based on the
+-- | `RenderMode` of the application. If the application renders continuously
+-- | then it emits a `Tick` action. If it renders on update then it does not.
+-- | It also continues if `updateAndRender` was skipped because any values were
+-- | `Nothing`, in the hope that the missing values will eventually appear.
 -- |
 -- | Finally, the `effectEventSource` is closed.
 queueAnimationFrame ::
@@ -283,38 +310,70 @@ queueAnimationFrame ::
   Maybe (T.TimestampPrevious) ->
   Maybe Context2D ->
   Maybe Dims.Scaler ->
+  List (GI.FullHandler localState) ->
   localState ->
   App.Application localState globalState appInput appOutput ->
   H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m Unit
-queueAnimationFrame mLastTime context scaler localState app = do
+queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app = do
   _ <- H.subscribe $ ES.effectEventSource rafEventSource
   pure unit
   where
-  rafEventSource :: ES.Emitter Effect (Action localState globalState) -> Effect (ES.Finalizer Effect)
+  rafEventSource ::
+    ES.Emitter Effect (Action localState globalState) ->
+    Effect (ES.Finalizer Effect)
   rafEventSource emitter = do
     _ <- T.requestAnimationFrame (rafCallback emitter) =<< window
     mempty
 
-  rafCallback :: ES.Emitter Effect (Action localState globalState) -> T.TimestampCurrent -> Effect Unit
+  rafCallback ::
+    ES.Emitter Effect (Action localState globalState) ->
+    T.TimestampCurrent ->
+    Effect Unit
   rafCallback emitter timestamp = do
-    let
-      mdelta = T.delta timestamp <$> mLastTime
-
-      mstate = join $ App.updateLocalState <$> mdelta <*> pure localState <*> pure app
-    traverse_ (ES.emit emitter <<< StateUpdated) mstate
     anotherFrame <-
-      sequence $ join
-        $ App.renderApp
-        <$> (mstate <|> pure localState)
-        <*> mdelta
-        <*> scaler
-        <*> context
-        <*> pure app
+      map join $ sequence $ updateAndRender emitter
+        <$> (T.delta timestamp <$> mLastTime)
+        <*> mcontext
+        <*> mscaler
     case anotherFrame of
       Just App.Stop -> pure unit
       Just App.Continue -> ES.emit emitter $ Tick $ Just $ T.toPrev timestamp
       Nothing -> ES.emit emitter $ Tick $ Just $ T.toPrev timestamp --try again in case we haven't gotten a delta or context yet
     ES.close emitter
+
+  updateAndRender ::
+    ES.Emitter Effect (Action localState globalState) ->
+    T.Delta ->
+    Context2D ->
+    Dims.Scaler ->
+    Effect (Maybe App.RequestFrame)
+  updateAndRender emitter delta context scaler = do
+    let
+      -- flap applies scaler to every function in queuedInteractions
+      qIs = flap queuedInteractions scaler
+
+      qIsThenUpdate = (\s -> App.updateLocalState delta s app) : qIs
+
+      changed /\ state' = foldr applyUpdateFn (DidNotChange /\ localState) qIsThenUpdate
+    case changed of
+      Changed -> ES.emit emitter $ StateUpdated state'
+      DidNotChange -> pure unit
+    ES.emit emitter InteractionsProcessed
+    sequence $ App.renderApp state' delta scaler context app
+
+  applyUpdateFn ::
+    (localState -> Maybe localState) ->
+    Tuple StateChanged localState ->
+    Tuple StateChanged localState
+  applyUpdateFn handlerFn s@(_ /\ state) = case handlerFn state of
+    Just state' -> Changed /\ state'
+    Nothing -> s
+
+-- | A simple type to track whether the local state changed while running
+-- | interactions and updates.
+data StateChanged
+  = Changed
+  | DidNotChange
 
 -- | Attempt to get the `Context2D` for this component's `canvas` element.
 getContext :: String -> Effect (Maybe Context2D)
