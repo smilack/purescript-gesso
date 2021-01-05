@@ -349,8 +349,9 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
     Effect (Maybe App.RequestFrame)
   updateAndRender emitter delta context scaler = do
     let
-      -- flap applies scaler to every function in queuedInteractions
-      qIs = flap queuedInteractions scaler
+      -- flap (<@>) applies delta and scaler to every function in
+      --   queuedInteractions
+      qIs = queuedInteractions <@> delta <@> scaler
 
       qIsThenUpdate = (\s -> App.updateLocalState delta s app) : qIs
 

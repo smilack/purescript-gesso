@@ -28,6 +28,7 @@ import DOM.HTML.Indexed (HTMLcanvas)
 import Gesso.Dimensions as Dims
 import Gesso.Interactions.Events as Events
 import Gesso.Interactions.Events (Event, ClipboardEvent, FocusEvent, KeyboardEvent, TouchEvent, DragEvent, MouseEvent, WheelEvent)
+import Gesso.Time as Time
 import Halogen.HTML.Properties (IProp)
 
 -- | This is the type of the `on` functions from `Gesso.Interactions.Events`.
@@ -41,7 +42,7 @@ type EventProp event i
 -- | may return an updated state if the state should change because of the
 -- | event.
 type FullHandler localState
-  = Dims.Scaler -> localState -> Maybe localState
+  = Time.Delta -> Dims.Scaler -> localState -> Maybe localState
 
 -- | Alias for an event handler, which receives an event, a coordinate scaler,
 -- | and the current state, and may return an updated state if the state should
@@ -144,7 +145,7 @@ mousePosition ::
   Interaction MouseEvent { mousePos :: Maybe { x :: Number, y :: Number } | moreState } i
 mousePosition = mkInteraction Events.onMouseMove getMousePos
   where
-  getMousePos event _ state =
+  getMousePos event _ _ state =
     let
       point = Dims.fromMouseEvent event
     in
