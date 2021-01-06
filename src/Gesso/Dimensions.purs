@@ -37,11 +37,10 @@ module Gesso.Dimensions
 import Prelude
 import CSS as CSS
 import Data.Int (round, toNumber)
-import Record (union)
 import Gesso.AspectRatio (AspectRatio)
 import Gesso.AspectRatio as AR
+import Graphics.Canvas (Rectangle)
 import Halogen.HTML.Properties as HP
-import Math as Math
 import Web.HTML.HTMLElement (DOMRect)
 import Web.UIEvent.MouseEvent (pageX, pageY, MouseEvent)
 
@@ -292,14 +291,8 @@ fromPointAndSize = Dimensions
 -- | [`ClientRect`](#t:ClientRect) coordinates and screen coordinates to
 -- | `ViewBox` coordinates.
 -- |
--- | The top level `x`, `y`, `w`, `h` functions convert from `ViewBox` to
--- | `ClientRect`, with the prime (`'`) functions returning the exact conversion
--- | and the underscore (`_`) functions returning a truncated number. For
--- | example, if `x' 1.0` returns `2.5` then `x_ 1.0` will return `2.0`.
--- |
--- | The `x` and `y` functions account for any margin that may exist (if the
--- | `ViewBox` and `ClientRect` are not the same size), while the `w` and `h`
--- | functions just scale.
+-- | This is important for fullscreen or stretched applications where the size
+-- | of the canvas element may not be the same size as the chosen `ViewBox`.
 -- |
 -- | `scale` is the ratio of `ViewBox` to `ClientRect` units.
 -- |
@@ -312,64 +305,91 @@ fromPointAndSize = Dimensions
 -- | the entire drawing, draw an extended border, or check that something is
 -- | completely off-screen.
 -- |
--- | `toVb` contains functions for converting a page coordinate to a `ViewBox`
--- | coordinate, for example, for converting mouse position to drawing position.
+-- | The `x`, `y`, `width`, `height`, `point`, `size`, and `dims` fields each
+-- | contain two functions: one for converting from `ClientRect` to `ViewBox`
+-- | units (`toVb`), and one for converting from `ViewBox` to `ClientRect`
+-- | units (`toCr`).
+-- |
+-- | Typically the `toCr` functions will be more useful, as they allow you to
+-- | specify units in the same coordinate system as the chosen `ViewBox`, and
+-- | then they will handle the scaling and margins for you.
+-- |
+-- | The `toVb` functions may be useful in the context of certain events, for
+-- | example, for converting the position of a mouse click.
+-- |
+-- | `toRectangle` is a helper that converts from a `Dimensioned` type to the
+-- | `Rectangle` type from `Graphics.Canvas`.
 type Scaler
-  = { x' :: Number -> Number
-    , y' :: Number -> Number
-    , w' :: Number -> Number
-    , h' :: Number -> Number
-    , x_ :: Number -> Number
-    , y_ :: Number -> Number
-    , w_ :: Number -> Number
-    , h_ :: Number -> Number
-    , scale :: Number
-    , viewBox ::
-        { x :: Number
-        , y :: Number
-        , width :: Number
-        , height :: Number
+  = { scale :: Number
+    , viewBox :: ViewBox
+    , screen :: ClientRect
+    , x ::
+        { toVb :: Number -> Number
+        , toCr :: Number -> Number
         }
-    , screen ::
-        { x :: Number
-        , y :: Number
-        , width :: Number
-        , height :: Number
+    , y ::
+        { toVb :: Number -> Number
+        , toCr :: Number -> Number
         }
-    , toVb ::
-        { x' :: Number -> Number
-        , y' :: Number -> Number
-        , x_ :: Number -> Number
-        , y_ :: Number -> Number
+    , width ::
+        { toVb :: Number -> Number
+        , toCr :: Number -> Number
         }
+    , height ::
+        { toVb :: Number -> Number
+        , toCr :: Number -> Number
+        }
+    , point ::
+        { toVb :: forall p. Positioned p => p -> Point
+        , toCr :: forall p. Positioned p => p -> Point
+        }
+    , size ::
+        { toVb :: forall s. Sized s => s -> Size
+        , toCr :: forall s. Sized s => s -> Size
+        }
+    , dims ::
+        { toVb :: ClientRect -> ViewBox
+        , toCr :: ViewBox -> ClientRect
+        }
+    , toRectangle :: forall d. Dimensioned d => d -> Rectangle
     }
 
 -- | Creates a [`Scaler`](#t:Scaler) from a [`ViewBox`](#t:ViewBox) and
 -- | [`ClientRect`](#t:ClientRect).
 mkScaler :: ViewBox -> ClientRect -> Scaler
-mkScaler viewBox clientRect =
-  { x'
-  , y'
-  , w'
-  , h'
-  , x_: Math.round <<< x'
-  , y_: Math.round <<< y'
-  , w_: Math.round <<< w'
-  , h_: Math.round <<< h'
-  , scale: c
-  , viewBox:
-      { x: getX viewBox
-      , y: getY viewBox
-      , width: getWidth viewBox
-      , height: getHeight viewBox
+mkScaler viewBox clientRect@(Dimensions _ crSize) =
+  { scale: c
+  , viewBox
+  , screen: Dimensions origin crSize
+  , x:
+      { toVb: toVb.x'
+      , toCr: x'
       }
-  , screen:
-      { x: 0.0
-      , y: 0.0
-      , width: getWidth clientRect
-      , height: getHeight clientRect
+  , y:
+      { toVb: toVb.y'
+      , toCr: y'
       }
-  , toVb: union toVb' toVb_
+  , width:
+      { toVb: toVb.w'
+      , toCr: w'
+      }
+  , height:
+      { toVb: toVb.h'
+      , toCr: h'
+      }
+  , point:
+      { toVb: transformP toVb.x' toVb.y'
+      , toCr: transformP x' y'
+      }
+  , size:
+      { toVb: transformS toVb.w' toVb.h'
+      , toCr: transformS w' h'
+      }
+  , dims:
+      { toVb: transformD toVb.x' toVb.y' toVb.w' toVb.h'
+      , toCr: transformD x' y' w' h'
+      }
+  , toRectangle
   }
   where
   actualVB = largestContainedArea (getRatio viewBox) clientRect
@@ -389,14 +409,67 @@ mkScaler viewBox clientRect =
 
   h' = (_ / c)
 
-  toVb' =
+  toVb =
     { x': (_ + getX viewBox) <<< (_ * c) <<< (_ - getX clientRect + margin.w)
     , y': (_ + getY viewBox) <<< (_ * c) <<< (_ - getY clientRect + margin.h)
+    , w': (_ * c)
+    , h': (_ * c)
     }
 
-  toVb_ =
-    { x_: Math.round <<< toVb'.x'
-    , y_: Math.round <<< toVb'.y'
+  transformP ::
+    forall p.
+    Positioned p =>
+    (Number -> Number) ->
+    (Number -> Number) ->
+    p ->
+    Point
+  transformP tx ty p =
+    fromXAndY
+      { x: tx $ getX p
+      , y: ty $ getY p
+      }
+
+  transformS ::
+    forall s.
+    Sized s =>
+    (Number -> Number) ->
+    (Number -> Number) ->
+    s ->
+    Size
+  transformS tw th s =
+    fromWidthAndHeight
+      { width: tw $ getWidth s
+      , height: th $ getHeight s
+      }
+
+  transformD ::
+    forall a d.
+    Dimensioned d =>
+    (Number -> Number) ->
+    (Number -> Number) ->
+    (Number -> Number) ->
+    (Number -> Number) ->
+    d ->
+    Dimensions a
+  transformD tx ty tw th d =
+    Dimensions
+      ( fromXAndY
+          { x: tx $ getX d
+          , y: ty $ getY d
+          }
+      )
+      ( fromWidthAndHeight
+          { width: tw $ getWidth d
+          , height: th $ getHeight d
+          }
+      )
+
+  toRectangle :: forall d. Dimensioned d => d -> Rectangle
+  toRectangle d =
+    { x: getX d
+    , y: getY d
+    , width: getWidth d
+    , height: getHeight d
     }
 
 ---------------
