@@ -139,14 +139,10 @@ mkInteraction = Interaction
 -- | A useful example [`Interaction`](#t:Interaction) that updates the mouse
 -- | position on every `MouseMove` event, which works with all state types that
 -- | are records containing at least a
--- | `mousePos :: Maybe { x :: Number, y :: Number }` field.
+-- | `mousePos :: Maybe Gesso.Dimensions.Point` field.
 mousePosition ::
   forall moreState i.
-  Interaction MouseEvent { mousePos :: Maybe { x :: Number, y :: Number } | moreState } i
+  Interaction MouseEvent { mousePos :: Maybe Dims.Point | moreState } i
 mousePosition = mkInteraction Events.onMouseMove getMousePos
   where
-  getMousePos event _ _ state =
-    let
-      point = Dims.fromMouseEvent event
-    in
-      Just state { mousePos = Just { x: Dims.getX point, y: Dims.getY point } }
+  getMousePos event _ _ state = Just state { mousePos = Just $ Dims.fromMouseEvent event }
