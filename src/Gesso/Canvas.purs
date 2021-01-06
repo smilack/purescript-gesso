@@ -78,6 +78,7 @@ type State localState globalState appInput appOutput
     , interactions :: GI.Interactions localState (Action localState globalState)
     , queuedInteractions :: List (GI.FullHandler localState)
     , processingInteractions :: List (GI.FullHandler localState)
+    , rafId :: Maybe T.RequestAnimationFrameId
     }
 
 -- | See [`handleAction`](#v:handleAction)
@@ -91,6 +92,8 @@ data Action localState globalState
   | InteractionTriggered (GI.FullHandler localState)
   | InteractionsProcessed
   | MaybeTick
+  | FrameRequested T.RequestAnimationFrameId
+  | FrameFired
 
 -- | The component's output type is defined by the `OutputMode` in the
 -- | `Application` spec.
@@ -160,6 +163,7 @@ initialState { name, app, localState, viewBox, interactions } =
   , interactions
   , queuedInteractions: List.Nil
   , processingInteractions: List.Nil
+  , rafId: Nothing
   }
 
 -- | Canvas component's render function. Size/position CSS comes from
@@ -198,7 +202,9 @@ render { name, clientRect, app, interactions } =
 -- | - `StateUpdated`: The local state is changing. Save it, tell `Application`
 -- |   to handle output, and request animation frame if rendering after updates.
 -- | - `MaybeTick`: Request an animation frame if the application should render
--- |   after state updates.
+-- |   after state changes and if a frame has not already been requested.
+-- | - `FrameRequested`: An animation frame has been requested, save its ID.
+-- | - `FrameFired`: The requested animation frame has fired, forget its ID.
 handleAction ::
   forall localState globalState appInput appOutput slots m.
   MonadAff m =>
@@ -213,7 +219,9 @@ handleAction = case _ of
     { app, localState } <- H.get
     App.receiveGlobal saveLocal localState globalState' app
     handleAction MaybeTick
-  HandleResize -> updateClientRect
+  HandleResize -> do
+    updateClientRect
+    handleAction MaybeTick
   Tick mLastTime -> do
     { context, localState, app, scaler, queuedInteractions, processingInteractions } <- H.get
     -- Prepend any newly queued interactions to the list of interactions we've
@@ -237,6 +245,7 @@ handleAction = case _ of
   InteractionTriggered handlerFn -> do
     queuedInteractions <- H.gets _.queuedInteractions
     H.modify_ (_ { queuedInteractions = handlerFn : queuedInteractions })
+    handleAction MaybeTick
   -- The interactions passed into an animation frame have been processed and are
   --   no longer needed.
   InteractionsProcessed -> H.modify_ (_ { processingInteractions = List.Nil })
@@ -244,10 +253,14 @@ handleAction = case _ of
     modifyState localState'
     handleAction MaybeTick
   MaybeTick -> do
-    app <- H.gets _.app
+    { app, rafId } <- H.get
     case App.renderOnUpdate app of
       App.Stop -> pure unit
-      App.Continue -> handleAction $ Tick Nothing
+      App.Continue -> case rafId of -- don't need to tick if a frame was already requested
+        Nothing -> handleAction $ Tick Nothing
+        Just _ -> pure unit
+  FrameRequested rafId -> H.modify_ (_ { rafId = Just rafId })
+  FrameFired -> H.modify_ (_ { rafId = Nothing })
 
 -- | Subscribe to the global state bus and window resize events. Get the
 -- | `canvas` element and its `Context2D` and `clientRect`. Create scaling
@@ -280,8 +293,11 @@ initialize = do
 -- | First, create and subscribe to an `effectEventSource` which calls
 -- | `requestAnimationFrame` with `rafCallback`. `rafCallback` is a closure so
 -- | that it has access to values from the component state.
+-- | `requestAnimationFrame` returns an ID which we save to the component state
+-- | through the `FrameRequested` action
 -- |
--- | `rafCallback` calculates the time delta based on the current and previous
+-- | `rafCallback` emits a `FrameFired` action indicating the callback started.
+-- | Next, it calculates the time delta based on the current and previous
 -- | timestamps. If there is no previous timestamp, the `updateAndRender` call
 -- | is skipped and another frame requested.
 -- |
@@ -322,7 +338,8 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
     ES.Emitter Effect (Action localState globalState) ->
     Effect (ES.Finalizer Effect)
   rafEventSource emitter = do
-    _ <- T.requestAnimationFrame (rafCallback emitter) =<< window
+    rafId <- T.requestAnimationFrame (rafCallback emitter) =<< window
+    ES.emit emitter $ FrameRequested rafId
     mempty
 
   rafCallback ::
@@ -330,6 +347,7 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
     T.TimestampCurrent ->
     Effect Unit
   rafCallback emitter timestamp = do
+    ES.emit emitter FrameFired
     anotherFrame <-
       map join $ sequence $ updateAndRender emitter
         <$> (T.delta timestamp <$> mLastTime)
