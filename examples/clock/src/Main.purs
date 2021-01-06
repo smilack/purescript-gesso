@@ -42,10 +42,10 @@ input =
   }
 
 render :: Unit -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
-render _ _ { x_, y_, w_, h_, screen, viewBox } context = do
+render _ _ scale@{ toRectangle, screen, viewBox } context = do
   -- Clear background
   Canvas.setFillStyle context "white"
-  Canvas.fillRect context { x: screen.x, y: screen.y, width: screen.width, height: screen.height }
+  Canvas.fillRect context (toRectangle screen)
   drawFrame
   drawNumbers
   drawHashes
@@ -56,12 +56,12 @@ render _ _ { x_, y_, w_, h_, screen, viewBox } context = do
   -- Center dot
   Canvas.setFillStyle context "#888888"
   Canvas.fillPath context do
-    Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: w_ 15.0 }
+    Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: scale.width.toCr 15.0 }
   where
   clock =
-    { x: x_ $ viewBox.width / 2.0
-    , y: y_ $ viewBox.height / 2.0
-    , r: w_ $ 500.0
+    { x: scale.x.toCr $ (GDim.getWidth viewBox) / 2.0
+    , y: scale.y.toCr $ (GDim.getHeight viewBox) / 2.0
+    , r: scale.width.toCr $ 500.0
     }
 
   eta = pi / 2.0
@@ -83,14 +83,14 @@ render _ _ { x_, y_, w_, h_, screen, viewBox } context = do
     Canvas.fillPath context do
       Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r }
     Canvas.setStrokeStyle context "#888888"
-    Canvas.setLineWidth context $ w_ 25.0
+    Canvas.setLineWidth context $ scale.width.toCr 25.0
     Canvas.strokePath context do
       Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r }
 
   drawNumbers :: Effect Unit
   drawNumbers = do
     let
-      size = floor $ w_ 78.0
+      size = floor $ scale.width.toCr 78.0
     Canvas.setFillStyle context "black"
     Canvas.setFont context $ show size <> "pt Georgia"
     Canvas.setTextAlign context Canvas.AlignCenter
@@ -104,7 +104,7 @@ render _ _ { x_, y_, w_, h_, screen, viewBox } context = do
       x = clock.x + (0.775 * clock.r * cos angle)
 
       -- Graphics.Canvas doesn't have setTextBaseline, so push the numbers down a little
-      y = clock.y + (0.775 * clock.r * sin angle + h_ 30.0)
+      y = clock.y + (0.775 * clock.r * sin angle + scale.height.toCr 30.0)
     Canvas.fillText context (show i) x y
 
   drawHashes :: Effect Unit
@@ -116,9 +116,9 @@ render _ _ { x_, y_, w_, h_, screen, viewBox } context = do
   drawHash :: Int -> Effect Unit
   drawHash i = do
     if i `mod` 5 == 0 then
-      Canvas.setLineWidth context $ w_ 9.0
+      Canvas.setLineWidth context $ scale.width.toCr 9.0
     else
-      Canvas.setLineWidth context $ w_ 3.0
+      Canvas.setLineWidth context $ scale.width.toCr 3.0
     let
       angle = (_ * tau / 60.0) <<< toNumber $ i
     drawLineSegment angle 0.9 0.95
@@ -129,7 +129,7 @@ render _ _ { x_, y_, w_, h_, screen, viewBox } context = do
       angle = (_ - eta) <<< (_ * tau / 12.0) $ (_ + minute / 60.0) $ hour
     Canvas.setLineCap context Canvas.Round
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ w_ 16.0
+    Canvas.setLineWidth context $ scale.width.toCr 16.0
     drawLineSegment angle (-0.1) 0.5
 
   drawMinuteHand :: Number -> Number -> Effect Unit
@@ -138,7 +138,7 @@ render _ _ { x_, y_, w_, h_, screen, viewBox } context = do
       angle = (_ - eta) <<< (_ * tau / 60.0) $ (_ + second / 60.0) $ minute
     Canvas.setLineCap context Canvas.Round
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ w_ 16.0
+    Canvas.setLineWidth context $ scale.width.toCr 16.0
     drawLineSegment angle (-0.1) 0.7
 
   drawSecondHand :: Number -> Effect Unit
@@ -147,9 +147,9 @@ render _ _ { x_, y_, w_, h_, screen, viewBox } context = do
       angle = (_ - eta) <<< (_ * tau / 60.0) $ second
     Canvas.setLineCap context Canvas.Square
     Canvas.setStrokeStyle context "#DD0000"
-    Canvas.setLineWidth context $ w_ 7.0
+    Canvas.setLineWidth context $ scale.width.toCr 7.0
     drawLineSegment angle (-0.2) 0.7
-    Canvas.setLineWidth context $ w_ 16.0
+    Canvas.setLineWidth context $ scale.width.toCr 16.0
     Canvas.setLineCap context Canvas.Round
     drawLineSegment angle (-0.2) (-0.1)
 
