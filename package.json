@@ -4,12 +4,13 @@
   "description": "A HTML canvas wrapper in PureScript for creating graphical standalone or Halogen applications",
   "scripts": {
     "example-all": "",
-    "example-clock": "spago --config examples/clock/spago.dhall --main Example.clock.Main --to examples/clock/dist/example.js",
-    "example-unit-grid": "spago --config examples/unit-grid/spago.dhall --main Example.unit-grid.Main --to examples/unit-grid/dist/example.js",
-    "example-paint-io": "spago --config examples/paint-io/spago.dhall --main Example.paint-io.Main --to examples/paint-io/dist/example.js",
-    "example-paint-global": "spago --config examples/paint-global/spago.dhall --main Example.paint-global.Main --to examples/paint-global/dist/example.js"
+    "example-clock": "spago --config examples/clock/spago.dhall bundle-app --main Example.Clock.Main --to examples/clock/dist/example.js",
+    "example-unit-grid": "spago --config examples/unit-grid/spago.dhall bundle-app --main Example.UnitGrid.Main --to examples/unit-grid/dist/example.js",
+    "example-paint-io": "spago --config examples/paint-io/spago.dhall bundle-app --main Example.PaintIO.Main --to examples/paint-io/dist/example.js",
+    "example-paint-global": "spago --config examples/paint-global/spago.dhall bundle-app --main Example.PaintGlobal.Main --to examples/paint-global/dist/example.js"
   },
   "devDependencies": {
+    "purescript": "0.13.8",
     "spago": "^0.18.1"
   }
 }
