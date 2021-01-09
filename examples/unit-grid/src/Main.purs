@@ -23,8 +23,8 @@ main =
     G.run GC.component input body
 
 type LocalState
-  = { mousePos :: Maybe { x :: Number, y :: Number }
-    , clicked :: Maybe { x :: Number, y :: Number }
+  = { mousePos :: Maybe GDim.Point
+    , clicked :: Maybe GDim.Point
     }
 
 input :: forall g i o. GC.Input LocalState g i o
@@ -46,17 +46,13 @@ input =
 
 mouseDown ::
   forall r i.
-  GInt.Interaction GEv.MouseEvent { clicked :: Maybe { x :: Number, y :: Number } | r } i
+  GInt.Interaction GEv.MouseEvent { clicked :: Maybe GDim.Point | r } i
 mouseDown = GInt.mkInteraction GEv.onMouseDown getMousePos
   where
-  getMousePos event _ state =
-    let
-      point = GDim.fromMouseEvent event
-    in
-      Just state { clicked = Just { x: GDim.getX point, y: GDim.getY point } }
+  getMousePos event _ _ state = Just state { clicked = Just $ GDim.fromMouseEvent event }
 
 render :: LocalState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
-render { clicked, mousePos } _ { x_, y_, w_, h_, screen, toVb } context = do
+render { clicked, mousePos } _ scale context = do
   clearBackground
   drawAxes
   drawGridLines
@@ -66,69 +62,69 @@ render { clicked, mousePos } _ { x_, y_, w_, h_, screen, toVb } context = do
   clearBackground :: Effect Unit
   clearBackground = do
     Canvas.setFillStyle context "white"
-    Canvas.fillRect context screen
+    Canvas.fillRect context (scale.toRectangle scale.screen)
 
   drawAxes :: Effect Unit
   drawAxes = do
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ w_ 0.015
-    drawCross (x_ 0.0) (y_ 0.0) 1.0
+    Canvas.setLineWidth context $ scale.width.toCr 0.015
+    drawCross (scale.x.toCr 0.0) (scale.y.toCr 0.0) 1.0
 
   drawGridLines :: Effect Unit
   drawGridLines = do
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ w_ 0.005
+    Canvas.setLineWidth context $ scale.width.toCr 0.005
     sequence_ $ map drawGridLine $ range 1 10
 
   drawGridLine :: Int -> Effect Unit
   drawGridLine i = do
     Canvas.strokePath context do
-      Canvas.moveTo context (x_ $ -n) (y_ $ -1.0)
-      Canvas.lineTo context (x_ $ -n) (y_ $ 1.0)
-      Canvas.moveTo context (x_ n) (y_ $ -1.0)
-      Canvas.lineTo context (x_ n) (y_ $ 1.0)
-      Canvas.moveTo context (x_ $ -1.0) (y_ $ -n)
-      Canvas.lineTo context (x_ $ 1.0) (y_ $ -n)
-      Canvas.moveTo context (x_ $ -1.0) (y_ n)
-      Canvas.lineTo context (x_ $ 1.0) (y_ n)
+      Canvas.moveTo context (scale.x.toCr $ -n) (scale.y.toCr $ -1.0)
+      Canvas.lineTo context (scale.x.toCr $ -n) (scale.y.toCr $ 1.0)
+      Canvas.moveTo context (scale.x.toCr n) (scale.y.toCr $ -1.0)
+      Canvas.lineTo context (scale.x.toCr n) (scale.y.toCr $ 1.0)
+      Canvas.moveTo context (scale.x.toCr $ -1.0) (scale.y.toCr $ -n)
+      Canvas.lineTo context (scale.x.toCr $ 1.0) (scale.y.toCr $ -n)
+      Canvas.moveTo context (scale.x.toCr $ -1.0) (scale.y.toCr n)
+      Canvas.lineTo context (scale.x.toCr $ 1.0) (scale.y.toCr n)
     where
     n = (_ / 10.0) <<< toNumber $ i
 
-  drawMouseClicked :: Maybe { x :: Number, y :: Number } -> Effect Unit
+  drawMouseClicked :: Maybe GDim.Point -> Effect Unit
   drawMouseClicked mxy = do
     Canvas.setFont context $ size <> "px 'Courier New'"
     Canvas.setFillStyle context "black"
     Canvas.setTextAlign context Canvas.AlignCenter
-    Canvas.fillText context ("Clicked: (" <> text) (x_ $ 0.0) (y_ $ -1.1)
+    Canvas.fillText context ("Clicked: (" <> text) (scale.x.toCr $ 0.0) (scale.y.toCr $ -1.1)
     case mxy of
       Nothing -> pure unit
-      Just { x, y } -> do
+      Just p -> do
         Canvas.setStrokeStyle context "black"
-        Canvas.setLineWidth context $ w_ 0.01
+        Canvas.setLineWidth context $ scale.width.toCr 0.01
         Canvas.strokePath context do
-          Canvas.arc context { x, y, radius: w_ 0.05, start: 0.0, end: tau }
-        drawCross x y 0.05
+          Canvas.arc context { x: GDim.getX p, y: GDim.getY p, radius: scale.width.toCr 0.05, start: 0.0, end: tau }
+        drawCross (GDim.getX p) (GDim.getY p) 0.05
     where
-    size = show $ floor $ w_ 0.2
+    size = show $ floor $ scale.width.toCr 0.2
 
-    x' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< toVb.x'
+    x' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< scale.x.toVb
 
-    y' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< toVb.y'
+    y' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< scale.y.toVb
 
     text = case mxy of
       Nothing -> "Nothing)"
-      Just { x, y } -> show (x' x) <> ", " <> show (y' y) <> ")"
+      Just p -> show (x' $ GDim.getX p) <> ", " <> show (y' $ GDim.getY p) <> ")"
 
-  drawMouseCursor :: { x :: Number, y :: Number } -> Effect Unit
-  drawMouseCursor { x, y } = do
+  drawMouseCursor :: GDim.Point -> Effect Unit
+  drawMouseCursor point = do
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ w_ 0.01
-    drawCross x y 0.05
+    Canvas.setLineWidth context $ scale.width.toCr 0.01
+    drawCross (GDim.getX point) (GDim.getY point) 0.05
 
   drawCross :: Number -> Number -> Number -> Effect Unit
   drawCross x y length = do
     Canvas.strokePath context do
-      Canvas.moveTo context (x - w_ length) y
-      Canvas.lineTo context (x + w_ length) y
-      Canvas.moveTo context x (y - h_ length)
-      Canvas.lineTo context x (y + h_ length)
+      Canvas.moveTo context (x - scale.width.toCr length) y
+      Canvas.lineTo context (x + scale.width.toCr length) y
+      Canvas.moveTo context x (y - scale.height.toCr length)
+      Canvas.lineTo context x (y + scale.height.toCr length)
