@@ -254,7 +254,7 @@ highlightCell ::
   GInt.Interaction GEv.MouseEvent CanvasState i
 highlightCell = GInt.mkInteraction GEv.onMouseMove getMousePos
   where
-  getMousePos event scaler state =
+  getMousePos event _ scaler state =
     let
       { x, y } = toXY event scaler
 
@@ -270,36 +270,33 @@ highlightCell = GInt.mkInteraction GEv.onMouseMove getMousePos
               Just state { mouseCell = Just { x, y } }
           else
             Just state { mouseCell = Just { x, y }, pixels = p : state.pixels }
+      else if state.mouseCell == Just { x, y } then
+        Nothing
       else
-        if state.mouseCell == Just { x, y } then
-          Nothing
-        else
-          Just state { mouseCell = Just { x, y } }
+        Just state { mouseCell = Just { x, y } }
 
 toXY :: GEv.MouseEvent -> GDim.Scaler -> { x :: Int, y :: Int }
-toXY event { toVb } =
+toXY event scale =
   let
-    point = GDim.fromMouseEvent event
+    point = scale.point.toVb (GDim.fromMouseEvent event)
 
-    { x, y } = { x: GDim.getX point, y: GDim.getY point }
+    x = floor $ GDim.getX point
 
-    x' = floor $ toVb.x' x
-
-    y' = floor $ toVb.y' y
+    y = floor $ GDim.getY point
   in
-    { x: x', y: y' }
+    { x, y }
 
 clearHighlight ::
   forall i.
   GInt.Interaction GEv.MouseEvent CanvasState i
-clearHighlight = GInt.mkInteraction GEv.onMouseOut (\_ _ s -> Just s { mouseCell = Nothing })
+clearHighlight = GInt.mkInteraction GEv.onMouseOut (\_ _ _ s -> Just s { mouseCell = Nothing })
 
 mouseDown ::
   forall i.
   GInt.Interaction GEv.MouseEvent CanvasState i
 mouseDown = GInt.mkInteraction GEv.onMouseDown startDrawing
   where
-  startDrawing event scaler state =
+  startDrawing event _ scaler state =
     let
       { x, y } = toXY event scaler
 
@@ -310,10 +307,10 @@ mouseDown = GInt.mkInteraction GEv.onMouseDown startDrawing
 mouseUp ::
   forall i.
   GInt.Interaction GEv.MouseEvent CanvasState i
-mouseUp = GInt.mkInteraction GEv.onMouseUp (\_ _ s -> Just s { mouseDown = false })
+mouseUp = GInt.mkInteraction GEv.onMouseUp (\_ _ _ s -> Just s { mouseDown = false })
 
 renderApp :: CanvasState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
-renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, screen, toVb } context = do
+renderApp { clicked, mouseCell, showGrid, color, pixels } _ scale context = do
   clearBackground
   drawOutline
   when showGrid drawGrid
@@ -323,13 +320,13 @@ renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, sc
   clearBackground :: Effect Unit
   clearBackground = do
     Canvas.setFillStyle context "white"
-    Canvas.fillRect context screen
+    Canvas.fillRect context (scale.toRectangle scale.screen)
 
   drawOutline :: Effect Unit
   drawOutline = do
-    Canvas.setLineWidth context $ w_ 0.05
+    Canvas.setLineWidth context $ scale.width.toCr 0.05
     Canvas.setStrokeStyle context "#888"
-    Canvas.strokeRect context screen
+    Canvas.strokeRect context (scale.toRectangle scale.screen)
 
   drawGrid :: Effect Unit
   drawGrid = do
@@ -339,10 +336,10 @@ renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, sc
   drawGridLine :: Int -> Effect Unit
   drawGridLine i = do
     Canvas.strokePath context do
-      Canvas.moveTo context (x_ n) (y_ 0.0)
-      Canvas.lineTo context (x_ n) (y_ 32.0)
-      Canvas.moveTo context (x_ 0.0) (y_ n)
-      Canvas.lineTo context (x_ 32.0) (y_ n)
+      Canvas.moveTo context (scale.x.toCr n) (scale.y.toCr 0.0)
+      Canvas.lineTo context (scale.x.toCr n) (scale.y.toCr 32.0)
+      Canvas.moveTo context (scale.x.toCr 0.0) (scale.y.toCr n)
+      Canvas.lineTo context (scale.x.toCr 32.0) (scale.y.toCr n)
     where
     n = toNumber i
 
@@ -355,4 +352,4 @@ renderApp { clicked, mouseCell, showGrid, color, pixels } _ { x_, y_, w_, h_, sc
   drawPixel :: Pixel -> Effect Unit
   drawPixel (Pixel { x, y, color: c }) = do
     Canvas.setFillStyle context c
-    Canvas.fillRect context { x: x_ $ toNumber x, y: y_ $ toNumber y, width: w_ 1.0, height: h_ 1.0 }
+    Canvas.fillRect context { x: scale.x.toCr $ toNumber x, y: scale.y.toCr $ toNumber y, width: scale.width.toCr 1.0, height: scale.height.toCr 1.0 }
