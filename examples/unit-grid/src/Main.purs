@@ -1,4 +1,4 @@
-module Main where
+module Example.UnitGrid.Main where
 
 import Prelude
 import Data.Array (range)

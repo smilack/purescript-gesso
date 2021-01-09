@@ -1,7 +1,7 @@
-module Root where
+module Example.PaintIO.Root where
 
 import Prelude
-import ColorButton as CB
+import Example.PaintIO.ColorButton as CB
 import Data.Array (range, fromFoldable)
 import Data.Foldable (sequence_, traverse_, length)
 import Data.Int (floor, toNumber)

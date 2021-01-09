@@ -1,7 +1,7 @@
-module Root where
+module Example.PaintGlobal.Root where
 
 import Prelude
-import ColorButton as CB
+import Example.PaintGlobal.ColorButton as CB
 import Data.Array (range, fromFoldable)
 import Data.Foldable (sequence_, traverse_, length)
 import Data.Int (floor, toNumber)

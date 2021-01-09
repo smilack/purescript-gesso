@@ -1,4 +1,4 @@
-module Main where
+module Example.Clock.Main where
 
 import Prelude
 import Data.Array (range)
