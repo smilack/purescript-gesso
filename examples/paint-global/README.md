@@ -1,0 +1,1 @@
+# Paint (Global State) Example
