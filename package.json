@@ -4,6 +4,7 @@
   "description": "A HTML canvas wrapper in PureScript for creating graphical standalone or Halogen applications",
   "scripts": {
     "example-all": "./build-examples.sh",
+    "example-hello": "spago --config examples/hello/spago.dhall bundle-app --main Example.Hello.Main --to examples/hello/dist/example.js",
     "example-clock": "spago --config examples/clock/spago.dhall bundle-app --main Example.Clock.Main --to examples/clock/dist/example.js",
     "example-unit-grid": "spago --config examples/unit-grid/spago.dhall bundle-app --main Example.UnitGrid.Main --to examples/unit-grid/dist/example.js",
     "example-paint-io": "spago --config examples/paint-io/spago.dhall bundle-app --main Example.PaintIO.Main --to examples/paint-io/dist/example.js",
