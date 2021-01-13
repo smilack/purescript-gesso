@@ -43,25 +43,19 @@ update _ scale { x, vx, y, vy } = Just { x: x + vx', vx: vx', y: y + vy', vy: vy
 
   xMax = xMin + GDims.getWidth scale.screen
 
-  vx' =
-    if x + vx > xMax then
-      -1.0
-    else if x + vx < xMin then
-      1.0
-    else
-      vx
+  vx' = updateV x xMin xMax vx
 
   yMin = GDims.getY scale.screen
 
   yMax = yMin + GDims.getHeight scale.screen
 
-  vy' =
-    if y + vy > yMax then
-      -1.0
-    else if y + vy < yMin then
-      1.0
-    else
-      vy
+  vy' = updateV y yMin yMax vy
+
+updateV :: Number -> Number -> Number -> Number -> Number
+updateV t min max vt
+  | t + vt > max = -1.0
+  | t + vt < min = 1.0
+  | otherwise = vt
 
 render :: State -> GTime.Delta -> GDims.Scaler -> Canvas.Context2D -> Effect Unit
 render { x, y } _ scale context = do
