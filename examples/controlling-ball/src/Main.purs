@@ -35,8 +35,18 @@ canvasInput =
             , update = Just $ GApp.updateFn update
             }
   , viewBox: GDims.p1080
-  , interactions: GInt.default { keyboard = [ keyDown, keyUp ] }
+  , interactions: GInt.default { keyboard = [ keyDown, keyUp ], mouse = [ mouseDown ] }
   }
+
+mouseDown :: forall i. GInt.Interaction GEv.MouseEvent State i
+mouseDown = GInt.mkInteraction GEv.onMouseDown go
+  where
+  go :: GEv.MouseEvent -> GTime.Delta -> GDims.Scaler -> State -> Maybe State
+  go event _ _ state =
+    let
+      point = GDims.fromMouseEvent event
+    in
+      Just state { x = GDims.getX point, y = GDims.getY point }
 
 keyDown :: forall i. GInt.Interaction GEv.KeyboardEvent State i
 keyDown = GInt.mkInteraction GEv.onKeyDown go
