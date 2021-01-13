@@ -8,9 +8,11 @@ import Gesso.Application as GApp
 import Gesso.Canvas as GCan
 import Gesso.Dimensions as GDims
 import Gesso.Interactions as GInt
+import Gesso.Interactions.Events as GEv
 import Gesso.Time as GTime
 import Graphics.Canvas as Canvas
 import Math (pi)
+import Web.UIEvent.KeyboardEvent as KEv
 
 main :: Effect Unit
 main =
@@ -23,8 +25,8 @@ type State
 
 canvasInput :: forall g i o. GCan.Input State g i o
 canvasInput =
-  { name: "bouncing-ball"
-  , localState: { x: 0.0, vx: 1.0, y: 0.0, vy: 1.0, radius: 25.0 }
+  { name: "controlling-ball"
+  , localState: { x: 100.0, vx: 0.0, y: 100.0, vy: 0.0, radius: 25.0 }
   , app:
       GApp.mkApplication
         $ GApp.defaultApp
@@ -33,29 +35,52 @@ canvasInput =
             , update = Just $ GApp.updateFn update
             }
   , viewBox: GDims.p1080
-  , interactions: GInt.default
+  , interactions: GInt.default { keyboard = [ keyDown, keyUp ] }
   }
 
+keyDown :: forall i. GInt.Interaction GEv.KeyboardEvent State i
+keyDown = GInt.mkInteraction GEv.onKeyDown go
+  where
+  go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Maybe State
+  go event _ _ state = case KEv.key event of
+    "ArrowUp" -> Just state { vy = -1.0 }
+    "ArrowDown" -> Just state { vy = 1.0 }
+    "ArrowLeft" -> Just state { vx = -1.0 }
+    "ArrowRight" -> Just state { vx = 1.0 }
+    _ -> Nothing
+
+keyUp :: forall i. GInt.Interaction GEv.KeyboardEvent State i
+keyUp = GInt.mkInteraction GEv.onKeyUp go
+  where
+  go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Maybe State
+  go event _ _ state = case KEv.key event of
+    "ArrowUp" -> Just state { vy = 0.0 }
+    "ArrowDown" -> Just state { vy = 0.0 }
+    "ArrowLeft" -> Just state { vx = 0.0 }
+    "ArrowRight" -> Just state { vx = 0.0 }
+    _ -> Nothing
+
 update :: GTime.Delta -> GDims.Scaler -> State -> Maybe State
-update _ scale { x, vx, y, vy, radius } = Just { x: x + vx', vx: vx', y: y + vy', vy: vy', radius }
+update _ scale state@{ x, vx, y, vy, radius } =
+  Just
+    state
+      { x = updateP x radius xMin xMax vx
+      , y = updateP y radius yMin yMax vy
+      }
   where
   xMin = GDims.getX scale.screen
 
   xMax = xMin + GDims.getWidth scale.screen
 
-  vx' = updateV x radius xMin xMax vx
-
   yMin = GDims.getY scale.screen
 
   yMax = yMin + GDims.getHeight scale.screen
 
-  vy' = updateV y radius yMin yMax vy
-
-updateV :: Number -> Number -> Number -> Number -> Number -> Number
-updateV t r min max vt
-  | t + r + vt > max = -1.0
-  | t - r + vt < min = 1.0
-  | otherwise = vt
+updateP :: Number -> Number -> Number -> Number -> Number -> Number
+updateP p r min max v
+  | p + r + v > max = max - r
+  | p - r + v < min = min + r
+  | otherwise = p + v
 
 render :: State -> GTime.Delta -> GDims.Scaler -> Canvas.Context2D -> Effect Unit
 render { x, y, radius } _ scale context = do
