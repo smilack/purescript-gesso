@@ -36,6 +36,7 @@ This tutorial is a little more advanced and covers using a Gesso component in a 
 These how-to guides address specific questions a developer might have after spending some time working with Gesso.
 
 * [How do I show animations when rendering on update?](https://github.com/smilack/purescript-gesso/blob/master/docs/how-do-i/animations-render-on-update.md)
+* [How do I render fonts consistently at different sizes?](https://github.com/smilack/purescript-gesso/blob/master/docs/how-do-i/consistent-font-sizes.md)
 
 ## Reference Guide
 
