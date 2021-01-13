@@ -30,10 +30,14 @@ canvasInput =
         $ GApp.defaultApp
             { window = GApp.fullscreen
             , render = Just $ GApp.continuous render
+            , update = Just $ GApp.updateFn update
             }
   , viewBox: GDims.p1080
   , interactions: GInt.default
   }
+
+update :: GTime.Delta -> GDims.Scaler -> State -> Maybe State
+update _ _ state = Just state { x = state.x + 1.0, y = state.y + 1.0 }
 
 render :: State -> GTime.Delta -> GDims.Scaler -> Canvas.Context2D -> Effect Unit
 render { x, y } _ _ context = do
