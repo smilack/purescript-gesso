@@ -371,7 +371,7 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
       --   queuedInteractions
       qIs = queuedInteractions <@> delta <@> scaler
 
-      qIsThenUpdate = (\s -> App.updateLocalState delta s app) : qIs
+      qIsThenUpdate = (\s -> App.updateLocalState delta scaler s app) : qIs
 
       changed /\ state' = foldr applyUpdateFn (DidNotChange /\ localState) qIsThenUpdate
     case changed of

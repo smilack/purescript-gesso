@@ -161,9 +161,7 @@ newtype Update local
 -- | An `UpdateFunction` gets a `Delta` record from `Gesso.Time` and the current
 -- | local state and may return an updated local state.
 type UpdateFunction local
-  = T.Delta -> local -> Maybe local
-
-derive instance newtypeUpdate :: Newtype (Update local) _
+  = T.Delta -> D.Scaler -> local -> Maybe local
 
 -- | Create an `Update` from an `UpdateFunction`
 updateFn :: forall local. UpdateFunction local -> Update local
@@ -269,8 +267,8 @@ windowCss (Application { window }) = case window of
 
 -- | Calls the application's update function, returning `Nothing` if it does not
 -- | have one or should not update.
-updateLocalState :: forall local global input output. T.Delta -> local -> Application local global input output -> Maybe local
-updateLocalState delta localState (Application { update }) = update >>= \(Update fn) -> fn delta localState
+updateLocalState :: forall local global input output. T.Delta -> D.Scaler -> local -> Application local global input output -> Maybe local
+updateLocalState delta scaler localState (Application { update }) = update >>= \(Update fn) -> fn delta scaler localState
 
 -- | A type to tell the component whether to request another animation frame.
 data RequestFrame
