@@ -1,15 +1,16 @@
 module Example.BouncingBall.Main where
 
+import Prelude
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Gesso as Gesso
-import Gesso.Application as Gesso.Application
-import Gesso.Canvas as Gesso.Canvas
-import Gesso.Dimensions as Gesso.Dimensions
-import Gesso.Interactions as Gesso.Interactions
-import Gesso.Time as Gesso.Time
-import Graphics.Canvas as Graphics.Canvas
-import Prelude (Unit, unit, bind, discard, ($))
+import Gesso.Application as GApp
+import Gesso.Canvas as GCan
+import Gesso.Dimensions as GDims
+import Gesso.Interactions as GInt
+import Gesso.Time as GTime
+import Graphics.Canvas as Canvas
+import Math (pi)
 
 main :: Effect Unit
 main =
@@ -17,26 +18,25 @@ main =
     body <- Gesso.awaitBody
     Gesso.run Gesso.canvas canvasInput body
 
--- Gesso.Canvas.Input's type variables are:
---   - local state (state held in canvas and given to update/render)
---   - global state (globally accessible state or state of parent component)
---   - input (type used to send data into canvas)
---   - output (type canvas uses to send data out)
-canvasInput :: forall g i o. Gesso.Canvas.Input Unit g i o
+type State
+  = { x :: Number, y :: Number }
+
+canvasInput :: forall g i o. GCan.Input State g i o
 canvasInput =
-  { name: "hello"
-  , localState: unit
+  { name: "bouncing-ball"
+  , localState: { x: 0.0, y: 0.0 }
   , app:
-      Gesso.Application.mkApplication
-        $ Gesso.Application.defaultApp
-            { window = Gesso.Application.fullscreen
-            , render = Just $ Gesso.Application.continuous render
+      GApp.mkApplication
+        $ GApp.defaultApp
+            { window = GApp.fullscreen
+            , render = Just $ GApp.continuous render
             }
-  , viewBox: Gesso.Dimensions.p1080
-  , interactions: Gesso.Interactions.default
+  , viewBox: GDims.p1080
+  , interactions: GInt.default
   }
 
-render :: Unit -> Gesso.Time.Delta -> Gesso.Dimensions.Scaler -> Graphics.Canvas.Context2D -> Effect Unit
-render _ _ _ context = do
-  Graphics.Canvas.setFillStyle context "black"
-  Graphics.Canvas.fillText context "hello world" 500.0 500.0
+render :: State -> GTime.Delta -> GDims.Scaler -> Canvas.Context2D -> Effect Unit
+render { x, y } _ _ context = do
+  Canvas.setFillStyle context "red"
+  Canvas.fillPath context do
+    Canvas.arc context { x, y, radius: 25.0, start: 0.0, end: 2.0 * pi }
