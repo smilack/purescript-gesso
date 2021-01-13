@@ -249,13 +249,21 @@ receiveGlobal saveLocal local globalState' (Application { global }) = saveLocal 
 -- | Get the appropriate CSS for the screen element based on the `WindowMode`.
 windowCss :: forall local global input output. Application local global input output -> CSS.CSS
 windowCss (Application { window }) = case window of
-  Fixed size -> D.toSizeCss size
+  Fixed size -> fix size
   Stretch -> stretched
   Fullscreen -> full
   where
+  common = do
+    CSS.key (CSS.fromString "outline") "none"
+
+  fix size = do
+    D.toSizeCss size
+    common
+
   stretched = do
     CSS.width $ CSS.pct 100.0
     CSS.height $ CSS.pct 100.0
+    common
 
   full = do
     CSS.width $ CSS.pct 100.0
@@ -264,6 +272,7 @@ windowCss (Application { window }) = case window of
     CSS.left $ CSS.pct 50.0
     CSS.top $ CSS.pct 50.0
     CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
+    common
 
 -- | Calls the application's update function, returning `Nothing` if it does not
 -- | have one or should not update.

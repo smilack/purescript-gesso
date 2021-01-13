@@ -33,7 +33,7 @@ import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
 import Halogen as H
 import Halogen.HTML (HTML, memoized, canvas)
 import Halogen.HTML.CSS (style)
-import Halogen.HTML.Properties (id_)
+import Halogen.HTML.Properties (id_, tabIndex)
 import Halogen.Query.EventSource as ES
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.Event.Event (EventType(..))
@@ -179,7 +179,7 @@ render ::
   H.ComponentHTML (Action localState globalState) slots m
 render { name, clientRect, app, interactions } =
   canvas
-    $ [ id_ name, style $ App.windowCss app ]
+    $ [ id_ name, style $ App.windowCss app, tabIndex 0 ]
     <> GI.toProps (Just <<< InteractionTriggered) interactions
     <> maybe [] Dims.toSizeProps clientRect
 
