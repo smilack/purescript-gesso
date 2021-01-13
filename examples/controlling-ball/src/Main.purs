@@ -21,12 +21,15 @@ main =
     Gesso.run Gesso.canvas canvasInput body
 
 type State
-  = { x :: Number, vx :: Number, y :: Number, vy :: Number, radius :: Number }
+  = { x :: Number, y :: Number, radius :: Number, keys :: Keys }
+
+type Keys
+  = { up :: Boolean, down :: Boolean, left :: Boolean, right :: Boolean }
 
 canvasInput :: forall g i o. GCan.Input State g i o
 canvasInput =
   { name: "controlling-ball"
-  , localState: { x: 100.0, vx: 0.0, y: 100.0, vy: 0.0, radius: 25.0 }
+  , localState: { x: 100.0, y: 100.0, radius: 25.0, keys: { up: false, down: false, left: false, right: false } }
   , app:
       GApp.mkApplication
         $ GApp.defaultApp
@@ -53,10 +56,10 @@ keyDown = GInt.mkInteraction GEv.onKeyDown go
   where
   go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Maybe State
   go event _ _ state = case KEv.key event of
-    "ArrowUp" -> Just state { vy = -1.0 }
-    "ArrowDown" -> Just state { vy = 1.0 }
-    "ArrowLeft" -> Just state { vx = -1.0 }
-    "ArrowRight" -> Just state { vx = 1.0 }
+    "ArrowUp" -> Just state { keys { up = true } }
+    "ArrowDown" -> Just state { keys { down = true } }
+    "ArrowLeft" -> Just state { keys { left = true } }
+    "ArrowRight" -> Just state { keys { right = true } }
     _ -> Nothing
 
 keyUp :: forall i. GInt.Interaction GEv.KeyboardEvent State i
@@ -64,27 +67,40 @@ keyUp = GInt.mkInteraction GEv.onKeyUp go
   where
   go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Maybe State
   go event _ _ state = case KEv.key event of
-    "ArrowUp" -> Just state { vy = 0.0 }
-    "ArrowDown" -> Just state { vy = 0.0 }
-    "ArrowLeft" -> Just state { vx = 0.0 }
-    "ArrowRight" -> Just state { vx = 0.0 }
+    "ArrowUp" -> Just state { keys { up = false } }
+    "ArrowDown" -> Just state { keys { down = false } }
+    "ArrowLeft" -> Just state { keys { left = false } }
+    "ArrowRight" -> Just state { keys { right = false } }
     _ -> Nothing
 
 update :: GTime.Delta -> GDims.Scaler -> State -> Maybe State
-update _ scale state@{ x, vx, y, vy, radius } =
+update _ scale state@{ x, y, radius, keys: { up, down, left, right } } =
   Just
     state
       { x = updateP x radius xMin xMax vx
       , y = updateP y radius yMin yMax vy
       }
   where
+  vx = getV left right
+
   xMin = GDims.getX scale.screen
 
   xMax = xMin + GDims.getWidth scale.screen
 
+  vy = getV up down
+
   yMin = GDims.getY scale.screen
 
   yMax = yMin + GDims.getHeight scale.screen
+
+getV :: Boolean -> Boolean -> Number
+getV neg pos = case neg of
+  false -> case pos of
+    false -> 0.0
+    true -> 1.0
+  true -> case pos of
+    false -> -1.0
+    true -> 0.0
 
 updateP :: Number -> Number -> Number -> Number -> Number -> Number
 updateP p r min max v
