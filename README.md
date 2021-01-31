@@ -31,7 +31,44 @@ Then, Gesso:
 
 ## Installation
 
-Hmm...
+This library has not been published on Pursuit yet. To use it in your project, it must be added to your `packages.dhall`. The default `packages.dhall` looks something like this:
+
+```dhall
+let upstream =
+      https://github.com/purescript/package-sets/releases/download/psc-0.13.8-20210118/packages.dhall sha256:a59c5c93a68d5d066f3815a89f398bcf00e130a51cb185b2da29b20e2d8ae115
+
+in  upstream
+```
+
+On the line after `in upstream`, add this:
+
+```dhall
+with gesso =
+  { repo = "https://github.com/smilack/purescript-gesso.git"
+  , version = "v0.1-alpha"
+  , dependencies =
+    [ "aff-bus"
+    , "canvas"
+    , "console"
+    , "debug"
+    , "effect"
+    , "halogen"
+    , "halogen-css"
+    , "halogen-hooks"
+    , "newtype"
+    , "psci-support"
+    , "record"
+    ]
+  }
+with css.version = "e5beb6b16f14e7d4dc10a0bb930c936fe9dde88a"
+with css.repo = "https://github.com/purescript-contrib/purescript-css.git"
+```
+
+Finally, run Spago's install command:
+
+```console
+$ spago install gesso
+```
 
 ## Documentation
 
