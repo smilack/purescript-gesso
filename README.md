@@ -72,18 +72,24 @@ $ spago install gesso
 
 ## Documentation
 
+***The documentation is still in progress and some pages are incomplete.***
+
 - Documentation, including a quick-start guide, is in the docs folder.
 - If you encounter a bug, the documentation is unclear or incorrect, or you have ideas for improving the API, open an issue.
 - For general help or questions, create a thread on the [PureScript Discourse](https://discourse.purescript.org/).
 
 ## Examples
 
-There are several complete example programs in the examples folder:
+***The documentation is still in progress and some pages are incomplete.***
+
+There are several example programs in the examples folder:
 
 - [Hello](https://github.com/smilack/purescript-gesso/tree/master/examples/hello) is the most minimal example that renders anything
 - [Clock](https://github.com/smilack/purescript-gesso/tree/master/examples/clock) is a more complex drawing using the scaling functions that renders the current system time as an analog clock
 - [Unit Grid](https://github.com/smilack/purescript-gesso/tree/master/examples/unit-grid) adds mouse events to show where the user clicked on a grid
 - [Paint (I/O)](https://github.com/smilack/purescript-gesso/tree/master/examples/paint-io) and [Paint (Global)](https://github.com/smilack/purescript-gesso/tree/master/examples/paint-global) are both Halogen applications with an embedded Gesso component. One uses Halogen queries for communicating between the Gesso component and parent component, while the other uses a shared mutable global state.
+- [Bouncing Ball](https://github.com/smilack/purescript-gesso/tree/master/examples/bouncing-ball) - a circle that moves around the drawing and bounces off the edges.
+- [Controlling the Ball](https://github.com/smilack/purescript-gesso/tree/master/examples/controlling-ball) - move the circle with the mouse or arrow keys.
 
 ## Contributing
 
