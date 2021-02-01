@@ -6,7 +6,7 @@ Hello is the most minimal example of a Gesso application. All imports except `Ma
 
 Because this example does not use the `Scaler` functions (introduced in other examples), your output may look different depending on the size of your browser window.
 
-![Hello example output](output.png)
+![Hello example output](/examples/hello/output.png)
 
 ## Complete Code
 
