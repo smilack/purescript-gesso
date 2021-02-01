@@ -9,7 +9,7 @@ import Gesso.Dimensions as Gesso.Dimensions
 import Gesso.Interactions as Gesso.Interactions
 import Gesso.Time as Gesso.Time
 import Graphics.Canvas as Graphics.Canvas
-import Prelude (Unit, unit, bind, discard, ($))
+import Prelude (Unit, unit, bind, ($))
 
 main :: Effect Unit
 main =
@@ -38,5 +38,4 @@ canvasInput =
 
 render :: Unit -> Gesso.Time.Delta -> Gesso.Dimensions.Scaler -> Graphics.Canvas.Context2D -> Effect Unit
 render _ _ _ context = do
-  Graphics.Canvas.setFillStyle context "black"
   Graphics.Canvas.fillText context "hello world" 500.0 500.0
