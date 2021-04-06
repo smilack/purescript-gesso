@@ -18,12 +18,10 @@ The [Quick-Start Guide](https://github.com/smilack/purescript-gesso/blob/master/
 These tutorials pick up from the end of the Quick-Start Guide and teach foundational concepts:
 
 1. [Bouncing Ball Tutorial](https://github.com/smilack/purescript-gesso/blob/master/docs/tutorials/bouncing-ball.md) - Make a circle move around the screen. Introduces:
-* * Animating
+* * Drawing
 * * Maintaining and updating state
-* * Keeping drawings to scale on any screen size
-2. [Controlling the Ball Tutorial](https://github.com/smilack/purescript-gesso/blob/master/docs/tutorials/controlling-the-ball.md) - Control the ball using the arrow keys or mouse. Introduces:
-* * Event handling
-* * Rendering options
+2. [Controlling the Ball Tutorial](https://github.com/smilack/purescript-gesso/blob/master/docs/tutorials/controlling-the-ball.md) - Control the ball using the arrow keys or mouse. Introduces event handling.
+3. [Jumping Ball]()
 
 This tutorial is a little more advanced and covers using a Gesso component in a Halogen application:
 
