@@ -13,7 +13,7 @@
     "example-paint-global": "spago --config examples/paint-global/spago.dhall bundle-app --main Example.PaintGlobal.Main --to examples/paint-global/dist/example.js"
   },
   "devDependencies": {
-    "purescript": "0.13.8",
+    "purescript": "0.14.0",
     "spago": "^0.18.1"
   }
 }

@@ -12,12 +12,12 @@ module Gesso.Canvas
   ) where
 
 import Prelude
+import CSS as CSS
 import Data.Foldable (foldr, traverse_)
 import Data.Function (on)
 import Data.List (List, (:))
 import Data.List as List
-import Data.Maybe (Maybe(..), maybe)
-import Data.Symbol (SProxy(..))
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Traversable (traverse, sequence)
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
@@ -31,10 +31,11 @@ import Gesso.Interactions as GI
 import Gesso.Time as T
 import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
 import Halogen as H
-import Halogen.HTML (HTML, memoized, canvas)
-import Halogen.HTML.CSS (style)
-import Halogen.HTML.Properties (id_, tabIndex)
-import Halogen.Query.EventSource as ES
+import Halogen.HTML (AttrName(..), memoized, canvas, attr)
+import Halogen.HTML.Properties (IProp, id, tabIndex)
+import Halogen.Query.Event as HE
+import Halogen.Subscription as HS
+import Type.Proxy (Proxy(..))
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.Event.Event (EventType(..))
 import Web.HTML (window)
@@ -48,7 +49,7 @@ type Slot input output slot
   = H.Slot (Query input) (Output output) slot
 
 -- | A proxy type for Canvas provided for convenience, for use with Slot.
-_gessoCanvas = SProxy :: SProxy "gessoCanvas"
+_gessoCanvas = Proxy :: Proxy "gessoCanvas"
 
 -- | The internal state of the Canvas component
 -- |
@@ -128,7 +129,7 @@ component ::
   forall localState appInput appOutput globalState m.
   MonadAff m =>
   ManageState m globalState =>
-  H.Component HTML (Query appInput) (Input localState globalState appInput appOutput) (Output appOutput) m
+  H.Component (Query appInput) (Input localState globalState appInput appOutput) (Output appOutput) m
 component =
   H.mkComponent
     { initialState
@@ -179,9 +180,17 @@ render ::
   H.ComponentHTML (Action localState globalState) slots m
 render { name, clientRect, app, interactions } =
   canvas
-    $ [ id_ name, style $ App.windowCss app, tabIndex 0 ]
-    <> GI.toProps (Just <<< InteractionTriggered) interactions
+    $ [ id name, style $ App.windowCss app, tabIndex 0 ]
+    <> GI.toProps InteractionTriggered interactions
     <> maybe [] Dims.toSizeProps clientRect
+  where
+  style :: forall r i. CSS.CSS -> IProp ( style ∷ String | r ) i
+  style =
+    attr (AttrName "style")
+      <<< fromMaybe ""
+      <<< CSS.renderedInline
+      <<< CSS.face
+      <<< CSS.runS
 
 -- | - `Initialize`: Create `context`, `resizeSub`, `clientRect`, `canvas`, and
 -- |   `scaler` values. Then recurse with `Tick` to request the first animation
@@ -271,8 +280,8 @@ initialize ::
   ManageState m globalState =>
   H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m Unit
 initialize = do
-  stateEventSource <- GM.getEventSource
-  _ <- H.subscribe $ HandleStateBus <$> stateEventSource
+  stateEmitter <- GM.getEmitter
+  _ <- H.subscribe $ HandleStateBus <$> stateEmitter
   resizeSub <- subscribeResize
   { name, viewBox } <- H.get
   mcontext <- H.liftEffect $ getContext name
@@ -290,11 +299,11 @@ initialize = do
 
 -- | Runs update and render functions:
 -- |
--- | First, create and subscribe to an `effectEventSource` which calls
--- | `requestAnimationFrame` with `rafCallback`. `rafCallback` is a closure so
--- | that it has access to values from the component state.
--- | `requestAnimationFrame` returns an ID which we save to the component state
--- | through the `FrameRequested` action
+-- | First, create a paired emitter and listener. Subscribe to the emitter, and
+-- | call `requestAnimationFrame` with `rafCallback`. `rafCallback` is a
+-- | closure so that it has access to values from the component state.
+-- | `requestAnimationFrame` returns an ID which we send to the component via
+-- | the listener and the `FrameRequested` action.
 -- |
 -- | `rafCallback` emits a `FrameFired` action indicating the callback started.
 -- | Next, it calculates the time delta based on the current and previous
@@ -318,8 +327,6 @@ initialize = do
 -- | then it emits a `Tick` action. If it renders on update then it does not.
 -- | It also continues if `updateAndRender` was skipped because any values were
 -- | `Nothing`, in the hope that the missing values will eventually appear.
--- |
--- | Finally, the `effectEventSource` is closed.
 queueAnimationFrame ::
   forall localState globalState appInput appOutput slots output m.
   MonadAff m =>
@@ -331,41 +338,37 @@ queueAnimationFrame ::
   App.Application localState globalState appInput appOutput ->
   H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m Unit
 queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app = do
-  _ <- H.subscribe $ ES.effectEventSource rafEventSource
+  { emitter, listener } <- H.liftEffect HS.create
+  _ <- H.subscribe emitter
+  H.liftEffect do
+    wnd <- window
+    rafId <- T.requestAnimationFrame (rafCallback listener) wnd
+    HS.notify listener $ FrameRequested rafId
   pure unit
   where
-  rafEventSource ::
-    ES.Emitter Effect (Action localState globalState) ->
-    Effect (ES.Finalizer Effect)
-  rafEventSource emitter = do
-    rafId <- T.requestAnimationFrame (rafCallback emitter) =<< window
-    ES.emit emitter $ FrameRequested rafId
-    mempty
-
   rafCallback ::
-    ES.Emitter Effect (Action localState globalState) ->
+    HS.Listener (Action localState globalState) ->
     T.TimestampCurrent ->
     Effect Unit
-  rafCallback emitter timestamp = do
-    ES.emit emitter FrameFired
+  rafCallback listener timestamp = do
+    HS.notify listener FrameFired
     anotherFrame <-
-      map join $ sequence $ updateAndRender emitter
+      map join $ sequence $ updateAndRender listener
         <$> (T.delta timestamp <$> mLastTime)
         <*> mcontext
         <*> mscaler
     case anotherFrame of
       Just App.Stop -> pure unit
-      Just App.Continue -> ES.emit emitter $ Tick $ Just $ T.toPrev timestamp
-      Nothing -> ES.emit emitter $ Tick $ Just $ T.toPrev timestamp --try again in case we haven't gotten a delta or context yet
-    ES.close emitter
+      Just App.Continue -> HS.notify listener $ Tick $ Just $ T.toPrev timestamp
+      Nothing -> HS.notify listener $ Tick $ Just $ T.toPrev timestamp --try again in case we haven't gotten a delta or context yet
 
   updateAndRender ::
-    ES.Emitter Effect (Action localState globalState) ->
+    HS.Listener (Action localState globalState) ->
     T.Delta ->
     Context2D ->
     Dims.Scaler ->
     Effect (Maybe App.RequestFrame)
-  updateAndRender emitter delta context scaler = do
+  updateAndRender listener delta context scaler = do
     let
       -- flap (<@>) applies delta and scaler to every function in
       --   queuedInteractions
@@ -375,9 +378,9 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
 
       changed /\ state' = foldr applyUpdateFn (DidNotChange /\ localState) qIsThenUpdate
     case changed of
-      Changed -> ES.emit emitter $ StateUpdated state'
+      Changed -> HS.notify listener $ StateUpdated state'
       DidNotChange -> pure unit
-    ES.emit emitter InteractionsProcessed
+    HS.notify listener InteractionsProcessed
     sequence $ App.renderApp state' delta scaler context app
 
   applyUpdateFn ::
@@ -449,7 +452,7 @@ subscribeResize ::
 subscribeResize = do
   wnd <- H.liftEffect window
   H.subscribe
-    $ ES.eventListenerEventSource
+    $ HE.eventListener
         (EventType "resize")
         (toEventTarget wnd)
         (const $ Just HandleResize)

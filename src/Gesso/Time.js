@@ -7,3 +7,11 @@ exports._requestAnimationFrame = function (fn) {
     };
   };
 };
+
+exports.cancelAnimationFrame = function (id) {
+  return function (window) {
+    return function () {
+      return window.cancelAnimationFrame(id);
+    };
+  };
+};

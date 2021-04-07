@@ -6,7 +6,7 @@ module Gesso.GessoM
   , runGessoM
   , class ManageState
   , getBus
-  , getEventSource
+  , getEmitter
   , getState
   , putState
   , modifyState
@@ -15,14 +15,14 @@ module Gesso.GessoM
 
 import Prelude
 import Control.Monad.Reader.Trans (ReaderT, runReaderT, class MonadAsk, asks, ask)
-import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Aff (Aff)
 import Effect.Aff.Bus as Bus
 import Effect.Aff.Class (class MonadAff, liftAff)
+import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Ref as Ref
-import Gesso.Environment (Environment, busEventSource)
+import Gesso.Environment (Environment, busEmitter)
 import Halogen (HalogenM, lift)
-import Halogen.Query.EventSource (EventSource)
+import Halogen.Subscription (Emitter)
 import Type.Equality (class TypeEquals, from)
 
 -- | `GessoM` is a wrapper around a `ReaderT` that reads from an `Environment`.
@@ -54,7 +54,8 @@ instance monadAskGessoM :: TypeEquals e (Environment globalState more) => MonadA
 -- | Gesso `Environment`.
 -- |
 -- | - `getBus` returns the bus that notifies of updates to the global state
--- | - `getEventSource` returns a Halogen `EventSource` created from the bus
+-- | - `getEmitter` returns a Halogen Subscriptions `Emitter` created from the
+-- |   bus
 -- | - `getState` returns the current value of the global state `Ref`
 -- | - `putState` sets the value of the global state `Ref`
 -- | - `modifyState` updates the current value of the global state `Ref` by
@@ -64,7 +65,7 @@ instance monadAskGessoM :: TypeEquals e (Environment globalState more) => MonadA
 class
   Monad m <= ManageState m a | m -> a where
   getBus :: m (Bus.BusRW a)
-  getEventSource :: forall n. MonadAff n => m (EventSource n a)
+  getEmitter :: m (Emitter a)
   getState :: m a
   putState :: a -> m Unit
   modifyState :: (a -> a) -> m a
@@ -72,7 +73,7 @@ class
 
 instance manageStateHalogenM :: ManageState m globalState => ManageState (HalogenM state action slots output m) globalState where
   getBus = lift getBus
-  getEventSource = lift getEventSource
+  getEmitter = lift getEmitter
   getState = lift getState
   putState = lift <<< putState
   modifyState = lift <<< modifyState
@@ -82,9 +83,9 @@ instance manageStateGessoM :: ManageState (GessoM globalState more) globalState 
   getBus = do
     env <- ask
     pure env.stateBus
-  getEventSource = do
+  getEmitter = do
     env <- ask
-    pure $ busEventSource env.stateBus
+    busEmitter env.stateBus
   getState = do
     env <- ask
     liftEffect $ Ref.read env.globalState

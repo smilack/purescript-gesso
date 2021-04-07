@@ -35,7 +35,7 @@ import Halogen.HTML.Properties (IProp)
 -- | For example,
 -- | `onClick :: forall r i. (MouseEvent -> Maybe i) -> IProp (onClick :: MouseEvent | r) i`
 type EventProp event i
-  = (event -> Maybe i) -> IProp HTMLcanvas i
+  = (event -> i) -> IProp HTMLcanvas i
 
 -- | Alias for an event handler that has received its event. In addition, it
 -- | gets a coordinate scaler (`Gesso.Dimensions`) and the current state, and
@@ -93,7 +93,7 @@ type Interactions localState i
 -- | `Just <<< InteractionTriggered` in Canvas.
 toProps ::
   forall localState i.
-  (FullHandler localState -> Maybe i) ->
+  (FullHandler localState -> i) ->
   Interactions localState i -> Array (IProp HTMLcanvas i)
 toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
   -- I tried to put these all in an array and foldMap it,

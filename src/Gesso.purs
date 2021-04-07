@@ -25,7 +25,6 @@ import Gesso.GessoM (GessoM, runGessoM, class ManageState)
 import Halogen as H
 import Halogen.Aff (awaitBody, awaitLoad, selectElement) as Halogen.Aff
 import Halogen.Aff as HAff
-import Halogen.HTML (HTML)
 import Halogen.VDom.Driver (runUI)
 import Record (union) as Record
 import Web.HTML.HTMLElement (HTMLElement)
@@ -43,7 +42,7 @@ runGessoAff = HAff.runHalogenAff
 -- |   [`awaitBody`](#v:awaitBody)
 run ::
   forall input q o.
-  H.Component HTML q input o (GessoM Unit ()) ->
+  H.Component q input o (GessoM Unit ()) ->
   input ->
   HTMLElement ->
   Aff Unit
@@ -64,7 +63,7 @@ run component input element = do
 -- |   [`awaitBody`](#v:awaitBody)
 runWithState ::
   forall input globalState more q o.
-  H.Component HTML q input o (GessoM globalState more) ->
+  H.Component q input o (GessoM globalState more) ->
   input ->
   globalState ->
   { | more } ->
@@ -96,8 +95,8 @@ mkPlainEnv = mkEnv {}
 hoist ::
   forall globalState q i o e.
   Environment globalState e ->
-  H.Component HTML q i o (GessoM globalState e) ->
-  H.Component HTML q i o Aff
+  H.Component q i o (GessoM globalState e) ->
+  H.Component q i o Aff
 hoist = H.hoist <<< runGessoM
 
 -- | Run a Gesso component with any monad implementing ManageState.
@@ -113,7 +112,7 @@ runWithM ::
   MonadAff m =>
   ManageState m globalState =>
   m ~> Aff ->
-  H.Component HTML q i o m ->
+  H.Component q i o m ->
   i ->
   HTMLElement ->
   Aff Unit
@@ -127,5 +126,5 @@ canvas ::
   forall localState appInput appOutput globalState m.
   MonadAff m =>
   ManageState m globalState =>
-  H.Component HTML (GCan.Query appInput) (GCan.Input localState globalState appInput appOutput) (GCan.Output appOutput) m
+  H.Component (GCan.Query appInput) (GCan.Input localState globalState appInput appOutput) (GCan.Output appOutput) m
 canvas = GCan.component

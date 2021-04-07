@@ -35,7 +35,6 @@ module Gesso.Application
 import Prelude
 import CSS as CSS
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Dimensions as D
@@ -48,8 +47,6 @@ import Halogen (liftEffect)
 -- | A newtype wrapper for an [`AppSpec`](#t:AppSpec)
 newtype Application local global input output
   = Application (AppSpec local global input output)
-
-derive instance newtypeApplication :: Newtype (Application local global input output) _
 
 -- | An `AppSpec` is a record consisting of the following fields:
 -- |
