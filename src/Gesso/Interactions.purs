@@ -33,7 +33,7 @@ import Halogen.HTML.Properties (IProp)
 
 -- | This is the type of the `on` functions from `Gesso.Interactions.Events`.
 -- | For example,
--- | `onClick :: forall r i. (MouseEvent -> Maybe i) -> IProp (onClick :: MouseEvent | r) i`
+-- | `onClick :: forall r i. (MouseEvent -> i) -> IProp (onClick :: MouseEvent | r) i`
 type EventProp event i
   = (event -> i) -> IProp HTMLcanvas i
 
@@ -88,9 +88,8 @@ type Interactions localState i
     }
 
 -- | Convert an [`Interactions`](#t:Interactions) record to an array of HTML
--- | properties. The `toCallback` parameter should return a `Maybe Action` for
--- | whatever `Action` type the component has, like
--- | `Just <<< InteractionTriggered` in Canvas.
+-- | properties. The `toCallback` parameter should return whatever `Action`
+-- | type the component has, like `Just <<< InteractionTriggered` in Canvas.
 toProps ::
   forall localState i.
   (FullHandler localState -> i) ->
