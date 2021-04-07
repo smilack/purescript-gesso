@@ -1,15 +1,15 @@
 module Example.PaintGlobal.Root where
 
 import Prelude
-import Example.PaintGlobal.ColorButton as CB
+import DOM.HTML.Indexed.InputType (InputType(..))
 import Data.Array (range, fromFoldable)
 import Data.Foldable (sequence_, traverse_, length)
 import Data.Int (floor, toNumber)
 import Data.List (List(..), (:), tail, reverse, head)
 import Data.Maybe (Maybe(..), fromMaybe)
-import DOM.HTML.Indexed.InputType (InputType(..))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
+import Example.PaintGlobal.ColorButton as CB
 import Gesso.Application as GApp
 import Gesso.AspectRatio as GAR
 import Gesso.Canvas as GC
@@ -89,7 +89,7 @@ component ::
   forall q i o m.
   MonadAff m =>
   ManageState m CanvasIO =>
-  H.Component HH.HTML q i o m
+  H.Component q i o m
 component =
   H.mkComponent
     { initialState
@@ -108,19 +108,19 @@ render state =
   where
   colorPicker =
     HH.div [ style styles.colorPicker ]
-      [ HH.slot CB._colorButton 0 CB.component (picker "black") (Just <<< ButtonClicked)
-      , HH.slot CB._colorButton 1 CB.component (picker "#888") (Just <<< ButtonClicked)
-      , HH.slot CB._colorButton 2 CB.component (picker "#ccc") (Just <<< ButtonClicked)
-      , HH.slot CB._colorButton 3 CB.component (picker "white") (Just <<< ButtonClicked)
+      [ HH.slot CB._colorButton 0 CB.component (picker "black") ButtonClicked
+      , HH.slot CB._colorButton 1 CB.component (picker "#888") ButtonClicked
+      , HH.slot CB._colorButton 2 CB.component (picker "#ccc") ButtonClicked
+      , HH.slot CB._colorButton 3 CB.component (picker "white") ButtonClicked
       ]
 
   picker = { selected: state.color, color: _ }
 
   drawing =
     HH.div [ style styles.canvas ]
-      [ HH.slot GC._gessoCanvas unit GC.component (canvasInput canvasInitialState) (const Nothing)
+      [ HH.slot_ GC._gessoCanvas unit GC.component (canvasInput canvasInitialState)
       , HH.label [ style styles.label ]
-          [ HH.input [ HP.type_ InputCheckbox, HE.onClick (Just <<< const ToggleGrid), HP.checked state.showGrid ]
+          [ HH.input [ HP.type_ InputCheckbox, HE.onClick (const ToggleGrid), HP.checked state.showGrid ]
           , HH.span_ [ HH.text "Show Grid" ]
           ]
       ]
@@ -128,8 +128,8 @@ render state =
   undoRedoHistory =
     HH.div
       [ style styles.history ]
-      [ HH.button [ HE.onClick (Just <<< const Undo), style styles.control ] [ HH.text "⟲ Undo" ]
-      , HH.button [ HE.onClick (Just <<< const Redo), style styles.control ] [ HH.text "⟳ Redo" ]
+      [ HH.button [ HE.onClick (const Undo), style styles.control ] [ HH.text "⟲ Undo" ]
+      , HH.button [ HE.onClick (const Redo), style styles.control ] [ HH.text "⟳ Redo" ]
       , HH.ul
           [ style "list-style-type: none;" ]
           $ history styles.redo (reverse state.redo)
@@ -179,8 +179,8 @@ handleAction ::
   Action -> H.HalogenM RootState Action Slots o m Unit
 handleAction = case _ of
   Initialize -> do
-    eventSource <- GM.getEventSource
-    _ <- H.subscribe $ GotGlobal <$> eventSource
+    emitter <- GM.getEmitter
+    _ <- H.subscribe $ GotGlobal <$> emitter
     pure unit
   GotGlobal state' -> H.modify_ $ convertState state'
   ToggleGrid -> GM.modifyState_ \s -> s { showGrid = not s.showGrid }

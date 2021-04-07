@@ -1,15 +1,15 @@
 module Example.PaintIO.Root where
 
 import Prelude
-import Example.PaintIO.ColorButton as CB
+import DOM.HTML.Indexed.InputType (InputType(..))
 import Data.Array (range, fromFoldable)
 import Data.Foldable (sequence_, traverse_, length)
 import Data.Int (floor, toNumber)
 import Data.List (List(..), (:), tail, reverse, head)
 import Data.Maybe (Maybe(..), fromMaybe)
-import DOM.HTML.Indexed.InputType (InputType(..))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
+import Example.PaintIO.ColorButton as CB
 import Gesso.Application as GApp
 import Gesso.AspectRatio as GAR
 import Gesso.Canvas as GC
@@ -23,7 +23,6 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Query as HQ
 import Record (merge) as Record
 
 type CanvasState
@@ -88,7 +87,7 @@ component ::
   forall g q i o m.
   MonadAff m =>
   ManageState m g =>
-  H.Component HH.HTML q i o m
+  H.Component q i o m
 component =
   H.mkComponent
     { initialState
@@ -107,19 +106,19 @@ render state =
   where
   colorPicker =
     HH.div [ style styles.colorPicker ]
-      [ HH.slot CB._colorButton 0 CB.component (picker "black") (Just <<< ButtonClicked)
-      , HH.slot CB._colorButton 1 CB.component (picker "#888") (Just <<< ButtonClicked)
-      , HH.slot CB._colorButton 2 CB.component (picker "#ccc") (Just <<< ButtonClicked)
-      , HH.slot CB._colorButton 3 CB.component (picker "white") (Just <<< ButtonClicked)
+      [ HH.slot CB._colorButton 0 CB.component (picker "black") ButtonClicked
+      , HH.slot CB._colorButton 1 CB.component (picker "#888") ButtonClicked
+      , HH.slot CB._colorButton 2 CB.component (picker "#ccc") ButtonClicked
+      , HH.slot CB._colorButton 3 CB.component (picker "white") ButtonClicked
       ]
 
   picker = { selected: state.color, color: _ }
 
   drawing =
     HH.div [ style styles.canvas ]
-      [ HH.slot GC._gessoCanvas unit GC.component (canvasInput canvasInitialState) (Just <<< GotOutput)
+      [ HH.slot GC._gessoCanvas unit GC.component (canvasInput canvasInitialState) GotOutput
       , HH.label [ style styles.label ]
-          [ HH.input [ HP.type_ InputCheckbox, HE.onClick (Just <<< const ToggleGrid), HP.checked state.showGrid ]
+          [ HH.input [ HP.type_ InputCheckbox, HE.onClick (const ToggleGrid), HP.checked state.showGrid ]
           , HH.span_ [ HH.text "Show Grid" ]
           ]
       ]
@@ -127,8 +126,8 @@ render state =
   undoRedoHistory =
     HH.div
       [ style styles.history ]
-      [ HH.button [ HE.onClick (Just <<< const Undo), style styles.control ] [ HH.text "⟲ Undo" ]
-      , HH.button [ HE.onClick (Just <<< const Redo), style styles.control ] [ HH.text "⟳ Redo" ]
+      [ HH.button [ HE.onClick (const Undo), style styles.control ] [ HH.text "⟲ Undo" ]
+      , HH.button [ HE.onClick (const Redo), style styles.control ] [ HH.text "⟳ Redo" ]
       , HH.ul
           [ style "list-style-type: none;" ]
           $ history styles.redo (reverse state.redo)
@@ -173,7 +172,7 @@ render state =
 
 send :: forall g o m. MonadAff m => ManageState m g => RootState -> H.HalogenM RootState Action Slots o m Unit
 send state = do
-  _ <- H.query GC._gessoCanvas unit $ HQ.tell $ GC.Input $ toIO state
+  H.tell GC._gessoCanvas unit $ GC.Input $ toIO state
   pure unit
 
 handleAction ::
