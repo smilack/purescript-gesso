@@ -189,7 +189,7 @@ render { name, clientRect, app, interactions } =
     attr (AttrName "style")
       <<< fromMaybe ""
       <<< CSS.renderedInline
-      <<< CSS.face
+      <<< CSS.rules []
       <<< CSS.runS
 
 -- | - `Initialize`: Create `context`, `resizeSub`, `clientRect`, `canvas`, and
