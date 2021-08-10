@@ -87,10 +87,11 @@ toSizeCss sized = do
   CSS.height $ CSS.px $ getHeight sized
 
 -- | Convert a `Sized` item to `width` and `height` HTML properties.
-toSizeProps ::
-  forall a i r.
-  Sized a =>
-  a -> Array (HP.IProp ( width :: HP.CSSPixel, height :: HP.CSSPixel | r ) i)
+toSizeProps
+  :: forall a i r
+   . Sized a
+  => a
+  -> Array (HP.IProp (width :: HP.CSSPixel, height :: HP.CSSPixel | r) i)
 toSizeProps sized =
   [ HP.width $ round $ getWidth sized
   , HP.height $ round $ getHeight sized
@@ -320,39 +321,40 @@ fromPointAndSize = Dimensions
 -- | `toRectangle` is a helper that converts from a `Dimensioned` type to the
 -- | `Rectangle` type from `Graphics.Canvas`.
 type Scaler
-  = { scale :: Number
-    , viewBox :: ViewBox
-    , screen :: ClientRect
-    , x ::
-        { toVb :: Number -> Number
-        , toCr :: Number -> Number
-        }
-    , y ::
-        { toVb :: Number -> Number
-        , toCr :: Number -> Number
-        }
-    , width ::
-        { toVb :: Number -> Number
-        , toCr :: Number -> Number
-        }
-    , height ::
-        { toVb :: Number -> Number
-        , toCr :: Number -> Number
-        }
-    , point ::
-        { toVb :: forall p. Positioned p => p -> Point
-        , toCr :: forall p. Positioned p => p -> Point
-        }
-    , size ::
-        { toVb :: forall s. Sized s => s -> Size
-        , toCr :: forall s. Sized s => s -> Size
-        }
-    , dims ::
-        { toVb :: ClientRect -> ViewBox
-        , toCr :: ViewBox -> ClientRect
-        }
-    , toRectangle :: forall d. Dimensioned d => d -> Rectangle
-    }
+  =
+  { scale :: Number
+  , viewBox :: ViewBox
+  , screen :: ClientRect
+  , x ::
+      { toVb :: Number -> Number
+      , toCr :: Number -> Number
+      }
+  , y ::
+      { toVb :: Number -> Number
+      , toCr :: Number -> Number
+      }
+  , width ::
+      { toVb :: Number -> Number
+      , toCr :: Number -> Number
+      }
+  , height ::
+      { toVb :: Number -> Number
+      , toCr :: Number -> Number
+      }
+  , point ::
+      { toVb :: forall p. Positioned p => p -> Point
+      , toCr :: forall p. Positioned p => p -> Point
+      }
+  , size ::
+      { toVb :: forall s. Sized s => s -> Size
+      , toCr :: forall s. Sized s => s -> Size
+      }
+  , dims ::
+      { toVb :: ClientRect -> ViewBox
+      , toCr :: ViewBox -> ClientRect
+      }
+  , toRectangle :: forall d. Dimensioned d => d -> Rectangle
+  }
 
 -- | Creates a [`Scaler`](#t:Scaler) from a [`ViewBox`](#t:ViewBox) and
 -- | [`ClientRect`](#t:ClientRect).
@@ -416,41 +418,41 @@ mkScaler viewBox clientRect@(Dimensions _ crSize) =
     , h': (_ * c)
     }
 
-  transformP ::
-    forall p.
-    Positioned p =>
-    (Number -> Number) ->
-    (Number -> Number) ->
-    p ->
-    Point
+  transformP
+    :: forall p
+     . Positioned p
+    => (Number -> Number)
+    -> (Number -> Number)
+    -> p
+    -> Point
   transformP tx ty p =
     fromXAndY
       { x: tx $ getX p
       , y: ty $ getY p
       }
 
-  transformS ::
-    forall s.
-    Sized s =>
-    (Number -> Number) ->
-    (Number -> Number) ->
-    s ->
-    Size
+  transformS
+    :: forall s
+     . Sized s
+    => (Number -> Number)
+    -> (Number -> Number)
+    -> s
+    -> Size
   transformS tw th s =
     fromWidthAndHeight
       { width: tw $ getWidth s
       , height: th $ getHeight s
       }
 
-  transformD ::
-    forall a d.
-    Dimensioned d =>
-    (Number -> Number) ->
-    (Number -> Number) ->
-    (Number -> Number) ->
-    (Number -> Number) ->
-    d ->
-    Dimensions a
+  transformD
+    :: forall a d
+     . Dimensioned d
+    => (Number -> Number)
+    -> (Number -> Number)
+    -> (Number -> Number)
+    -> (Number -> Number)
+    -> d
+    -> Dimensions a
   transformD tx ty tw th d =
     Dimensions
       ( fromXAndY

@@ -15,24 +15,25 @@ import Halogen.Subscription as HS
 -- | and a Bus for notifying subscribers of changes, but may contain other
 -- | fields as well.
 type Environment globalState more
-  = { globalState :: Ref globalState
-    , stateBus :: BusRW globalState
-    | more
-    }
+  =
+  { globalState :: Ref globalState
+  , stateBus :: BusRW globalState
+  | more
+  }
 
 -- | Create an emitter from a bus. It's unlikely that you want to call this
 -- | function - `getEventSource` from `ManageState` in `GessoM` gives you the
 -- | emitter directly.
-busEmitter ::
-  forall m globalState r.
-  MonadAff m =>
-  BusR' r globalState ->
-  m (HS.Emitter globalState)
+busEmitter
+  :: forall m globalState r
+   . MonadAff m
+  => BusR' r globalState
+  -> m (HS.Emitter globalState)
 busEmitter bus = do
   { emitter, listener } <- H.liftEffect HS.create
   _ <-
     H.liftAff $ forkAff $ forever
       $ do
-          val <- read bus
-          H.liftEffect $ HS.notify listener val
+        val <- read bus
+        H.liftEffect $ HS.notify listener val
   pure emitter

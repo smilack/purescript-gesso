@@ -67,20 +67,21 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |   `clientRect` and recreate the `scaler`.
 -- | - `interactions` is the events attached to the canvas element.
 type State localState globalState appInput appOutput
-  = { name :: String
-    , app :: App.Application localState globalState appInput appOutput
-    , localState :: localState
-    , viewBox :: Dims.ViewBox
-    , clientRect :: Maybe Dims.ClientRect
-    , canvas :: Maybe HTMLElement
-    , context :: Maybe Context2D
-    , scaler :: Maybe Dims.Scaler
-    , resizeSub :: Maybe H.SubscriptionId
-    , interactions :: GI.Interactions localState (Action localState globalState)
-    , queuedInteractions :: List (GI.FullHandler localState)
-    , processingInteractions :: List (GI.FullHandler localState)
-    , rafId :: Maybe T.RequestAnimationFrameId
-    }
+  =
+  { name :: String
+  , app :: App.Application localState globalState appInput appOutput
+  , localState :: localState
+  , viewBox :: Dims.ViewBox
+  , clientRect :: Maybe Dims.ClientRect
+  , canvas :: Maybe HTMLElement
+  , context :: Maybe Context2D
+  , scaler :: Maybe Dims.Scaler
+  , resizeSub :: Maybe H.SubscriptionId
+  , interactions :: GI.Interactions localState (Action localState globalState)
+  , queuedInteractions :: List (GI.FullHandler localState)
+  , processingInteractions :: List (GI.FullHandler localState)
+  , rafId :: Maybe T.RequestAnimationFrameId
+  }
 
 -- | See [`handleAction`](#v:handleAction)
 data Action localState globalState
@@ -116,20 +117,21 @@ data Query appInput a
 -- | `viewBox` is the desired dimensions for the drawing surface.
 -- | `interactions` is the events which will be attached to the canvas element.
 type Input localState globalState appInput appOutput
-  = { name :: String
-    , app :: App.Application localState globalState appInput appOutput
-    , localState :: localState
-    , viewBox :: Dims.ViewBox
-    , interactions :: GI.Interactions localState (Action localState globalState)
-    }
+  =
+  { name :: String
+  , app :: App.Application localState globalState appInput appOutput
+  , localState :: localState
+  , viewBox :: Dims.ViewBox
+  , interactions :: GI.Interactions localState (Action localState globalState)
+  }
 
 -- | Definition of the Canvas component. `render` is memoized so that it only
 -- | re-renders when the size of the element changes.
-component ::
-  forall localState appInput appOutput globalState m.
-  MonadAff m =>
-  ManageState m globalState =>
-  H.Component (Query appInput) (Input localState globalState appInput appOutput) (Output appOutput) m
+component
+  :: forall localState appInput appOutput globalState m
+   . MonadAff m
+  => ManageState m globalState
+  => H.Component (Query appInput) (Input localState globalState appInput appOutput) (Output appOutput) m
 component =
   H.mkComponent
     { initialState
@@ -137,20 +139,20 @@ component =
     , eval:
         H.mkEval
           $ H.defaultEval
-              { handleAction = handleAction
-              , handleQuery = handleQuery
-              , initialize = Just Initialize
-              , finalize = Just Finalize
-              }
+            { handleAction = handleAction
+            , handleQuery = handleQuery
+            , initialize = Just Initialize
+            , finalize = Just Finalize
+            }
     }
 
 -- | Get initial state for Canvas. Most values are copied directly from the
 -- | input. The rest require Effects and are created in `initialize`, except for
 -- | the interactions queues, which start empty.
-initialState ::
-  forall localState globalState appInput appOutput.
-  Input localState globalState appInput appOutput ->
-  State localState globalState appInput appOutput
+initialState
+  :: forall localState globalState appInput appOutput
+   . Input localState globalState appInput appOutput
+  -> State localState globalState appInput appOutput
 initialState { name, app, localState, viewBox, interactions } =
   { name
   , app
@@ -174,17 +176,17 @@ initialState { name, app, localState, viewBox, interactions } =
 -- | The `width` and `height` attributes may be different from the size CSS. The
 -- | CSS controls the size of the element, while the HTML attributes control the
 -- | scale of the drawing area.
-render ::
-  forall localState globalState appInput appOutput slots m.
-  State localState globalState appInput appOutput ->
-  H.ComponentHTML (Action localState globalState) slots m
+render
+  :: forall localState globalState appInput appOutput slots m
+   . State localState globalState appInput appOutput
+  -> H.ComponentHTML (Action localState globalState) slots m
 render { name, clientRect, app, interactions } =
   canvas
     $ [ id name, style $ App.windowCss app, tabIndex 0 ]
-    <> GI.toProps InteractionTriggered interactions
-    <> maybe [] Dims.toSizeProps clientRect
+      <> GI.toProps InteractionTriggered interactions
+      <> maybe [] Dims.toSizeProps clientRect
   where
-  style :: forall r i. CSS.CSS -> IProp ( style ∷ String | r ) i
+  style :: forall r i. CSS.CSS -> IProp (style :: String | r) i
   style =
     attr (AttrName "style")
       <<< fromMaybe ""
@@ -214,12 +216,12 @@ render { name, clientRect, app, interactions } =
 -- |   after state changes and if a frame has not already been requested.
 -- | - `FrameRequested`: An animation frame has been requested, save its ID.
 -- | - `FrameFired`: The requested animation frame has fired, forget its ID.
-handleAction ::
-  forall localState globalState appInput appOutput slots m.
-  MonadAff m =>
-  ManageState m globalState =>
-  (Action localState globalState) ->
-  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
+handleAction
+  :: forall localState globalState appInput appOutput slots m
+   . MonadAff m
+  => ManageState m globalState
+  => (Action localState globalState)
+  -> H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
 handleAction = case _ of
   Initialize -> do
     initialize
@@ -274,11 +276,11 @@ handleAction = case _ of
 -- | Subscribe to the global state bus and window resize events. Get the
 -- | `canvas` element and its `Context2D` and `clientRect`. Create scaling
 -- | functions based on the `viewBox` and `clientRect`.
-initialize ::
-  forall localState globalState appInput appOutput slots output m.
-  MonadAff m =>
-  ManageState m globalState =>
-  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m Unit
+initialize
+  :: forall localState globalState appInput appOutput slots output m
+   . MonadAff m
+  => ManageState m globalState
+  => H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m Unit
 initialize = do
   stateEmitter <- GM.getEmitter
   _ <- H.subscribe $ HandleStateBus <$> stateEmitter
@@ -327,16 +329,16 @@ initialize = do
 -- | then it emits a `Tick` action. If it renders on update then it does not.
 -- | It also continues if `updateAndRender` was skipped because any values were
 -- | `Nothing`, in the hope that the missing values will eventually appear.
-queueAnimationFrame ::
-  forall localState globalState appInput appOutput slots output m.
-  MonadAff m =>
-  Maybe (T.TimestampPrevious) ->
-  Maybe Context2D ->
-  Maybe Dims.Scaler ->
-  List (GI.FullHandler localState) ->
-  localState ->
-  App.Application localState globalState appInput appOutput ->
-  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m Unit
+queueAnimationFrame
+  :: forall localState globalState appInput appOutput slots output m
+   . MonadAff m
+  => Maybe (T.TimestampPrevious)
+  -> Maybe Context2D
+  -> Maybe Dims.Scaler
+  -> List (GI.FullHandler localState)
+  -> localState
+  -> App.Application localState globalState appInput appOutput
+  -> H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m Unit
 queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app = do
   { emitter, listener } <- H.liftEffect HS.create
   _ <- H.subscribe emitter
@@ -346,10 +348,10 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
     HS.notify listener $ FrameRequested rafId
   pure unit
   where
-  rafCallback ::
-    HS.Listener (Action localState globalState) ->
-    T.TimestampCurrent ->
-    Effect Unit
+  rafCallback
+    :: HS.Listener (Action localState globalState)
+    -> T.TimestampCurrent
+    -> Effect Unit
   rafCallback listener timestamp = do
     HS.notify listener FrameFired
     anotherFrame <-
@@ -362,12 +364,12 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
       Just App.Continue -> HS.notify listener $ Tick $ Just $ T.toPrev timestamp
       Nothing -> HS.notify listener $ Tick $ Just $ T.toPrev timestamp --try again in case we haven't gotten a delta or context yet
 
-  updateAndRender ::
-    HS.Listener (Action localState globalState) ->
-    T.Delta ->
-    Context2D ->
-    Dims.Scaler ->
-    Effect (Maybe App.RequestFrame)
+  updateAndRender
+    :: HS.Listener (Action localState globalState)
+    -> T.Delta
+    -> Context2D
+    -> Dims.Scaler
+    -> Effect (Maybe App.RequestFrame)
   updateAndRender listener delta context scaler = do
     let
       -- flap (<@>) applies delta and scaler to every function in
@@ -383,10 +385,10 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
     HS.notify listener InteractionsProcessed
     sequence $ App.renderApp state' delta scaler context app
 
-  applyUpdateFn ::
-    (localState -> Maybe localState) ->
-    Tuple StateChanged localState ->
-    Tuple StateChanged localState
+  applyUpdateFn
+    :: (localState -> Maybe localState)
+    -> Tuple StateChanged localState
+    -> Tuple StateChanged localState
   applyUpdateFn handlerFn s@(_ /\ state) = case handlerFn state of
     Just state' -> Changed /\ state'
     Nothing -> s
@@ -420,10 +422,10 @@ getCanvasClientRect mcanvas = do
 
 -- | Get a new `clientRect` for the `canvas` element and create a new scaler for
 -- | it, saving both to the component state.
-updateClientRect ::
-  forall localState globalState appInput appOutput action slots output m.
-  MonadAff m =>
-  H.HalogenM (State localState globalState appInput appOutput) action slots output m Unit
+updateClientRect
+  :: forall localState globalState appInput appOutput action slots output m
+   . MonadAff m
+  => H.HalogenM (State localState globalState appInput appOutput) action slots output m Unit
 updateClientRect = do
   { canvas, viewBox } <- H.get
   clientRect <- H.liftEffect $ getCanvasClientRect canvas
@@ -435,60 +437,60 @@ updateClientRect = do
     )
 
 -- | Unsubscribe to window resize events.
-unsubscribeResize ::
-  forall localState globalState appInput appOutput action slots output m.
-  MonadAff m =>
-  H.HalogenM (State localState globalState appInput appOutput) action slots output m Unit
+unsubscribeResize
+  :: forall localState globalState appInput appOutput action slots output m
+   . MonadAff m
+  => H.HalogenM (State localState globalState appInput appOutput) action slots output m Unit
 unsubscribeResize = do
   mresizeSub <- H.gets _.resizeSub
   traverse_ H.unsubscribe mresizeSub
 
 -- | Subscribe to window resize events and fire the `HandleResize` `Action` when
 -- | they occur.
-subscribeResize ::
-  forall localState globalState appInput appOutput slots output m.
-  MonadAff m =>
-  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m H.SubscriptionId
+subscribeResize
+  :: forall localState globalState appInput appOutput slots output m
+   . MonadAff m
+  => H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots output m H.SubscriptionId
 subscribeResize = do
   wnd <- H.liftEffect window
   H.subscribe
     $ HE.eventListener
-        (EventType "resize")
-        (toEventTarget wnd)
-        (const $ Just HandleResize)
+      (EventType "resize")
+      (toEventTarget wnd)
+      (const $ Just HandleResize)
 
 -- | Attempt to raise an output message. Called in `Application.handleOutput`,
 -- | which is called when local state changes. Only relevant if `OutputMode` is
 -- | `OutputFn`, and the output function may return `Nothing` if the change in
 -- | local state is not worth outputting.
-sendOutput ::
-  forall localState globalState appInput appOutput slots m.
-  MonadAff m =>
-  ManageState m globalState =>
-  Maybe appOutput ->
-  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
+sendOutput
+  :: forall localState globalState appInput appOutput slots m
+   . MonadAff m
+  => ManageState m globalState
+  => Maybe appOutput
+  -> H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
 sendOutput = traverse_ (H.raise <<< Output)
 
 -- | Save a new version of the application's local state to the component's
 -- | state. This is also passed to `Application.receiveInput` to simplify the
 -- | process of receiving input and modifying the state accordingly.
-saveLocal ::
-  forall localState globalState appInput appOutput slots m.
-  MonadAff m =>
-  ManageState m globalState =>
-  localState ->
-  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
+saveLocal
+  :: forall localState globalState appInput appOutput slots m
+   . MonadAff m
+  => ManageState m globalState
+  => localState
+  -> H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
 saveLocal state' = H.modify_ (_ { localState = state' })
 
 -- | Modify the local state of the application. The new state is saved, and the
 -- | new and old states are given to `Application` to check the `OutputMode` and
 -- | send output, if necessary.
-modifyState ::
-  forall localState globalState appInput appOutput slots m.
-  MonadAff m =>
-  ManageState m globalState =>
-  localState ->
-  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
+modifyState
+  :: forall localState globalState appInput appOutput slots m
+   . MonadAff m
+  => ManageState m globalState
+  => localState
+  -> H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m Unit
 modifyState state' = do
   { app, localState } <- H.get
   saveLocal state'
@@ -497,12 +499,12 @@ modifyState state' = do
 -- | Handle `Input` from the host application according to the `Application`'s
 -- | `InputReceiver` function, and request an animation frame if rendering after
 -- | state updates.
-handleQuery ::
-  forall localState globalState appInput appOutput slots a m.
-  MonadAff m =>
-  ManageState m globalState =>
-  Query appInput a ->
-  H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m (Maybe a)
+handleQuery
+  :: forall localState globalState appInput appOutput slots a m
+   . MonadAff m
+  => ManageState m globalState
+  => Query appInput a
+  -> H.HalogenM (State localState globalState appInput appOutput) (Action localState globalState) slots (Output appOutput) m (Maybe a)
 handleQuery (Input inData a) = do
   { app, localState } <- H.get
   App.receiveInput saveLocal localState inData app

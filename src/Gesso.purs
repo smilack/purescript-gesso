@@ -40,12 +40,12 @@ runGessoAff = HAff.runHalogenAff
 -- | - `input` is the component's input type
 -- | - `element` is the parent element for the component, such as the result of
 -- |   [`awaitBody`](#v:awaitBody)
-run ::
-  forall input q o.
-  H.Component q input o (GessoM Unit ()) ->
-  input ->
-  HTMLElement ->
-  Aff Unit
+run
+  :: forall input q o
+   . H.Component q input o (GessoM Unit ())
+  -> input
+  -> HTMLElement
+  -> Aff Unit
 run component input element = do
   env <- liftEffect $ mkPlainEnv unit
   _ <- runUI (hoist env component) input element
@@ -61,14 +61,14 @@ run component input element = do
 -- | - `fields` is any additional fields to add to the `env` record
 -- | - `element` is the parent element for the component, such as the result of
 -- |   [`awaitBody`](#v:awaitBody)
-runWithState ::
-  forall input globalState more q o.
-  H.Component q input o (GessoM globalState more) ->
-  input ->
-  globalState ->
-  { | more } ->
-  HTMLElement ->
-  Aff (Environment globalState more)
+runWithState
+  :: forall input globalState more q o
+   . H.Component q input o (GessoM globalState more)
+  -> input
+  -> globalState
+  -> { | more }
+  -> HTMLElement
+  -> Aff (Environment globalState more)
 runWithState component input globalState fields element = do
   env <- liftEffect $ mkEnv fields $ globalState
   io <- runUI (hoist env component) input element
@@ -92,11 +92,11 @@ mkPlainEnv :: forall globalState. globalState -> Effect (Environment globalState
 mkPlainEnv = mkEnv {}
 
 -- | Hoist a Gesso component to run in an `Aff` context.
-hoist ::
-  forall globalState q i o e.
-  Environment globalState e ->
-  H.Component q i o (GessoM globalState e) ->
-  H.Component q i o Aff
+hoist
+  :: forall globalState q i o e
+   . Environment globalState e
+  -> H.Component q i o (GessoM globalState e)
+  -> H.Component q i o Aff
 hoist = H.hoist <<< runGessoM
 
 -- | Run a Gesso component with any monad implementing ManageState.
@@ -107,24 +107,24 @@ hoist = H.hoist <<< runGessoM
 -- | - `input` is the component's input type
 -- | - `element` is the parent element for the component, such as the result of
 -- |   [`awaitBody`](#v:awaitBody)
-runWithM ::
-  forall globalState q i o m.
-  MonadAff m =>
-  ManageState m globalState =>
-  m ~> Aff ->
-  H.Component q i o m ->
-  i ->
-  HTMLElement ->
-  Aff Unit
+runWithM
+  :: forall globalState q i o m
+   . MonadAff m
+  => ManageState m globalState
+  => m ~> Aff
+  -> H.Component q i o m
+  -> i
+  -> HTMLElement
+  -> Aff Unit
 runWithM runM component input element = do
   _ <- runUI (H.hoist runM component) input element
   pure unit
 
 -- | The Gesso Canvas component. Wraps HTML Canvas and provides an interface for
 -- | state, updates, and rendering.
-canvas ::
-  forall localState appInput appOutput globalState m.
-  MonadAff m =>
-  ManageState m globalState =>
-  H.Component (GCan.Query appInput) (GCan.Input localState globalState appInput appOutput) (GCan.Output appOutput) m
+canvas
+  :: forall localState appInput appOutput globalState m
+   . MonadAff m
+  => ManageState m globalState
+  => H.Component (GCan.Query appInput) (GCan.Input localState globalState appInput appOutput) (GCan.Output appOutput) m
 canvas = GCan.component

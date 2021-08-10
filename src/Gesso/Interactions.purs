@@ -77,23 +77,25 @@ type InteractionList event localState i
 -- | I think, barring some trick I'm not aware of, I have to separate the
 -- | Interactions into separate lists for each event.
 type Interactions localState i
-  = { base :: InteractionList Event localState i
-    , clipboard :: InteractionList ClipboardEvent localState i
-    , focus :: InteractionList FocusEvent localState i
-    , keyboard :: InteractionList KeyboardEvent localState i
-    , touch :: InteractionList TouchEvent localState i
-    , drag :: InteractionList DragEvent localState i
-    , mouse :: InteractionList MouseEvent localState i
-    , wheel :: InteractionList WheelEvent localState i
-    }
+  =
+  { base :: InteractionList Event localState i
+  , clipboard :: InteractionList ClipboardEvent localState i
+  , focus :: InteractionList FocusEvent localState i
+  , keyboard :: InteractionList KeyboardEvent localState i
+  , touch :: InteractionList TouchEvent localState i
+  , drag :: InteractionList DragEvent localState i
+  , mouse :: InteractionList MouseEvent localState i
+  , wheel :: InteractionList WheelEvent localState i
+  }
 
 -- | Convert an [`Interactions`](#t:Interactions) record to an array of HTML
 -- | properties. The `toCallback` parameter should return whatever `Action`
 -- | type the component has, like `Just <<< InteractionTriggered` in Canvas.
-toProps ::
-  forall localState i.
-  (FullHandler localState -> i) ->
-  Interactions localState i -> Array (IProp HTMLcanvas i)
+toProps
+  :: forall localState i
+   . (FullHandler localState -> i)
+  -> Interactions localState i
+  -> Array (IProp HTMLcanvas i)
 toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
   -- I tried to put these all in an array and foldMap it,
   --   but it didn't work since they're different types
@@ -130,18 +132,20 @@ default =
 
 -- | Create an [`Interaction`](#t:Interaction) from an
 -- | [`EventProp`](#t:EventProp) an event [`Handler`](#t:Handler).
-mkInteraction ::
-  forall event localState i.
-  EventProp event i -> Handler event localState -> Interaction event localState i
+mkInteraction
+  :: forall event localState i
+   . EventProp event i
+  -> Handler event localState
+  -> Interaction event localState i
 mkInteraction = Interaction
 
 -- | A useful example [`Interaction`](#t:Interaction) that updates the mouse
 -- | position on every `MouseMove` event, which works with all state types that
 -- | are records containing at least a
 -- | `mousePos :: Maybe Gesso.Dimensions.Point` field.
-mousePosition ::
-  forall moreState i.
-  Interaction MouseEvent { mousePos :: Maybe Dims.Point | moreState } i
+mousePosition
+  :: forall moreState i
+   . Interaction MouseEvent { mousePos :: Maybe Dims.Point | moreState } i
 mousePosition = mkInteraction Events.onMouseMove getMousePos
   where
   getMousePos event _ _ state = Just state { mousePos = Just $ Dims.fromMouseEvent event }

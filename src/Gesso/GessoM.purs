@@ -62,8 +62,7 @@ instance monadAskGessoM :: TypeEquals e (Environment globalState more) => MonadA
 -- |   running a function on the current value, and returns the updated value.
 -- | - `modifyState_` updates the current value of the global state `Ref` by
 -- |   running a function on the current value, and returns `Unit`.
-class
-  Monad m <= ManageState m a | m -> a where
+class Monad m <= ManageState m a | m -> a where
   getBus :: m (Bus.BusRW a)
   getEmitter :: m (Emitter a)
   getState :: m a

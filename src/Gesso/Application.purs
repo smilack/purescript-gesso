@@ -64,16 +64,17 @@ newtype Application local global input output
 -- | - `global` is a record containing two functions, `toLocal` and `fromLocal`,
 -- |   which update local or global state in response to a change in the other.
 type AppSpec local global input output
-  = { window :: WindowMode
-    , render :: Maybe (RenderMode local)
-    , update :: Maybe (Update local)
-    , output :: OutputMode local output
-    , input :: InputReceiver local input
-    , global ::
-        { toLocal :: global -> local -> local
-        , fromLocal :: local -> global -> global
-        }
-    }
+  =
+  { window :: WindowMode
+  , render :: Maybe (RenderMode local)
+  , update :: Maybe (Update local)
+  , output :: OutputMode local output
+  , input :: InputReceiver local input
+  , global ::
+      { toLocal :: global -> local -> local
+      , fromLocal :: local -> global -> global
+      }
+  }
 
 -- | A default [`AppSpec`](#t:AppSpec) which can be modified piecemeal like
 -- | Halogen's `EvalSpec`.
@@ -202,15 +203,15 @@ globalState = GlobalState
 
 -- | When the component's state changes, it calls `handleOutput` to use the
 -- | appropriate `OutputMode` to deal with the change.
-handleOutput ::
-  forall local global input output m.
-  MonadAff m =>
-  ManageState m global =>
-  (Maybe output -> m Unit) ->
-  local ->
-  local ->
-  Application local global input output ->
-  m Unit
+handleOutput
+  :: forall local global input output m
+   . MonadAff m
+  => ManageState m global
+  => (Maybe output -> m Unit)
+  -> local
+  -> local
+  -> Application local global input output
+  -> m Unit
 handleOutput sendOutput local local' (Application { output, global }) = case output of
   OutputFn fn -> sendOutput $ fn local local'
   GlobalState -> GM.modifyState_ $ global.fromLocal local'
@@ -218,29 +219,29 @@ handleOutput sendOutput local local' (Application { output, global }) = case out
 
 -- | When a component receives input through a Halogen `Query`, it calls
 -- | `receiveInput` to process it and update the local state.
-receiveInput ::
-  forall local global input output m.
-  MonadAff m =>
-  ManageState m global =>
-  (local -> m Unit) ->
-  local ->
-  input ->
-  Application local global input output ->
-  m Unit
+receiveInput
+  :: forall local global input output m
+   . MonadAff m
+  => ManageState m global
+  => (local -> m Unit)
+  -> local
+  -> input
+  -> Application local global input output
+  -> m Unit
 receiveInput saveLocal local inData (Application { input }) = saveLocal $ input inData local
 
 -- | When a component receives an event on the global state bus that the global
 -- | state has changed, it calls `receiveGlobal` to process it and update the
 -- | local state.
-receiveGlobal ::
-  forall local global input output m.
-  MonadAff m =>
-  ManageState m global =>
-  (local -> m Unit) ->
-  local ->
-  global ->
-  Application local global input output ->
-  m Unit
+receiveGlobal
+  :: forall local global input output m
+   . MonadAff m
+  => ManageState m global
+  => (local -> m Unit)
+  -> local
+  -> global
+  -> Application local global input output
+  -> m Unit
 receiveGlobal saveLocal local globalState' (Application { global }) = saveLocal $ global.toLocal globalState' local
 
 -- | Get the appropriate CSS for the screen element based on the `WindowMode`.
@@ -285,14 +286,14 @@ data RequestFrame
 -- | canvas context, and application spec. Returns a `RequestFrame` variant:
 -- | `Stop` if the application renders `OnChange` or `Continue` if it renders
 -- | `Continuous`ly.
-renderApp ::
-  forall local global input output.
-  local ->
-  T.Delta ->
-  D.Scaler ->
-  C.Context2D ->
-  Application local global input output ->
-  Maybe (Effect RequestFrame)
+renderApp
+  :: forall local global input output
+   . local
+  -> T.Delta
+  -> D.Scaler
+  -> C.Context2D
+  -> Application local global input output
+  -> Maybe (Effect RequestFrame)
 renderApp localState delta scaler context (Application { render }) = go <$> render
   where
   go = case _ of
