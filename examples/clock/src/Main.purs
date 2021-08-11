@@ -34,9 +34,9 @@ input =
   , app:
       GApp.mkApplication
         $ GApp.defaultApp
-            { window = GApp.fullscreen
-            , render = Just $ GApp.continuous render
-            }
+          { window = GApp.fullscreen
+          , render = Just $ GApp.continuous render
+          }
   , viewBox: GDim.p1080
   , interactions: GInt.default
   }

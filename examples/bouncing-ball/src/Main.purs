@@ -28,10 +28,10 @@ canvasInput =
   , app:
       GApp.mkApplication
         $ GApp.defaultApp
-            { window = GApp.fullscreen
-            , render = Just $ GApp.continuous render
-            , update = Just $ GApp.updateFn update
-            }
+          { window = GApp.fullscreen
+          , render = Just $ GApp.continuous render
+          , update = Just $ GApp.updateFn update
+          }
   , viewBox: GDims.p1080
   , interactions: GInt.default
   }

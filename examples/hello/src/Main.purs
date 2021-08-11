@@ -29,9 +29,9 @@ canvasInput =
   , app:
       Gesso.Application.mkApplication
         $ Gesso.Application.defaultApp
-            { window = Gesso.Application.fullscreen
-            , render = Just $ Gesso.Application.continuous render
-            }
+          { window = Gesso.Application.fullscreen
+          , render = Just $ Gesso.Application.continuous render
+          }
   , viewBox: Gesso.Dimensions.p1080
   , interactions: Gesso.Interactions.default
   }

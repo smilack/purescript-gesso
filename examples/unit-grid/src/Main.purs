@@ -23,9 +23,10 @@ main =
     G.run GC.component input body
 
 type LocalState
-  = { mousePos :: Maybe GDim.Point
-    , clicked :: Maybe GDim.Point
-    }
+  =
+  { mousePos :: Maybe GDim.Point
+  , clicked :: Maybe GDim.Point
+  }
 
 input :: forall g i o. GC.Input LocalState g i o
 input =
@@ -34,9 +35,9 @@ input =
   , app:
       GApp.mkApplication
         $ GApp.defaultApp
-            { window = GApp.fullscreen
-            , render = Just $ GApp.continuous render
-            }
+          { window = GApp.fullscreen
+          , render = Just $ GApp.continuous render
+          }
   , viewBox:
       GDim.fromPointAndSize
         (GDim.fromXAndY { x: -1.5, y: -1.5 })
@@ -44,9 +45,9 @@ input =
   , interactions: GInt.default { mouse = [ GInt.mousePosition, mouseDown ] }
   }
 
-mouseDown ::
-  forall r i.
-  GInt.Interaction GEv.MouseEvent { clicked :: Maybe GDim.Point | r } i
+mouseDown
+  :: forall r i
+   . GInt.Interaction GEv.MouseEvent { clicked :: Maybe GDim.Point | r } i
 mouseDown = GInt.mkInteraction GEv.onMouseDown getMousePos
   where
   getMousePos event _ _ state = Just state { clicked = Just $ GDim.fromMouseEvent event }

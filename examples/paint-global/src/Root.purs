@@ -27,13 +27,14 @@ import Halogen.HTML.Properties as HP
 import Record (merge) as Record
 
 type CanvasState
-  = {
-    | CanvasIO'
+  =
+  {
+  | CanvasIO'
       ( mouseCell :: Maybe { x :: Int, y :: Int }
       , clicked :: Maybe { x :: Number, y :: Number }
       , mouseDown :: Boolean
       )
-    }
+  }
 
 type RootState
   = CanvasIO
@@ -44,12 +45,13 @@ type CanvasIO
 -- These are all the things that Root needs to know. If Root is aware
 --   of mouseCell, it changes the global state too often, causing lag.
 type CanvasIO' r
-  = ( showGrid :: Boolean
-    , color :: String
-    , pixels :: List Pixel
-    , redo :: List Pixel
-    | r
-    )
+  =
+  ( showGrid :: Boolean
+  , color :: String
+  , pixels :: List Pixel
+  , redo :: List Pixel
+  | r
+  )
 
 newtype Pixel
   = Pixel { x :: Int, y :: Int, color :: String }
@@ -57,9 +59,10 @@ newtype Pixel
 derive instance eqPixel :: Eq Pixel
 
 type Slots
-  = ( colorButton :: CB.Slot Int
-    , gessoCanvas :: forall i o. GC.Slot i o Unit
-    )
+  =
+  ( colorButton :: CB.Slot Int
+  , gessoCanvas :: forall i o. GC.Slot i o Unit
+  )
 
 data Action
   = ButtonClicked CB.Output
@@ -85,11 +88,11 @@ canvasInitialState =
     , mouseDown: false
     }
 
-component ::
-  forall q i o m.
-  MonadAff m =>
-  ManageState m CanvasIO =>
-  H.Component q i o m
+component
+  :: forall q i o m
+   . MonadAff m
+  => ManageState m CanvasIO
+  => H.Component q i o m
 component =
   H.mkComponent
     { initialState
@@ -133,8 +136,8 @@ render state =
       , HH.ul
           [ style "list-style-type: none;" ]
           $ history styles.redo (reverse state.redo)
-          <> [ HH.li [ style styles.place ] [ HH.span [ style styles.line ] [] ] ]
-          <> history "" state.pixels
+            <> [ HH.li [ style styles.place ] [ HH.span [ style styles.line ] [] ] ]
+            <> history "" state.pixels
       ]
 
   history sty pixels = fromFoldable $ map listItem pixels
@@ -150,10 +153,10 @@ render state =
     HH.span
       [ style
           $ "display: inline-block;"
-          <> "width: 10px;"
-          <> "height: 10px;"
-          <> "border: 1px black solid;"
-          <> ("background-color: " <> color)
+            <> "width: 10px;"
+            <> "height: 10px;"
+            <> "border: 1px black solid;"
+            <> ("background-color: " <> color)
       ]
       []
 
@@ -172,11 +175,12 @@ render state =
     , line: "display: inline-block; width: 100%; height: 2px; background-color: black; vertical-align: middle; margin-bottom: 2px;"
     }
 
-handleAction ::
-  forall o m.
-  MonadAff m =>
-  ManageState m CanvasIO =>
-  Action -> H.HalogenM RootState Action Slots o m Unit
+handleAction
+  :: forall o m
+   . MonadAff m
+  => ManageState m CanvasIO
+  => Action
+  -> H.HalogenM RootState Action Slots o m Unit
 handleAction = case _ of
   Initialize -> do
     emitter <- GM.getEmitter
@@ -217,11 +221,11 @@ canvasInput localState =
   , app:
       GApp.mkApplication
         $ GApp.defaultApp
-            { window = GApp.fixed $ GDim.fromWidthAndHeight { width: 600.0, height: 600.0 }
-            , render = Just $ GApp.onChange renderApp
-            , output = GApp.globalState
-            , global { toLocal = convertState, fromLocal = convertState }
-            }
+          { window = GApp.fixed $ GDim.fromWidthAndHeight { width: 600.0, height: 600.0 }
+          , render = Just $ GApp.onChange renderApp
+          , output = GApp.globalState
+          , global { toLocal = convertState, fromLocal = convertState }
+          }
   , viewBox:
       GDim.fromPointAndSize
         GDim.origin
@@ -232,26 +236,27 @@ canvasInput localState =
 toIO :: forall r. { | CanvasIO' r } -> CanvasIO
 toIO { showGrid, color, pixels, redo } = { showGrid, color, pixels, redo }
 
-convertState ::
-  forall r s.
-  { | CanvasIO' r } ->
-  { | CanvasIO' s } ->
-  { | CanvasIO' s }
+convertState
+  :: forall r s
+   . { | CanvasIO' r }
+  -> { | CanvasIO' s }
+  -> { | CanvasIO' s }
 convertState { showGrid, color, pixels, redo } = _ { showGrid = showGrid, color = color, pixels = pixels, redo = redo }
 
 extractOutput :: CanvasState -> CanvasState -> Maybe CanvasIO
 extractOutput state state'@{ showGrid, color, pixels, redo } =
-  if (state.showGrid /= showGrid)
-    || (state.color /= color)
-    || (length state.pixels /= (length pixels :: Int))
-    || (length state.redo /= (length redo :: Int)) then
+  if
+    (state.showGrid /= showGrid)
+      || (state.color /= color)
+      || (length state.pixels /= (length pixels :: Int))
+      || (length state.redo /= (length redo :: Int)) then
     Just { showGrid, color, pixels, redo }
   else
     Nothing
 
-highlightCell ::
-  forall i.
-  GInt.Interaction GEv.MouseEvent CanvasState i
+highlightCell
+  :: forall i
+   . GInt.Interaction GEv.MouseEvent CanvasState i
 highlightCell = GInt.mkInteraction GEv.onMouseMove getMousePos
   where
   getMousePos event _ scaler state =
@@ -286,14 +291,14 @@ toXY event scale =
   in
     { x, y }
 
-clearHighlight ::
-  forall i.
-  GInt.Interaction GEv.MouseEvent CanvasState i
+clearHighlight
+  :: forall i
+   . GInt.Interaction GEv.MouseEvent CanvasState i
 clearHighlight = GInt.mkInteraction GEv.onMouseOut (\_ _ _ s -> Just s { mouseCell = Nothing })
 
-mouseDown ::
-  forall i.
-  GInt.Interaction GEv.MouseEvent CanvasState i
+mouseDown
+  :: forall i
+   . GInt.Interaction GEv.MouseEvent CanvasState i
 mouseDown = GInt.mkInteraction GEv.onMouseDown startDrawing
   where
   startDrawing event _ scaler state =
@@ -304,9 +309,9 @@ mouseDown = GInt.mkInteraction GEv.onMouseDown startDrawing
     in
       Just state { pixels = p : state.pixels, redo = Nil, mouseDown = true }
 
-mouseUp ::
-  forall i.
-  GInt.Interaction GEv.MouseEvent CanvasState i
+mouseUp
+  :: forall i
+   . GInt.Interaction GEv.MouseEvent CanvasState i
 mouseUp = GInt.mkInteraction GEv.onMouseUp (\_ _ _ s -> Just s { mouseDown = false })
 
 renderApp :: CanvasState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit

@@ -34,9 +34,9 @@ component =
     , eval:
         H.mkEval
           $ H.defaultEval
-              { handleAction = handleAction
-              , receive = Just <<< Update
-              }
+            { handleAction = handleAction
+            , receive = Just <<< Update
+            }
     }
 
 render :: forall s m. State -> H.ComponentHTML Action s m
@@ -45,11 +45,11 @@ render { color, selected } =
     [ onClick \_ -> ClickedAction color
     , style
         $ ("background-color: " <> color <> ";")
-        <> "width: 72px;"
-        <> "height: 72px;"
-        <> "margin: 6px 12px;"
-        <> "cursor: pointer;"
-        <> selectedStyle
+          <> "width: 72px;"
+          <> "height: 72px;"
+          <> "margin: 6px 12px;"
+          <> "cursor: pointer;"
+          <> selectedStyle
     ]
     []
   where
