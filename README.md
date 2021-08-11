@@ -13,7 +13,7 @@ You provide Gesso with:
 - Render function and whether to render continuously or only when the state changes
 - Update function run before each render
 - Event handlers
-- (Optionally) I/O or global state functions to communicate with a parent application
+- (Optionally) I/O functions to communicate with a parent application
 
 Then, Gesso:
 
@@ -87,7 +87,7 @@ There are several example programs in the examples folder:
 - [Hello](https://github.com/smilack/purescript-gesso/tree/master/examples/hello) is the most minimal example that renders anything
 - [Clock](https://github.com/smilack/purescript-gesso/tree/master/examples/clock) is a more complex drawing using the scaling functions that renders the current system time as an analog clock
 - [Unit Grid](https://github.com/smilack/purescript-gesso/tree/master/examples/unit-grid) adds mouse events to show where the user clicked on a grid
-- [Paint (I/O)](https://github.com/smilack/purescript-gesso/tree/master/examples/paint-io) and [Paint (Global)](https://github.com/smilack/purescript-gesso/tree/master/examples/paint-global) are both Halogen applications with an embedded Gesso component. One uses Halogen queries for communicating between the Gesso component and parent component, while the other uses a shared mutable global state.
+- [Paint (I/O)](https://github.com/smilack/purescript-gesso/tree/master/examples/paint-io) is a Halogen application with an embedded Gesso component. It uses Halogen queries to communicate between the Gesso component and parent component.
 - [Bouncing Ball](https://github.com/smilack/purescript-gesso/tree/master/examples/bouncing-ball) - a circle that moves around the drawing and bounces off the edges.
 - [Controlling the Ball](https://github.com/smilack/purescript-gesso/tree/master/examples/controlling-ball) - move the circle with the mouse or arrow keys.
 
