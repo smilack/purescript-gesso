@@ -1,6 +1,5 @@
 -- | This is the main entry point for Gesso applications and contains functions
--- | for running `Aff` values and creating the global environment that Gesso
--- | can use to share state.
+-- | for running `Aff` values.
 module Gesso
   ( runGessoAff
   , run
