@@ -90,7 +90,6 @@ data Action localState
   | StateUpdated localState
   | InteractionTriggered (GI.FullHandler localState)
   | InteractionsProcessed
-  | MaybeTick
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
 
@@ -206,8 +205,6 @@ render { name, clientRect, app, interactions } =
 -- |   be discarded.
 -- | - `StateUpdated`: The local state is changing. Save it, tell `Application`
 -- |   to handle output, and request animation frame if rendering after updates.
--- | - `MaybeTick`: Request an animation frame if the application should render
--- |   after state changes and if a frame has not already been requested.
 -- | - `FrameRequested`: An animation frame has been requested, save its ID.
 -- | - `FrameFired`: The requested animation frame has fired, forget its ID.
 handleAction
@@ -219,9 +216,7 @@ handleAction = case _ of
   Initialize -> do
     initialize
     handleAction $ Tick Nothing
-  HandleResize -> do
-    updateClientRect
-    handleAction MaybeTick
+  HandleResize -> updateClientRect
   Tick mLastTime -> do
     { context, localState, app, scaler, queuedInteractions, processingInteractions } <- H.get
     -- Prepend any newly queued interactions to the list of interactions we've
@@ -244,20 +239,10 @@ handleAction = case _ of
   InteractionTriggered handlerFn -> do
     queuedInteractions <- H.gets _.queuedInteractions
     H.modify_ (_ { queuedInteractions = handlerFn : queuedInteractions })
-    handleAction MaybeTick
   -- The interactions passed into an animation frame have been processed and are
   --   no longer needed.
   InteractionsProcessed -> H.modify_ (_ { processingInteractions = List.Nil })
-  StateUpdated localState' -> do
-    modifyState localState'
-    handleAction MaybeTick
-  MaybeTick -> do
-    { app, rafId } <- H.get
-    case App.renderOnUpdate app of
-      App.Stop -> pure unit
-      App.Continue -> case rafId of -- don't need to tick if a frame was already requested
-        Nothing -> handleAction $ Tick Nothing
-        Just _ -> pure unit
+  StateUpdated localState' -> modifyState localState'
   FrameRequested rafId -> H.modify_ (_ { rafId = Just rafId })
   FrameFired -> H.modify_ (_ { rafId = Nothing })
 
@@ -308,12 +293,7 @@ initialize = do
 -- | functions. If it is, a `StateUpdated` action is emitted. Finally, the
 -- | state (updated or not) is passed to `App.renderApp`.
 -- |
--- | `App.renderApp` returns a value instructing whether to request another
--- | frame, which is passed out to `rafCallback`. It varies based on the
--- | `RenderMode` of the application. If the application renders continuously
--- | then it emits a `Tick` action. If it renders on update then it does not.
--- | It also continues if `updateAndRender` was skipped because any values were
--- | `Nothing`, in the hope that the missing values will eventually appear.
+-- | Finally, a `Tick` is emitted to request the next frame.
 queueAnimationFrame
   :: forall localState appInput appOutput slots output m
    . MonadAff m
@@ -339,22 +319,20 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
     -> Effect Unit
   rafCallback listener timestamp = do
     HS.notify listener FrameFired
-    anotherFrame <-
+    _ <-
       map join $ sequence $ updateAndRender listener
         <$> (T.delta timestamp <$> mLastTime)
         <*> mcontext
         <*> mscaler
-    case anotherFrame of
-      Just App.Stop -> pure unit
-      Just App.Continue -> HS.notify listener $ Tick $ Just $ T.toPrev timestamp
-      Nothing -> HS.notify listener $ Tick $ Just $ T.toPrev timestamp --try again in case we haven't gotten a delta or context yet
+
+    HS.notify listener $ Tick $ Just $ T.toPrev timestamp
 
   updateAndRender
     :: HS.Listener (Action localState)
     -> T.Delta
     -> Context2D
     -> Dims.Scaler
-    -> Effect (Maybe App.RequestFrame)
+    -> Effect (Maybe Unit)
   updateAndRender listener delta context scaler = do
     let
       -- flap (<@>) applies delta and scaler to every function in
@@ -489,5 +467,4 @@ handleQuery
 handleQuery (Input inData a) = do
   { app, localState } <- H.get
   App.receiveInput saveLocal localState inData app
-  handleAction MaybeTick
   pure (Just a)

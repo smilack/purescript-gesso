@@ -11,7 +11,6 @@ module Gesso.Application
   , fullscreen
   , RenderMode
   , RenderFunction
-  , onChange
   , continuous
   , Update
   , UpdateFunction
@@ -25,9 +24,7 @@ module Gesso.Application
   , handleOutput
   , windowCss
   , updateLocalState
-  , RequestFrame(..)
   , renderApp
-  , renderOnUpdate
   ) where
 
 import Prelude
@@ -108,17 +105,11 @@ stretch = Stretch
 fullscreen :: WindowMode
 fullscreen = Fullscreen
 
--- | There are two modes that determine how the component renders its state:
--- |
--- | - `OnChange` re-renders whenever the local state is updated. It may be
--- |   useful for applications with little animation where most changes are a
--- |   result of user input.
--- | - `Continuous` is a more traditional mode that re-renders on every frame.
--- |   It is useful for applications or games with lots of animations or changes
--- |   that happen outside of user control.
+-- | A `Continuous` render re-renders on every frame. It is useful for
+-- | applications or games with lots of animations or changes that happen
+-- | outside of user control.
 data RenderMode local
-  = OnChange (RenderFunction local)
-  | Continuous (RenderFunction local)
+  = Continuous (RenderFunction local)
 
 -- | An alias for a `Context2D` rendering function.
 -- |
@@ -133,10 +124,6 @@ data RenderMode local
 -- | related to drawing on the canvas.
 type RenderFunction local
   = local -> T.Delta -> D.Scaler -> C.Context2D -> Effect Unit
-
--- | Create an `OnChange` [`RenderMode`](#t:RenderMode)
-onChange :: forall local. RenderFunction local -> RenderMode local
-onChange = OnChange
 
 -- | Create a `Continuous` [`RenderMode`](#t:RenderMode)
 continuous :: forall local. RenderFunction local -> RenderMode local
@@ -255,15 +242,8 @@ updateLocalState
 updateLocalState delta scaler localState (Application { update }) =
   update >>= \(Update fn) -> fn delta scaler localState
 
--- | A type to tell the component whether to request another animation frame.
-data RequestFrame
-  = Continue
-  | Stop
-
 -- | Render the application, given the current state, delta record, scaler,
--- | canvas context, and application spec. Returns a `RequestFrame` variant:
--- | `Stop` if the application renders `OnChange` or `Continue` if it renders
--- | `Continuous`ly.
+-- | canvas context, and application spec.
 renderApp
   :: forall local input output
    . local
@@ -271,28 +251,10 @@ renderApp
   -> D.Scaler
   -> C.Context2D
   -> Application local input output
-  -> Maybe (Effect RequestFrame)
+  -> Maybe (Effect Unit)
 renderApp localState delta scaler context (Application { render }) = go <$> render
   where
   go = case _ of
-    OnChange fn -> do
-      run fn
-      pure Stop
-    Continuous fn -> do
-      run fn
-      pure Continue
+    Continuous fn -> run fn
 
   run fn = liftEffect $ fn localState delta scaler context
-
--- | Components can call `renderOnUpdate` to determine if they should request an
--- | animation frame immediately after updating the state. If the application
--- | does not render or renders continuously this is not necessary. (The latter
--- | because it already requests another frame at the end of each render.)
-renderOnUpdate
-  :: forall local input output
-   . Application local input output
-  -> RequestFrame
-renderOnUpdate (Application { render }) = case render of
-  Just (OnChange _) -> Continue
-  Just (Continuous _) -> Stop
-  Nothing -> Stop
