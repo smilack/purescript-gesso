@@ -103,15 +103,17 @@ newtype Output appOutput
 data Query appInput a
   = Input appInput a
 
--- | The input provided when the Canvas component is created. Canvas has no
--- | `receive` in its `EvalSpec`, so the input is only read once.
+-- | The input provided when the Canvas component is created. The component has
+-- | no `receive` defined in its `EvalSpec` (see [`component`](#v:component)),
+-- | so this input is only read once.
 -- |
 -- | - `name` is the name of the application, which doubles as the HTML `id` for
 -- |   the canvas element.
 -- | - `app` is the Application spec.
--- | `localState` is the initial local state for the application.
--- | `viewBox` is the desired dimensions for the drawing surface.
--- | `interactions` is the events which will be attached to the canvas element.
+-- | - `localState` is the initial local state for the application.
+-- | - `viewBox` is the desired dimensions for the drawing surface.
+-- | - `interactions` is the events which will be attached to the
+-- |    canvas element.
 type Input localState appInput appOutput
   =
   { name :: String
@@ -203,8 +205,8 @@ render { name, clientRect, app, interactions } =
 -- | - `InteractionsProcessed`: The `processingInteractions` queue was
 -- |   successfully processed in an animation frame, so those interactions can
 -- |   be discarded.
--- | - `StateUpdated`: The local state is changing. Save it, tell `Application`
--- |   to handle output, and request animation frame if rendering after updates.
+-- | - `StateUpdated`: The local state is changing. Save it and tell
+-- |   `Application` to handle output.
 -- | - `FrameRequested`: An animation frame has been requested, save its ID.
 -- | - `FrameFired`: The requested animation frame has fired, forget its ID.
 handleAction
@@ -216,7 +218,9 @@ handleAction = case _ of
   Initialize -> do
     initialize
     handleAction $ Tick Nothing
+
   HandleResize -> updateClientRect
+
   Tick mLastTime -> do
     { context, localState, app, scaler, queuedInteractions, processingInteractions } <- H.get
     -- Prepend any newly queued interactions to the list of interactions we've
@@ -231,19 +235,24 @@ handleAction = case _ of
           }
       )
     queueAnimationFrame mLastTime context scaler tryInteractions localState app
+
   Finalize -> unsubscribeResize
+
   -- If effectful interactions become necessary, handlerFn could return
-  --   Effect (Maybe localState) - Just if localState is changed, or Nothing if
-  --   localState is not changed.
+  --   Effect (Maybe localState)
   -- Hold on to interactions until the next tick, then pass them into rAF
   InteractionTriggered handlerFn -> do
     queuedInteractions <- H.gets _.queuedInteractions
     H.modify_ (_ { queuedInteractions = handlerFn : queuedInteractions })
+
   -- The interactions passed into an animation frame have been processed and are
   --   no longer needed.
   InteractionsProcessed -> H.modify_ (_ { processingInteractions = List.Nil })
+
   StateUpdated localState' -> modifyState localState'
+
   FrameRequested rafId -> H.modify_ (_ { rafId = Just rafId })
+
   FrameFired -> H.modify_ (_ { rafId = Nothing })
 
 -- | Subscribe to window resize events. Get the `canvas` element and its
@@ -341,7 +350,8 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
 
       qIsThenUpdate = (\s -> App.updateLocalState delta scaler s app) : qIs
 
-      changed /\ state' = foldr applyUpdateFn (DidNotChange /\ localState) qIsThenUpdate
+      changed /\ state' =
+        foldr applyUpdateFn (DidNotChange /\ localState) qIsThenUpdate
     case changed of
       Changed -> HS.notify listener $ StateUpdated state'
       DidNotChange -> pure unit
@@ -457,8 +467,7 @@ modifyState state' = do
   App.handleOutput sendOutput localState state' app
 
 -- | Handle `Input` from the host application according to the `Application`'s
--- | `InputReceiver` function, and request an animation frame if rendering after
--- | state updates.
+-- | `InputReceiver` function.
 handleQuery
   :: forall localState appInput appOutput slots a m
    . MonadAff m
