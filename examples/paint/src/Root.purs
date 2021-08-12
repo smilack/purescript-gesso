@@ -86,7 +86,7 @@ canvasInitialState =
     }
 
 component
-  :: forall g q i o m
+  :: forall q i o m
    . MonadAff m
   => H.Component q i o m
 component =
@@ -96,7 +96,7 @@ component =
     , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
     }
 
-render :: forall g m. MonadAff m => RootState -> H.ComponentHTML Action Slots m
+render :: forall m. MonadAff m => RootState -> H.ComponentHTML Action Slots m
 render state =
   HH.div
     [ style styles.root ]
@@ -171,13 +171,13 @@ render state =
     , line: "display: inline-block; width: 100%; height: 2px; background-color: black; vertical-align: middle; margin-bottom: 2px;"
     }
 
-send :: forall g o m. MonadAff m => RootState -> H.HalogenM RootState Action Slots o m Unit
+send :: forall o m. MonadAff m => RootState -> H.HalogenM RootState Action Slots o m Unit
 send state = do
   H.tell GC._gessoCanvas unit $ GC.Input $ toIO state
   pure unit
 
 handleAction
-  :: forall g o m
+  :: forall o m
    . MonadAff m
   => Action
   -> H.HalogenM RootState Action Slots o m Unit
