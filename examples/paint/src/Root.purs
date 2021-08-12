@@ -314,7 +314,7 @@ mouseUp
 mouseUp = GInt.mkInteraction GEv.onMouseUp (\_ _ _ s -> Just s { mouseDown = false })
 
 renderApp :: CanvasState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
-renderApp { clicked, mouseCell, showGrid, color, pixels } _ scale context = do
+renderApp { mouseCell, showGrid, color, pixels } _ scale context = do
   clearBackground
   drawOutline
   when showGrid drawGrid
