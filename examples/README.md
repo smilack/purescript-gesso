@@ -18,7 +18,7 @@ npm run example-all
 npm run example-hello
 npm run example-clock
 npm run example-unit-grid
-npm run example-paint-io
+npm run example-paint
 ```
 
 This creates an `example.js` file in the example's `dist` folder. Open `examples/{name}/dist/index.html` in your browser to see the example running.
@@ -30,4 +30,4 @@ See each example's `README` for more detail and an explanation of its implementa
 - [Hello](https://github.com/smilack/purescript-gesso/tree/master/examples/hello) is the most minimal example that renders anything
 - [Clock](https://github.com/smilack/purescript-gesso/tree/master/examples/clock) is a more complex drawing using the scaling functions that renders the current system time as an analog clock
 - [Unit Grid](https://github.com/smilack/purescript-gesso/tree/master/examples/unit-grid) adds mouse events to show where the user clicked on a grid
-- [Paint (I/O)](https://github.com/smilack/purescript-gesso/tree/master/examples/paint-io) is a Halogen application with an embedded Gesso component. It uses Halogen queries to communicate between the Gesso component and parent component.
+- [Paint](https://github.com/smilack/purescript-gesso/tree/master/examples/paint) is a Halogen application with an embedded Gesso component. It uses Halogen queries to communicate between the Gesso component and parent component.

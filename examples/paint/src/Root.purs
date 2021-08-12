@@ -1,4 +1,4 @@
-module Example.PaintIO.Root where
+module Example.Paint.Root where
 
 import Prelude
 import DOM.HTML.Indexed.InputType (InputType(..))
@@ -9,7 +9,7 @@ import Data.List (List(..), (:), tail, reverse, head)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
-import Example.PaintIO.ColorButton as CB
+import Example.Paint.ColorButton as CB
 import Gesso.Application as GApp
 import Gesso.AspectRatio as GAR
 import Gesso.Canvas as GC

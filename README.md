@@ -87,7 +87,7 @@ There are several example programs in the examples folder:
 - [Hello](https://github.com/smilack/purescript-gesso/tree/master/examples/hello) is the most minimal example that renders anything
 - [Clock](https://github.com/smilack/purescript-gesso/tree/master/examples/clock) is a more complex drawing using the scaling functions that renders the current system time as an analog clock
 - [Unit Grid](https://github.com/smilack/purescript-gesso/tree/master/examples/unit-grid) adds mouse events to show where the user clicked on a grid
-- [Paint (I/O)](https://github.com/smilack/purescript-gesso/tree/master/examples/paint-io) is a Halogen application with an embedded Gesso component. It uses Halogen queries to communicate between the Gesso component and parent component.
+- [Paint](https://github.com/smilack/purescript-gesso/tree/master/examples/paint) is a Halogen application with an embedded Gesso component. It uses Halogen queries to communicate between the Gesso component and parent component.
 - [Bouncing Ball](https://github.com/smilack/purescript-gesso/tree/master/examples/bouncing-ball) - a circle that moves around the drawing and bounces off the edges.
 - [Controlling the Ball](https://github.com/smilack/purescript-gesso/tree/master/examples/controlling-ball) - move the circle with the mouse or arrow keys.
 
