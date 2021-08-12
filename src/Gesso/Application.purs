@@ -262,7 +262,4 @@ renderApp
 renderApp localState delta scaler context (Application { render }) =
   go <$> render
   where
-  go = case _ of
-    Continuous fn -> run fn
-
-  run fn = liftEffect $ fn localState delta scaler context
+  go (Continuous fn) = liftEffect $ fn localState delta scaler context
