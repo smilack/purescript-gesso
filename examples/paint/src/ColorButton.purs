@@ -1,4 +1,4 @@
-module Example.PaintIO.ColorButton where
+module Example.Paint.ColorButton where
 
 import Prelude
 import Data.Maybe (Maybe(..))

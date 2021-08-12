@@ -26,7 +26,7 @@ type State
 type Keys
   = { up :: Boolean, down :: Boolean, left :: Boolean, right :: Boolean }
 
-canvasInput :: forall g i o. GCan.Input State g i o
+canvasInput :: forall i o. GCan.Input State i o
 canvasInput =
   { name: "controlling-ball"
   , localState: { x: 100.0, y: 100.0, radius: 25.0, keys: { up: false, down: false, left: false, right: false } }

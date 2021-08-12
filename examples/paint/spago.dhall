@@ -1,10 +1,10 @@
 let config = ../../spago.dhall
 
 in config // {
-  sources = config.sources # [ "examples/unit-grid/**/*.purs" ],
+  sources = config.sources # [ "examples/paint/**/*.purs" ],
   dependencies =
     config.dependencies #
     [ "arrays"
-    , "math"
+    , "record"
     ]
 }

@@ -21,9 +21,7 @@ module Gesso.Application
   , InputReceiver
   , noOutput
   , outputFn
-  , globalState
   , receiveInput
-  , receiveGlobal
   , handleOutput
   , windowCss
   , updateLocalState
@@ -38,15 +36,13 @@ import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Dimensions as D
-import Gesso.GessoM (class ManageState)
-import Gesso.GessoM as GM
 import Gesso.Time as T
 import Graphics.Canvas as C
 import Halogen (liftEffect)
 
 -- | A newtype wrapper for an [`AppSpec`](#t:AppSpec)
-newtype Application local global input output
-  = Application (AppSpec local global input output)
+newtype Application local input output
+  = Application (AppSpec local input output)
 
 -- | An `AppSpec` is a record consisting of the following fields:
 -- |
@@ -61,35 +57,31 @@ newtype Application local global input output
 -- | - `input` is an [`InputReceiver`](#t:InputReceiver) that defines how the
 -- |   state should change in response to receiving input from the host
 -- |   application.
--- | - `global` is a record containing two functions, `toLocal` and `fromLocal`,
--- |   which update local or global state in response to a change in the other.
-type AppSpec local global input output
+type AppSpec local input output
   =
   { window :: WindowMode
   , render :: Maybe (RenderMode local)
   , update :: Maybe (Update local)
   , output :: OutputMode local output
   , input :: InputReceiver local input
-  , global ::
-      { toLocal :: global -> local -> local
-      , fromLocal :: local -> global -> global
-      }
   }
 
 -- | A default [`AppSpec`](#t:AppSpec) which can be modified piecemeal like
 -- | Halogen's `EvalSpec`.
-defaultApp :: forall local global input output. AppSpec local global input output
+defaultApp :: forall local input output. AppSpec local input output
 defaultApp =
   { window: fixed D.sizeless
   , render: Nothing
   , update: Nothing
   , output: noOutput
   , input: const identity
-  , global: { toLocal: const identity, fromLocal: const identity }
   }
 
 -- | Convert an [`AppSpec`](#t:AppSpec) into an [`Application`](#t:Application).
-mkApplication :: forall local global input output. AppSpec local global input output -> Application local global input output
+mkApplication
+  :: forall local input output
+   . AppSpec local input output
+  -> Application local input output
 mkApplication = Application
 
 -- | There are three modes that determine the size and position of a Gesso
@@ -169,15 +161,12 @@ updateFn = Update
 -- | application.
 -- |
 -- | - `NoOutput` does not send any information out from the component
--- | - `OutputFn` has an `OutputProducer` which, when the local state is
--- |   changed, compares the old and new states and may send output through the
--- |   component's Halogen `Output` type.
--- | - `GlobalState` updates the `globalState` `Ref` in the `Environment` when
--- |   the local state changes.
+-- | - `OutputFn` has an `OutputProducer` function which, when the local state
+-- |   is changed, compares the old and new states and may send output through
+-- |   the component's Halogen `Output` type.
 data OutputMode local output
   = NoOutput
   | OutputFn (OutputProducer local output)
-  | GlobalState
 
 -- | An alias for a function that receives input from the host application and
 -- | may update the local state in response to the input.
@@ -197,55 +186,37 @@ noOutput = NoOutput
 outputFn :: forall local output. OutputProducer local output -> OutputMode local output
 outputFn = OutputFn
 
--- | Create a `GlobalState` `OutputMode`
-globalState :: forall local output. OutputMode local output
-globalState = GlobalState
-
 -- | When the component's state changes, it calls `handleOutput` to use the
 -- | appropriate `OutputMode` to deal with the change.
 handleOutput
-  :: forall local global input output m
+  :: forall local input output m
    . MonadAff m
-  => ManageState m global
   => (Maybe output -> m Unit)
   -> local
   -> local
-  -> Application local global input output
+  -> Application local input output
   -> m Unit
-handleOutput sendOutput local local' (Application { output, global }) = case output of
+handleOutput sendOutput local local' (Application { output }) = case output of
   OutputFn fn -> sendOutput $ fn local local'
-  GlobalState -> GM.modifyState_ $ global.fromLocal local'
   NoOutput -> pure unit
 
 -- | When a component receives input through a Halogen `Query`, it calls
 -- | `receiveInput` to process it and update the local state.
 receiveInput
-  :: forall local global input output m
+  :: forall local input output m
    . MonadAff m
-  => ManageState m global
   => (local -> m Unit)
   -> local
   -> input
-  -> Application local global input output
+  -> Application local input output
   -> m Unit
 receiveInput saveLocal local inData (Application { input }) = saveLocal $ input inData local
 
--- | When a component receives an event on the global state bus that the global
--- | state has changed, it calls `receiveGlobal` to process it and update the
--- | local state.
-receiveGlobal
-  :: forall local global input output m
-   . MonadAff m
-  => ManageState m global
-  => (local -> m Unit)
-  -> local
-  -> global
-  -> Application local global input output
-  -> m Unit
-receiveGlobal saveLocal local globalState' (Application { global }) = saveLocal $ global.toLocal globalState' local
-
 -- | Get the appropriate CSS for the screen element based on the `WindowMode`.
-windowCss :: forall local global input output. Application local global input output -> CSS.CSS
+windowCss
+  :: forall local input output
+   . Application local input output
+  -> CSS.CSS
 windowCss (Application { window }) = case window of
   Fixed size -> fix size
   Stretch -> stretched
@@ -274,8 +245,15 @@ windowCss (Application { window }) = case window of
 
 -- | Calls the application's update function, returning `Nothing` if it does not
 -- | have one or should not update.
-updateLocalState :: forall local global input output. T.Delta -> D.Scaler -> local -> Application local global input output -> Maybe local
-updateLocalState delta scaler localState (Application { update }) = update >>= \(Update fn) -> fn delta scaler localState
+updateLocalState
+  :: forall local input output
+   . T.Delta
+  -> D.Scaler
+  -> local
+  -> Application local input output
+  -> Maybe local
+updateLocalState delta scaler localState (Application { update }) =
+  update >>= \(Update fn) -> fn delta scaler localState
 
 -- | A type to tell the component whether to request another animation frame.
 data RequestFrame
@@ -287,12 +265,12 @@ data RequestFrame
 -- | `Stop` if the application renders `OnChange` or `Continue` if it renders
 -- | `Continuous`ly.
 renderApp
-  :: forall local global input output
+  :: forall local input output
    . local
   -> T.Delta
   -> D.Scaler
   -> C.Context2D
-  -> Application local global input output
+  -> Application local input output
   -> Maybe (Effect RequestFrame)
 renderApp localState delta scaler context (Application { render }) = go <$> render
   where
@@ -310,7 +288,10 @@ renderApp localState delta scaler context (Application { render }) = go <$> rend
 -- | animation frame immediately after updating the state. If the application
 -- | does not render or renders continuously this is not necessary. (The latter
 -- | because it already requests another frame at the end of each render.)
-renderOnUpdate :: forall local global input output. Application local global input output -> RequestFrame
+renderOnUpdate
+  :: forall local input output
+   . Application local input output
+  -> RequestFrame
 renderOnUpdate (Application { render }) = case render of
   Just (OnChange _) -> Continue
   Just (Continuous _) -> Stop

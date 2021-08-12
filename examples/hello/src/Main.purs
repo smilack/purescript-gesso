@@ -19,10 +19,9 @@ main =
 
 -- Gesso.Canvas.Input's type variables are:
 --   - local state (state held in canvas and given to update/render)
---   - global state (globally accessible state or state of parent component)
 --   - input (type used to send data into canvas)
 --   - output (type canvas uses to send data out)
-canvasInput :: forall g i o. Gesso.Canvas.Input Unit g i o
+canvasInput :: forall i o. Gesso.Canvas.Input Unit i o
 canvasInput =
   { name: "hello"
   , localState: unit

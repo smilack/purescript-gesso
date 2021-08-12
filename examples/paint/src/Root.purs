@@ -1,4 +1,4 @@
-module Example.PaintIO.Root where
+module Example.Paint.Root where
 
 import Prelude
 import DOM.HTML.Indexed.InputType (InputType(..))
@@ -9,12 +9,11 @@ import Data.List (List(..), (:), tail, reverse, head)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
-import Example.PaintIO.ColorButton as CB
+import Example.Paint.ColorButton as CB
 import Gesso.Application as GApp
 import Gesso.AspectRatio as GAR
 import Gesso.Canvas as GC
 import Gesso.Dimensions as GDim
-import Gesso.GessoM (class ManageState)
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
 import Gesso.Time as GTime
@@ -87,9 +86,8 @@ canvasInitialState =
     }
 
 component
-  :: forall g q i o m
+  :: forall q i o m
    . MonadAff m
-  => ManageState m g
   => H.Component q i o m
 component =
   H.mkComponent
@@ -98,7 +96,7 @@ component =
     , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
     }
 
-render :: forall g m. MonadAff m => ManageState m g => RootState -> H.ComponentHTML Action Slots m
+render :: forall m. MonadAff m => RootState -> H.ComponentHTML Action Slots m
 render state =
   HH.div
     [ style styles.root ]
@@ -173,15 +171,14 @@ render state =
     , line: "display: inline-block; width: 100%; height: 2px; background-color: black; vertical-align: middle; margin-bottom: 2px;"
     }
 
-send :: forall g o m. MonadAff m => ManageState m g => RootState -> H.HalogenM RootState Action Slots o m Unit
+send :: forall o m. MonadAff m => RootState -> H.HalogenM RootState Action Slots o m Unit
 send state = do
   H.tell GC._gessoCanvas unit $ GC.Input $ toIO state
   pure unit
 
 handleAction
-  :: forall g o m
+  :: forall o m
    . MonadAff m
-  => ManageState m g
   => Action
   -> H.HalogenM RootState Action Slots o m Unit
 handleAction = case _ of
@@ -216,7 +213,7 @@ handleAction = case _ of
         H.put state'
         send state'
 
-canvasInput :: forall g. CanvasState -> GC.Input CanvasState g CanvasIO CanvasIO
+canvasInput :: CanvasState -> GC.Input CanvasState CanvasIO CanvasIO
 canvasInput localState =
   { name: "canvas"
   , localState

@@ -26,8 +26,8 @@ main =
 
 -- localState is unit because it's an input for run and needs to be
 --   passed in. The rest can be open because we never need to use them
---   unless we call runWithState, query, or set the OutputMode to OutputFn
-input :: forall g i o. GC.Input Unit g i o
+--   unless we call query or set the OutputMode to OutputFn
+input :: forall i o. GC.Input Unit i o
 input =
   { name: "test-app"
   , localState: unit

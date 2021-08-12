@@ -28,7 +28,7 @@ type LocalState
   , clicked :: Maybe GDim.Point
   }
 
-input :: forall g i o. GC.Input LocalState g i o
+input :: forall i o. GC.Input LocalState i o
 input =
   { name: "test-app"
   , localState: { mousePos: Nothing, clicked: Nothing }
