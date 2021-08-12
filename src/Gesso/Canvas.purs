@@ -90,7 +90,6 @@ data Action localState
   | StateUpdated localState
   | InteractionTriggered (GI.FullHandler localState)
   | InteractionsProcessed
-  | MaybeTick
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
 
@@ -104,15 +103,17 @@ newtype Output appOutput
 data Query appInput a
   = Input appInput a
 
--- | The input provided when the Canvas component is created. Canvas has no
--- | `receive` in its `EvalSpec`, so the input is only read once.
+-- | The input provided when the Canvas component is created. The component has
+-- | no `receive` defined in its `EvalSpec` (see [`component`](#v:component)),
+-- | so this input is only read once.
 -- |
 -- | - `name` is the name of the application, which doubles as the HTML `id` for
 -- |   the canvas element.
 -- | - `app` is the Application spec.
--- | `localState` is the initial local state for the application.
--- | `viewBox` is the desired dimensions for the drawing surface.
--- | `interactions` is the events which will be attached to the canvas element.
+-- | - `localState` is the initial local state for the application.
+-- | - `viewBox` is the desired dimensions for the drawing surface.
+-- | - `interactions` is the events which will be attached to the
+-- |    canvas element.
 type Input localState appInput appOutput
   =
   { name :: String
@@ -204,10 +205,8 @@ render { name, clientRect, app, interactions } =
 -- | - `InteractionsProcessed`: The `processingInteractions` queue was
 -- |   successfully processed in an animation frame, so those interactions can
 -- |   be discarded.
--- | - `StateUpdated`: The local state is changing. Save it, tell `Application`
--- |   to handle output, and request animation frame if rendering after updates.
--- | - `MaybeTick`: Request an animation frame if the application should render
--- |   after state changes and if a frame has not already been requested.
+-- | - `StateUpdated`: The local state is changing. Save it and tell
+-- |   `Application` to handle output.
 -- | - `FrameRequested`: An animation frame has been requested, save its ID.
 -- | - `FrameFired`: The requested animation frame has fired, forget its ID.
 handleAction
@@ -219,9 +218,9 @@ handleAction = case _ of
   Initialize -> do
     initialize
     handleAction $ Tick Nothing
-  HandleResize -> do
-    updateClientRect
-    handleAction MaybeTick
+
+  HandleResize -> updateClientRect
+
   Tick mLastTime -> do
     { context, localState, app, scaler, queuedInteractions, processingInteractions } <- H.get
     -- Prepend any newly queued interactions to the list of interactions we've
@@ -236,29 +235,24 @@ handleAction = case _ of
           }
       )
     queueAnimationFrame mLastTime context scaler tryInteractions localState app
+
   Finalize -> unsubscribeResize
+
   -- If effectful interactions become necessary, handlerFn could return
-  --   Effect (Maybe localState) - Just if localState is changed, or Nothing if
-  --   localState is not changed.
+  --   Effect (Maybe localState)
   -- Hold on to interactions until the next tick, then pass them into rAF
   InteractionTriggered handlerFn -> do
     queuedInteractions <- H.gets _.queuedInteractions
     H.modify_ (_ { queuedInteractions = handlerFn : queuedInteractions })
-    handleAction MaybeTick
+
   -- The interactions passed into an animation frame have been processed and are
   --   no longer needed.
   InteractionsProcessed -> H.modify_ (_ { processingInteractions = List.Nil })
-  StateUpdated localState' -> do
-    modifyState localState'
-    handleAction MaybeTick
-  MaybeTick -> do
-    { app, rafId } <- H.get
-    case App.renderOnUpdate app of
-      App.Stop -> pure unit
-      App.Continue -> case rafId of -- don't need to tick if a frame was already requested
-        Nothing -> handleAction $ Tick Nothing
-        Just _ -> pure unit
+
+  StateUpdated localState' -> modifyState localState'
+
   FrameRequested rafId -> H.modify_ (_ { rafId = Just rafId })
+
   FrameFired -> H.modify_ (_ { rafId = Nothing })
 
 -- | Subscribe to window resize events. Get the `canvas` element and its
@@ -308,12 +302,7 @@ initialize = do
 -- | functions. If it is, a `StateUpdated` action is emitted. Finally, the
 -- | state (updated or not) is passed to `App.renderApp`.
 -- |
--- | `App.renderApp` returns a value instructing whether to request another
--- | frame, which is passed out to `rafCallback`. It varies based on the
--- | `RenderMode` of the application. If the application renders continuously
--- | then it emits a `Tick` action. If it renders on update then it does not.
--- | It also continues if `updateAndRender` was skipped because any values were
--- | `Nothing`, in the hope that the missing values will eventually appear.
+-- | Finally, a `Tick` is emitted to request the next frame.
 queueAnimationFrame
   :: forall localState appInput appOutput slots output m
    . MonadAff m
@@ -339,22 +328,20 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
     -> Effect Unit
   rafCallback listener timestamp = do
     HS.notify listener FrameFired
-    anotherFrame <-
+    _ <-
       map join $ sequence $ updateAndRender listener
         <$> (T.delta timestamp <$> mLastTime)
         <*> mcontext
         <*> mscaler
-    case anotherFrame of
-      Just App.Stop -> pure unit
-      Just App.Continue -> HS.notify listener $ Tick $ Just $ T.toPrev timestamp
-      Nothing -> HS.notify listener $ Tick $ Just $ T.toPrev timestamp --try again in case we haven't gotten a delta or context yet
+
+    HS.notify listener $ Tick $ Just $ T.toPrev timestamp
 
   updateAndRender
     :: HS.Listener (Action localState)
     -> T.Delta
     -> Context2D
     -> Dims.Scaler
-    -> Effect (Maybe App.RequestFrame)
+    -> Effect (Maybe Unit)
   updateAndRender listener delta context scaler = do
     let
       -- flap (<@>) applies delta and scaler to every function in
@@ -363,7 +350,8 @@ queueAnimationFrame mLastTime mcontext mscaler queuedInteractions localState app
 
       qIsThenUpdate = (\s -> App.updateLocalState delta scaler s app) : qIs
 
-      changed /\ state' = foldr applyUpdateFn (DidNotChange /\ localState) qIsThenUpdate
+      changed /\ state' =
+        foldr applyUpdateFn (DidNotChange /\ localState) qIsThenUpdate
     case changed of
       Changed -> HS.notify listener $ StateUpdated state'
       DidNotChange -> pure unit
@@ -479,8 +467,7 @@ modifyState state' = do
   App.handleOutput sendOutput localState state' app
 
 -- | Handle `Input` from the host application according to the `Application`'s
--- | `InputReceiver` function, and request an animation frame if rendering after
--- | state updates.
+-- | `InputReceiver` function.
 handleQuery
   :: forall localState appInput appOutput slots a m
    . MonadAff m
@@ -489,5 +476,4 @@ handleQuery
 handleQuery (Input inData a) = do
   { app, localState } <- H.get
   App.receiveInput saveLocal localState inData app
-  handleAction MaybeTick
   pure (Just a)
