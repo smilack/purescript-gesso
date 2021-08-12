@@ -221,7 +221,7 @@ canvasInput localState =
       GApp.mkApplication
         $ GApp.defaultApp
           { window = GApp.fixed $ GDim.fromWidthAndHeight { width: 600.0, height: 600.0 }
-          , render = Just $ GApp.onChange renderApp
+          , render = Just $ GApp.continuous renderApp
           , output = GApp.outputFn extractOutput
           , input = convertState
           }
