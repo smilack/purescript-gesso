@@ -21,7 +21,7 @@ main =
 type State
   = { x :: Number, vx :: Number, y :: Number, vy :: Number, radius :: Number }
 
-canvasInput :: forall g i o. GCan.Input State g i o
+canvasInput :: forall i o. GCan.Input State i o
 canvasInput =
   { name: "bouncing-ball"
   , localState: { x: 0.0, vx: 1.0, y: 0.0, vy: 1.0, radius: 25.0 }
