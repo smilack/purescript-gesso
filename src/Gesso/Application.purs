@@ -131,12 +131,15 @@ continuous = Continuous
 
 -- | A newtype wrapper for an [`UpdateFunction`](#t:UpdateFunction)
 newtype Update local
-  -- Considering making an Effectful variant, i.e.
-  -- data Update state = Pure (Delta -> state -> state) | Effectful (Delta -> state -> Effect state)
+  -- Considering making an Effectful variant, like
+  --   data Update state
+  --     = Pure (Delta -> state -> Maybe state)
+  --     | Effectful (Delta -> state -> Effect (Maybe state))
   = Update (UpdateFunction local)
 
--- | An `UpdateFunction` gets a `Delta` record from `Gesso.Time` and the current
--- | local state and may return an updated local state.
+-- | An `UpdateFunction` gets a `Delta` record from `Gesso.Time`, a `Scaler`
+-- | from `Gesso.Dimensions`, and the current local state, and may return an
+-- | updated local state if changes are necessary.
 type UpdateFunction local
   = T.Delta -> D.Scaler -> local -> Maybe local
 
@@ -170,7 +173,10 @@ noOutput :: forall local output. OutputMode local output
 noOutput = NoOutput
 
 -- | Create an `OutputFn` `OutputMode`
-outputFn :: forall local output. OutputProducer local output -> OutputMode local output
+outputFn
+  :: forall local output
+   . OutputProducer local output
+  -> OutputMode local output
 outputFn = OutputFn
 
 -- | When the component's state changes, it calls `handleOutput` to use the
@@ -197,7 +203,8 @@ receiveInput
   -> input
   -> Application local input output
   -> m Unit
-receiveInput saveLocal local inData (Application { input }) = saveLocal $ input inData local
+receiveInput saveLocal local inData (Application { input }) =
+  saveLocal $ input inData local
 
 -- | Get the appropriate CSS for the screen element based on the `WindowMode`.
 windowCss
@@ -252,7 +259,8 @@ renderApp
   -> C.Context2D
   -> Application local input output
   -> Maybe (Effect Unit)
-renderApp localState delta scaler context (Application { render }) = go <$> render
+renderApp localState delta scaler context (Application { render }) =
+  go <$> render
   where
   go = case _ of
     Continuous fn -> run fn
