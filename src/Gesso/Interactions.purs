@@ -11,7 +11,6 @@
 -- | be written.
 module Gesso.Interactions
   ( EventProp
-  , FullHandler
   , Handler
   , Interaction
   , InteractionList
@@ -25,10 +24,10 @@ module Gesso.Interactions
 import Prelude
 import Data.Maybe (Maybe(..))
 import DOM.HTML.Indexed (HTMLcanvas)
+import Gesso.Application (UpdateFunction) as App
 import Gesso.Dimensions as Dims
 import Gesso.Interactions.Events as Events
 import Gesso.Interactions.Events (Event, ClipboardEvent, FocusEvent, KeyboardEvent, TouchEvent, DragEvent, MouseEvent, WheelEvent)
-import Gesso.Time as Time
 import Halogen.HTML.Properties (IProp)
 
 -- | This is the type of the `on` functions from `Gesso.Interactions.Events`.
@@ -37,18 +36,13 @@ import Halogen.HTML.Properties (IProp)
 type EventProp event i
   = (event -> i) -> IProp HTMLcanvas i
 
--- | Alias for an event handler that has received its event. In addition, it
--- | gets a coordinate scaler (`Gesso.Dimensions`) and the current state, and
--- | may return an updated state if the state should change because of the
+-- | Alias for an event handler, which receives an event and returns an
+-- | `UpdateFunction`. An `UpdateFunction` receives a time delta (`Gesso.Time`),
+-- | a coordinate scaler (`Gesso.Dimensions`), and the current state, and may
+-- | return an updated state if the state should change in response to the
 -- | event.
-type FullHandler localState
-  = Time.Delta -> Dims.Scaler -> localState -> Maybe localState
-
--- | Alias for an event handler, which receives an event, a coordinate scaler,
--- | and the current state, and may return an updated state if the state should
--- | change as a result of the interaction.
 type Handler event localState
-  = event -> FullHandler localState
+  = event -> App.UpdateFunction localState
 
 -- | An `Interaction` is a combination of an event property
 -- | ([`EventProp`](#t:EventProp) e.g., `onClick`) and an event handler
@@ -89,18 +83,18 @@ type Interactions localState i
   }
 
 -- | Convert an [`Interactions`](#t:Interactions) record to an array of HTML
--- | properties. The `toCallback` parameter should return whatever `Action`
--- | type the component has, like `Just <<< InteractionTriggered` in Canvas.
+-- | properties. `i` - the return value of the `toCallback` parameter - should
+-- | be whatever `Action` type the component has, like `InteractionTriggered` in
+-- | Canvas.
 toProps
   :: forall localState i
-   . (FullHandler localState -> i)
+   . (App.UpdateFunction localState -> i)
   -> Interactions localState i
   -> Array (IProp HTMLcanvas i)
 toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
-  -- I tried to put these all in an array and foldMap it,
-  --   but it didn't work since they're different types
-  -- I might be able to make a ToProp typeclass and use
-  --   existential types
+  -- I tried to put these all in an array and foldMap it, but it didn't work
+  --   since they're different types.
+  -- I might be able to make a ToProp typeclass and use existential types?
   map toProp base
     <> map toProp clipboard
     <> map toProp focus
@@ -146,6 +140,8 @@ mkInteraction = Interaction
 mousePosition
   :: forall moreState i
    . Interaction MouseEvent { mousePos :: Maybe Dims.Point | moreState } i
-mousePosition = mkInteraction Events.onMouseMove getMousePos
+mousePosition =
+  mkInteraction Events.onMouseMove getMousePos
   where
-  getMousePos event _ _ state = Just state { mousePos = Just $ Dims.fromMouseEvent event }
+  getMousePos event _ _ state =
+    Just state { mousePos = Just $ Dims.fromMouseEvent event }
