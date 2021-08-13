@@ -81,8 +81,8 @@ type State localState appInput appOutput
   , emitterSub :: Maybe H.SubscriptionId
   , listener :: Maybe (HS.Listener (Action localState))
   , interactions :: GI.Interactions localState (Action localState)
-  , queuedInteractions :: List (GI.FullHandler localState)
-  , processingInteractions :: List (GI.FullHandler localState)
+  , queuedInteractions :: List (App.UpdateFunction localState)
+  , processingInteractions :: List (App.UpdateFunction localState)
   , rafId :: Maybe T.RequestAnimationFrameId
   }
 
@@ -93,7 +93,7 @@ data Action localState
   | Tick (Maybe T.TimestampPrevious)
   | Finalize
   | StateUpdated localState
-  | InteractionTriggered (GI.FullHandler localState)
+  | InteractionTriggered (App.UpdateFunction localState)
   | InteractionsProcessed
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
@@ -322,7 +322,7 @@ queueAnimationFrame
   -> Maybe (HS.Listener (Action localState))
   -> Maybe Context2D
   -> Maybe Dims.Scaler
-  -> List (GI.FullHandler localState)
+  -> List (App.UpdateFunction localState)
   -> localState
   -> App.Application localState appInput appOutput
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots output m Unit

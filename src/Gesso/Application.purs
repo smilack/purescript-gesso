@@ -139,7 +139,8 @@ newtype Update local
 
 -- | An `UpdateFunction` gets a `Delta` record from `Gesso.Time`, a `Scaler`
 -- | from `Gesso.Dimensions`, and the current local state, and may return an
--- | updated local state if changes are necessary.
+-- | updated local state if changes are necessary. This type is used by both
+-- | the Update type and interaction handlers.
 type UpdateFunction local
   = T.Delta -> D.Scaler -> local -> Maybe local
 
