@@ -53,7 +53,7 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |
 -- | - `name` is the name of the application, which doubles as the HTML `id` for
 -- |   the canvas element.
--- | - `app` is the Application spec.
+-- | - `app` is the Application Spec.
 -- | - `localState` is the local state of the application.
 -- | - `viewBox` is the position and dimensions of the drawing surface.
 -- | - `clientRect` is the actual position and dimensions of the canvas element.
@@ -67,10 +67,18 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- | - `listener` is part of a paired listener/emitter used to send Actions from
 -- |   `requestAnimationFrame` callbacks to the component.
 -- | - `interactions` is the events attached to the canvas element.
+-- | - `queuedUpdates` is a list of interactions and Query inputs waiting to be
+-- |   applied.
+-- | - `processingUpdates` is a list of interactions and Query inputs that have
+-- |   been passed to the animation frame to be applied, but which may not have
+-- |   been applied yet.
+-- | - `rafId` is the ID of the most recently requested animation frame. It's
+-- |   set when `requestAnimationFrame` is called and cleared when the animation
+-- |   frame callback runs.
 type State localState appInput appOutput
   =
   { name :: String
-  , app :: App.Application localState appInput appOutput
+  , app :: App.AppSpec Context2D localState appInput appOutput
   , localState :: localState
   , viewBox :: Dims.ViewBox
   , clientRect :: Maybe Dims.ClientRect
@@ -81,8 +89,8 @@ type State localState appInput appOutput
   , emitterSub :: Maybe H.SubscriptionId
   , listener :: Maybe (HS.Listener (Action localState))
   , interactions :: GI.Interactions localState (Action localState)
-  , queuedInteractions :: List (App.UpdateFunction localState)
-  , processingInteractions :: List (App.UpdateFunction localState)
+  , queuedUpdates :: List (App.Update localState)
+  , processingUpdates :: List (App.Update localState)
   , rafId :: Maybe T.RequestAnimationFrameId
   }
 
@@ -92,29 +100,30 @@ data Action localState
   | HandleResize
   | Tick (Maybe T.TimestampPrevious)
   | Finalize
-  | StateUpdated localState
-  | InteractionTriggered (App.UpdateFunction localState)
-  | InteractionsProcessed
+  | StateUpdated T.Delta Dims.Scaler localState
+  | QueueUpdate (App.Update localState)
+  | UpdatesProcessed
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
 
 -- | The component's output type is defined by the `OutputMode` in the
--- | `Application` spec.
+-- | `Application.AppSpec`.
 newtype Output appOutput
   = Output appOutput
 
 -- | The component's input type is defined by the `InputReceiver` in the
--- | `Application` spec.
+-- | `Application.AppSpec`.
 data Query appInput a
   = Input appInput a
 
 -- | The input provided when the Canvas component is created. The component has
--- | no `receive` defined in its `EvalSpec` (see [`component`](#v:component)),
--- | so this input is only read once.
+-- | no `receive` defined in its `EvalSpec` (see [`component`](#v:component)'s
+-- | use of `defaultEval`), so this input is only read once.
 -- |
 -- | - `name` is the name of the application, which doubles as the HTML `id` for
--- |   the canvas element.
--- | - `app` is the Application spec.
+-- |   the canvas element. (Related:
+-- |   https://github.com/smilack/purescript-gesso/issues/4)
+-- | - `app` is the Application Spec.
 -- | - `localState` is the initial local state for the application.
 -- | - `viewBox` is the desired dimensions for the drawing surface.
 -- | - `interactions` is the events which will be attached to the
@@ -122,7 +131,7 @@ data Query appInput a
 type Input localState appInput appOutput
   =
   { name :: String
-  , app :: App.Application localState appInput appOutput
+  , app :: App.AppSpec Context2D localState appInput appOutput
   , localState :: localState
   , viewBox :: Dims.ViewBox
   , interactions :: GI.Interactions localState (Action localState)
@@ -149,8 +158,9 @@ component =
     }
 
 -- | Get initial state for Canvas. Most values are copied directly from the
--- | input. The rest require Effects and are created in `initialize`, except for
--- | the interactions queues, which start empty.
+-- | input. The rest require Effects and are created in
+-- | [`initialize`](#v:initialize), except for the update queues, which start
+-- | empty.
 initialState
   :: forall localState appInput appOutput
    . Input localState appInput appOutput
@@ -168,26 +178,26 @@ initialState { name, app, localState, viewBox, interactions } =
   , emitterSub: Nothing
   , listener: Nothing
   , interactions
-  , queuedInteractions: List.Nil
-  , processingInteractions: List.Nil
+  , queuedUpdates: List.Nil
+  , processingUpdates: List.Nil
   , rafId: Nothing
   }
 
 -- | Canvas component's render function. Size/position CSS comes from
 -- | `Application`, event properties come from `Interactions`, and
--- | `width`/`height` attributes come from Dimensions.
+-- | `width`/`height` attributes come from `Dimensions`.
 -- |
 -- | The `width` and `height` attributes may be different from the size CSS. The
--- | CSS controls the size of the element, while the HTML attributes control the
--- | scale of the drawing area.
+-- | CSS controls the area that the element takes up on the page, while the HTML
+-- | attributes control the coordinate system of the drawing area.
 render
   :: forall localState appInput appOutput slots m
    . State localState appInput appOutput
   -> H.ComponentHTML (Action localState) slots m
 render { name, clientRect, app, interactions } =
   canvas
-    $ [ id name, style $ App.windowCss app, tabIndex 0 ]
-      <> GI.toProps InteractionTriggered interactions
+    $ [ id name, style $ App.windowCss app.window, tabIndex 0 ]
+      <> GI.toProps QueueUpdate interactions
       <> maybe [] Dims.toSizeProps clientRect
   where
   style :: forall r i. CSS.CSS -> IProp (style :: String | r) i
@@ -207,11 +217,10 @@ render { name, clientRect, app, interactions } =
 -- |   animation frame timestamp to itself so it can calculate the delta between
 -- |   frames.
 -- | - `Finalize`: Unsubscribe from window resize events and listener/emitter.
--- | - `InteractionTriggered`: An event fired, add the handler to a queue to be
--- |   run on the next animation frame.
--- | - `InteractionsProcessed`: The `processingInteractions` queue was
--- |   successfully processed in an animation frame, so those interactions can
--- |   be discarded.
+-- | - `QueueUpdate`: An event (interaction or input) fired, add the handler to
+-- |   a queue to be run on the next animation frame.
+-- | - `UpdatesProcessed`: The `processingUpdates` queue was successfully
+-- |   processed in an animation frame, so those updates can be discarded.
 -- | - `StateUpdated`: The local state is changing. Save it and tell
 -- |   `Application` to handle output.
 -- | - `FrameRequested`: An animation frame has been requested, save its ID.
@@ -229,34 +238,32 @@ handleAction = case _ of
   HandleResize -> updateClientRect
 
   Tick mLastTime -> do
-    { listener, context, localState, app, scaler, queuedInteractions, processingInteractions } <- H.get
-    -- Prepend any newly queued interactions to the list of interactions we've
-    --   tried to process, then empty the main queue and replace the processing
-    --   queue with the sum of both.
+    { listener, context, localState, app, scaler, queuedUpdates, processingUpdates } <- H.get
+    -- Prepend any newly queued updates to the list of updates we've tried to
+    --   process, then empty the main queue and replace the processing queue
+    --   with the sum of both.
     let
-      tryInteractions = queuedInteractions <> processingInteractions
+      tryUpdates = queuedUpdates <> processingUpdates
     H.modify_
       ( _
-          { queuedInteractions = List.Nil
-          , processingInteractions = tryInteractions
+          { queuedUpdates = List.Nil
+          , processingUpdates = tryUpdates
           }
       )
-    queueAnimationFrame mLastTime listener context scaler tryInteractions localState app
+    queueAnimationFrame mLastTime listener context scaler tryUpdates localState app
 
   Finalize -> unsubscribe
 
-  -- If effectful interactions become necessary, handlerFn could return
-  --   Effect (Maybe localState)
-  -- Hold on to interactions until the next tick, then pass them into rAF
-  InteractionTriggered handlerFn -> do
-    queuedInteractions <- H.gets _.queuedInteractions
-    H.modify_ (_ { queuedInteractions = handlerFn : queuedInteractions })
+  -- Hold on to interactions/inputs until the next tick, then pass them into rAF
+  QueueUpdate handlerFn -> do
+    queuedUpdates <- H.gets _.queuedUpdates
+    H.modify_ (_ { queuedUpdates = handlerFn : queuedUpdates })
 
   -- The interactions passed into an animation frame have been processed and are
   --   no longer needed.
-  InteractionsProcessed -> H.modify_ (_ { processingInteractions = List.Nil })
+  UpdatesProcessed -> H.modify_ (_ { processingUpdates = List.Nil })
 
-  StateUpdated localState' -> modifyState localState'
+  StateUpdated delta scaler localState' -> saveNewState delta scaler localState'
 
   FrameRequested rafId -> H.modify_ (_ { rafId = Just rafId })
 
@@ -307,14 +314,16 @@ initialize = do
 -- | been found, so there is no context, or the listener and emitter haven't
 -- | been created.
 -- |
--- | `updateAndRender` converts the list of queued interaction handlers to
--- | `localState -> Maybe localState` functions, and prepends a mostly filled-in
--- | call to `App.updateLocalState` with the same type. This list is folded
--- | over, keeping track of whether the state is changed by any of the
--- | functions. If it is, a `StateUpdated` action is emitted. Finally, the
--- | state (updated or not) is passed to `App.renderApp`.
+-- | `updateAndRender` takes the list of queued update handlers and adds the
+-- | component's update function. It folds over the list, calling each update
+-- | function, and tracking whether any of them changes the state. If they do, a
+-- | `StateUpdated` Action is emitted, which will persist the change back to the
+-- | component and cause the component to check whether the change needs to be
+-- | outputted. Next, an action is emitted to let the component know that the
+-- | updates in the `processingUpdates` queue are complete. Finally, it calls
+-- | the app's render function.
 -- |
--- | Finally, a `Tick` is emitted to request the next frame.
+-- | After `updateAndRender`, a `Tick` is emitted to request the next frame.
 queueAnimationFrame
   :: forall localState appInput appOutput slots output m
    . MonadAff m
@@ -322,11 +331,11 @@ queueAnimationFrame
   -> Maybe (HS.Listener (Action localState))
   -> Maybe Context2D
   -> Maybe Dims.Scaler
-  -> List (App.UpdateFunction localState)
+  -> List (App.Update localState)
   -> localState
-  -> App.Application localState appInput appOutput
+  -> App.AppSpec Context2D localState appInput appOutput
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots output m Unit
-queueAnimationFrame mLastTime mlistener mcontext mscaler queuedInteractions localState app = do
+queueAnimationFrame mLastTime mlistener mcontext mscaler queuedUpdates localState app = do
   H.liftEffect do
     wnd <- window
     rafId <- T.requestAnimationFrame rafCallback wnd
@@ -335,10 +344,11 @@ queueAnimationFrame mLastTime mlistener mcontext mscaler queuedInteractions loca
   rafCallback :: T.TimestampCurrent -> Effect Unit
   rafCallback timestamp = do
     notify FrameFired
+    mdelta <- pure $ T.delta timestamp <$> mLastTime
     _ <-
-      map join $ sequence $ updateAndRender
+      sequence $ updateAndRender
         <$> mlistener
-        <*> (T.delta timestamp <$> mLastTime)
+        <*> mdelta
         <*> mcontext
         <*> mscaler
     notify $ Tick $ Just $ T.toPrev timestamp
@@ -353,30 +363,35 @@ queueAnimationFrame mLastTime mlistener mcontext mscaler queuedInteractions loca
     -> T.Delta
     -> Context2D
     -> Dims.Scaler
-    -> Effect (Maybe Unit)
+    -> Effect Unit
   updateAndRender listener delta context scaler = do
-    let
-      -- flap (<@>) applies delta and scaler to every function in
-      --   queuedInteractions
-      qIs = queuedInteractions <@> delta <@> scaler
+    changed /\ state' <-
+      foldr
+        (applyUpdate delta scaler)
+        (pure (DidNotChange /\ localState))
+        (app.update : queuedUpdates)
 
-      qIsThenUpdate = (\s -> App.updateLocalState delta scaler s app) : qIs
-
-      changed /\ state' =
-        foldr applyUpdateFn (DidNotChange /\ localState) qIsThenUpdate
     case changed of
-      Changed -> HS.notify listener $ StateUpdated state'
+      Changed -> HS.notify listener $ StateUpdated delta scaler state'
       DidNotChange -> pure unit
-    HS.notify listener InteractionsProcessed
-    sequence $ App.renderApp state' delta scaler context app
 
-  applyUpdateFn
-    :: (localState -> Maybe localState)
-    -> Tuple StateChanged localState
-    -> Tuple StateChanged localState
-  applyUpdateFn handlerFn s@(_ /\ state) = case handlerFn state of
-    Just state' -> Changed /\ state'
-    Nothing -> s
+    HS.notify listener UpdatesProcessed
+    app.render state' delta scaler context
+
+  applyUpdate
+    :: T.Delta
+    -> Dims.Scaler
+    -> App.Update localState
+    -> Effect (Tuple StateChanged localState)
+    -> Effect (Tuple StateChanged localState)
+  applyUpdate delta scaler update s = do
+    (_ /\ state) <- s
+
+    mstate' <- App.runUpdate delta scaler state update
+
+    case mstate' of
+      Just state' -> pure $ Changed /\ state'
+      Nothing -> s
 
 -- | A simple type to track whether the local state changed while running
 -- | interactions and updates.
@@ -421,7 +436,7 @@ updateClientRect = do
         }
     )
 
--- | Unsubscribe to window resize events and paired listener/emitter.
+-- | Unsubscribe from window resize events and paired listener/emitter.
 unsubscribe
   :: forall localState appInput appOutput action slots output m
    . MonadAff m
@@ -446,48 +461,28 @@ subscribeResize = do
       (toEventTarget wnd)
       (const $ Just HandleResize)
 
--- | Attempt to raise an output message. Called in `Application.handleOutput`,
--- | which is called when local state changes. Only relevant if `OutputMode` is
--- | `OutputFn`, and the output function may return `Nothing` if the change in
--- | local state is not worth outputting.
-sendOutput
+-- | Save the updated local state of the application. Compare the old and new
+-- | states in the `OutputProducer` function and send output, if necessary.
+saveNewState
   :: forall localState appInput appOutput slots m
    . MonadAff m
-  => Maybe appOutput
+  => T.Delta
+  -> Dims.Scaler
+  -> localState
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m Unit
-sendOutput = traverse_ (H.raise <<< Output)
-
--- | Save a new version of the application's local state to the component's
--- | state. This is also passed to `Application.receiveInput` to simplify the
--- | process of receiving input and modifying the state accordingly.
-saveLocal
-  :: forall localState appInput appOutput slots m
-   . MonadAff m
-  => localState
-  -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m Unit
-saveLocal state' = H.modify_ (_ { localState = state' })
-
--- | Modify the local state of the application. The new state is saved, and the
--- | new and old states are given to `Application` to check the `OutputMode` and
--- | send output, if necessary.
-modifyState
-  :: forall localState appInput appOutput slots m
-   . MonadAff m
-  => localState
-  -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m Unit
-modifyState state' = do
+saveNewState delta scaler state' = do
   { app, localState } <- H.get
-  saveLocal state'
-  App.handleOutput sendOutput localState state' app
+  H.modify_ (_ { localState = state' })
+  traverse_ (H.raise <<< Output) $ app.output delta scaler localState state'
 
--- | Handle `Input` from the host application according to the `Application`'s
--- | `InputReceiver` function.
+-- | Receiving input from the host application. Convert it into an `Update` and
+-- | call `handleAction` to add it to the update queue.
 handleQuery
   :: forall localState appInput appOutput slots a m
    . MonadAff m
   => Query appInput a
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m (Maybe a)
 handleQuery (Input inData a) = do
-  { app, localState } <- H.get
-  App.receiveInput saveLocal localState inData app
+  { input } <- H.gets _.app
+  handleAction $ QueueUpdate $ App.pureUpdate $ input inData
   pure (Just a)

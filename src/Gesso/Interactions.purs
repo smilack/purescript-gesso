@@ -12,11 +12,13 @@
 module Gesso.Interactions
   ( EventProp
   , Handler
+  , EffectHandler
   , Interaction
   , InteractionList
   , Interactions
   , default
   , mkInteraction
+  , mkEffectInteraction
   , toProps
   , mousePosition
   ) where
@@ -24,7 +26,7 @@ module Gesso.Interactions
 import Prelude
 import Data.Maybe (Maybe(..))
 import DOM.HTML.Indexed (HTMLcanvas)
-import Gesso.Application (UpdateFunction) as App
+import Gesso.Application (Update, pureUpdate, effectUpdate, UpdateFunction, EffectUpdateFunction) as App
 import Gesso.Dimensions as Dims
 import Gesso.Interactions.Events as Events
 import Gesso.Interactions.Events (Event, ClipboardEvent, FocusEvent, KeyboardEvent, TouchEvent, DragEvent, MouseEvent, WheelEvent)
@@ -44,11 +46,16 @@ type EventProp event i
 type Handler event localState
   = event -> App.UpdateFunction localState
 
+-- | Like a regular [`Handler`](#t:Handler) but runs in `Effect`.
+type EffectHandler event localState
+  = event -> App.EffectUpdateFunction localState
+
 -- | An `Interaction` is a combination of an event property
--- | ([`EventProp`](#t:EventProp) e.g., `onClick`) and an event handler
--- | ([`Handler`](#t:Handler)).
+-- | ([`EventProp`](#t:EventProp) e.g., `onClick`) and an event handler, which
+-- | can be pure or effectful.
 data Interaction event localState i
-  = Interaction (EventProp event i) (Handler event localState)
+  = Pure (EventProp event i) (Handler event localState)
+  | Effectful (EventProp event i) (EffectHandler event localState)
 
 -- | Alias for an array of [`Interaction`s](#t:Interaction)
 type InteractionList event localState i
@@ -84,11 +91,10 @@ type Interactions localState i
 
 -- | Convert an [`Interactions`](#t:Interactions) record to an array of HTML
 -- | properties. `i` - the return value of the `toCallback` parameter - should
--- | be whatever `Action` type the component has, like `InteractionTriggered` in
--- | Canvas.
+-- | be whatever `Action` type the component has, like `QueueUpdate` in Canvas.
 toProps
   :: forall localState i
-   . (App.UpdateFunction localState -> i)
+   . (App.Update localState -> i)
   -> Interactions localState i
   -> Array (IProp HTMLcanvas i)
 toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
@@ -105,7 +111,12 @@ toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel
     <> map toProp wheel
   where
   toProp :: forall e. Interaction e localState i -> IProp HTMLcanvas i
-  toProp (Interaction onEvent handler) = onEvent $ toCallback <<< handler
+  toProp = case _ of
+    Pure onEvent handler ->
+      onEvent $ toCallback <<< App.pureUpdate <<< handler
+
+    Effectful onEvent handler ->
+      onEvent $ toCallback <<< App.effectUpdate <<< handler
 
 -- | An [`Interactions`](#t:Interactions) record containing no interactions. The
 -- | attributes can be overridden individually instead of manually creating a
@@ -125,13 +136,22 @@ default =
   }
 
 -- | Create an [`Interaction`](#t:Interaction) from an
--- | [`EventProp`](#t:EventProp) an event [`Handler`](#t:Handler).
+-- | [`EventProp`](#t:EventProp) and a pure event [`Handler`](#t:Handler).
 mkInteraction
   :: forall event localState i
    . EventProp event i
   -> Handler event localState
   -> Interaction event localState i
-mkInteraction = Interaction
+mkInteraction = Pure
+
+-- | Create an [`Interaction`](#t:Interaction) from an
+-- | [`EventProp`](#t:EventProp) and an [`EffectHandler`](#t:EffectHandler).
+mkEffectInteraction
+  :: forall event localState i
+   . EventProp event i
+  -> EffectHandler event localState
+  -> Interaction event localState i
+mkEffectInteraction = Effectful
 
 -- | A useful example [`Interaction`](#t:Interaction) that updates the mouse
 -- | position on every `MouseMove` event, which works with all state types that
