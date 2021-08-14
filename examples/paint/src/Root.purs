@@ -183,7 +183,9 @@ handleAction
   -> H.HalogenM RootState Action Slots o m Unit
 handleAction = case _ of
   ToggleGrid -> (H.modify \s -> s { showGrid = not s.showGrid } :: RootState) >>= send
-  GotOutput (GC.Output output') -> H.modify_ $ convertState output'
+  GotOutput (GC.Output output') -> do
+    current <- H.get
+    H.modify_ $ fromMaybe current <<< convertState output' unit unit
   ButtonClicked (CB.Clicked color') -> H.modify (_ { color = color' }) >>= send
   Undo -> do
     state <- H.get
@@ -218,13 +220,12 @@ canvasInput localState =
   { name: "canvas"
   , localState
   , app:
-      GApp.mkApplication
-        $ GApp.defaultApp
-          { window = GApp.fixed $ GDim.fromWidthAndHeight { width: 600.0, height: 600.0 }
-          , render = Just $ GApp.continuous renderApp
-          , output = GApp.outputFn extractOutput
-          , input = convertState
-          }
+      GApp.defaultApp
+        { window = GApp.fixed $ GDim.fromWidthAndHeight { width: 600.0, height: 600.0 }
+        , render = renderApp
+        , output = extractOutput
+        , input = convertState
+        }
   , viewBox:
       GDim.fromPointAndSize
         GDim.origin
@@ -236,14 +237,17 @@ toIO :: forall r. { | CanvasIO' r } -> CanvasIO
 toIO { showGrid, color, pixels, redo } = { showGrid, color, pixels, redo }
 
 convertState
-  :: forall r s
+  :: forall delta scaler r s
    . { | CanvasIO' r }
+  -> delta
+  -> scaler
   -> { | CanvasIO' s }
-  -> { | CanvasIO' s }
-convertState { showGrid, color, pixels, redo } = _ { showGrid = showGrid, color = color, pixels = pixels, redo = redo }
+  -> Maybe { | CanvasIO' s }
+convertState { showGrid, color, pixels, redo } _ _ =
+  Just <<< _ { showGrid = showGrid, color = color, pixels = pixels, redo = redo }
 
-extractOutput :: CanvasState -> CanvasState -> Maybe CanvasIO
-extractOutput state state'@{ showGrid, color, pixels, redo } =
+extractOutput :: GTime.Delta -> GDim.Scaler -> CanvasState -> CanvasState -> Maybe CanvasIO
+extractOutput _ _ state state'@{ showGrid, color, pixels, redo } =
   if
     (state.showGrid /= showGrid)
       || (state.color /= color)
