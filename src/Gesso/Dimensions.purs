@@ -228,6 +228,7 @@ derive instance eqPoint :: Eq Point
 -- | type to identify where the dimensions came from.
 -- | [`ClientRect`](#t:ClientRect) and [`ViewBox`](#t:ViewBox) are the two kinds
 -- | of dimensions.
+data Dimensions :: Type -> Type
 data Dimensions a
   = Dimensions Point Size
 
