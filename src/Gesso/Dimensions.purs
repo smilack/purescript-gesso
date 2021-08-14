@@ -354,6 +354,10 @@ type Scaler
       { toVb :: ClientRect -> ViewBox
       , toCr :: ViewBox -> ClientRect
       }
+  , rect ::
+      { toVb :: Rectangle -> Rectangle
+      , toCr :: Rectangle -> Rectangle
+      }
   , toRectangle :: forall d. Dimensioned d => d -> Rectangle
   }
 
@@ -391,6 +395,10 @@ mkScaler viewBox clientRect@(Dimensions _ crSize) =
   , dims:
       { toVb: transformD toVb.x' toVb.y' toVb.w' toVb.h'
       , toCr: transformD x' y' w' h'
+      }
+  , rect:
+      { toVb: transformR toVb.x' toVb.y' toVb.w' toVb.h'
+      , toCr: transformR x' y' w' h'
       }
   , toRectangle
   }
@@ -466,6 +474,20 @@ mkScaler viewBox clientRect@(Dimensions _ crSize) =
           , height: th $ getHeight d
           }
       )
+
+  transformR
+    :: (Number -> Number)
+    -> (Number -> Number)
+    -> (Number -> Number)
+    -> (Number -> Number)
+    -> Rectangle
+    -> Rectangle
+  transformR tx ty tw th { x, y, width, height } =
+    { x: tx x
+    , y: ty y
+    , width: tw width
+    , height: th height
+    }
 
   toRectangle :: forall d. Dimensioned d => d -> Rectangle
   toRectangle d =
