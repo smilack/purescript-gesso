@@ -1,6 +1,5 @@
 module Example.Hello.Main where
 
-import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application as Gesso.Application
@@ -9,7 +8,7 @@ import Gesso.Dimensions as Gesso.Dimensions
 import Gesso.Interactions as Gesso.Interactions
 import Gesso.Time as Gesso.Time
 import Graphics.Canvas as Graphics.Canvas
-import Prelude (Unit, unit, bind, ($))
+import Prelude (Unit, unit, bind)
 
 main :: Effect Unit
 main =
@@ -26,11 +25,10 @@ canvasInput =
   { name: "hello"
   , localState: unit
   , app:
-      Gesso.Application.mkApplication
-        $ Gesso.Application.defaultApp
-          { window = Gesso.Application.fullscreen
-          , render = Just $ Gesso.Application.continuous render
-          }
+      Gesso.Application.defaultApp
+        { window = Gesso.Application.fullscreen
+        , render = render
+        }
   , viewBox: Gesso.Dimensions.p1080
   , interactions: Gesso.Interactions.default
   }

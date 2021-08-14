@@ -33,11 +33,10 @@ input =
   { name: "test-app"
   , localState: { mousePos: Nothing, clicked: Nothing }
   , app:
-      GApp.mkApplication
-        $ GApp.defaultApp
-          { window = GApp.fullscreen
-          , render = Just $ GApp.continuous render
-          }
+      GApp.defaultApp
+        { window = GApp.fullscreen
+        , render = render
+        }
   , viewBox:
       GDim.fromPointAndSize
         (GDim.fromXAndY { x: -1.5, y: -1.5 })

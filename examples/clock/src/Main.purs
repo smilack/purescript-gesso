@@ -5,7 +5,6 @@ import Data.Array (range)
 import Data.Enum (fromEnum)
 import Data.Foldable (sequence_)
 import Data.Int (toNumber, floor)
-import Data.Maybe (Maybe(..))
 import Data.Time as Time
 import Effect (Effect)
 import Effect.Now (nowTime) as Now
@@ -32,11 +31,10 @@ input =
   { name: "test-app"
   , localState: unit
   , app:
-      GApp.mkApplication
-        $ GApp.defaultApp
-          { window = GApp.fullscreen
-          , render = Just $ GApp.continuous render
-          }
+      GApp.defaultApp
+        { window = GApp.fullscreen
+        , render = render
+        }
   , viewBox: GDim.p1080
   , interactions: GInt.default
   }

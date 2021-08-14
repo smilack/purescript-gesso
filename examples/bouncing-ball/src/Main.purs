@@ -26,12 +26,11 @@ canvasInput =
   { name: "bouncing-ball"
   , localState: { x: 0.0, vx: 1.0, y: 0.0, vy: 1.0, radius: 25.0 }
   , app:
-      GApp.mkApplication
-        $ GApp.defaultApp
-          { window = GApp.fullscreen
-          , render = Just $ GApp.continuous render
-          , update = Just $ GApp.updateFn update
-          }
+      GApp.defaultApp
+        { window = GApp.fullscreen
+        , render = render
+        , update = GApp.pureUpdate update
+        }
   , viewBox: GDims.p1080
   , interactions: GInt.default
   }
