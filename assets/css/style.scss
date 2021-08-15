@@ -5,4 +5,17 @@
 
 body {
   font-size: 20px;
+  line-height: 1.4;
+}
+
+ol, ul {
+  margin-left: 1rem;
+}
+
+li + li {
+  margin-top: 0.25rem;
+}
+
+.inner {
+  max-width: 700px;
 }
