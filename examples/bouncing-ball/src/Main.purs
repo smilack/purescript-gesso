@@ -36,7 +36,8 @@ canvasInput =
   }
 
 update :: GTime.Delta -> GDims.Scaler -> State -> Maybe State
-update _ scale { x, vx, y, vy, radius } = Just { x: x + vx', vx: vx', y: y + vy', vy: vy', radius }
+update _ scale { x, vx, y, vy, radius } =
+  Just { x: x + vx', vx: vx', y: y + vy', vy: vy', radius }
   where
   xMin = GDims.getX scale.screen
 
@@ -51,10 +52,10 @@ update _ scale { x, vx, y, vy, radius } = Just { x: x + vx', vx: vx', y: y + vy'
   vy' = updateV y radius yMin yMax vy
 
 updateV :: Number -> Number -> Number -> Number -> Number -> Number
-updateV t r min max vt
-  | t + r + vt > max = -1.0
-  | t - r + vt < min = 1.0
-  | otherwise = vt
+updateV position radius min max velocity
+  | position + radius + velocity > max = -1.0
+  | position - radius + velocity < min = 1.0
+  | otherwise = velocity
 
 render :: State -> GTime.Delta -> GDims.Scaler -> Canvas.Context2D -> Effect Unit
 render { x, y, radius } _ scale context = do
