@@ -4,16 +4,17 @@ Hello is the most minimal example of a Gesso application. All imports except `Ma
 
 ## Output
 
+[See this example in action](https://smilack.github.io/purescript-gesso/examples/hello/dist/)
+
 Because this example does not use the `Scaler` functions (introduced in other examples), your output may look different depending on the size of your browser window.
 
-![Hello example output](/examples/hello/output.png)
+![Hello example output](output.png)
 
 ## Complete Code
 
 ```purescript
 module Example.Hello.Main where
 
-import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application as Gesso.Application
@@ -22,7 +23,7 @@ import Gesso.Dimensions as Gesso.Dimensions
 import Gesso.Interactions as Gesso.Interactions
 import Gesso.Time as Gesso.Time
 import Graphics.Canvas as Graphics.Canvas
-import Prelude (Unit, unit, bind, ($))
+import Prelude (Unit, unit, bind)
 
 main :: Effect Unit
 main =
@@ -30,16 +31,15 @@ main =
     body <- Gesso.awaitBody
     Gesso.run Gesso.canvas canvasInput body
 
-canvasInput :: forall g i o. Gesso.Canvas.Input Unit g i o
+canvasInput :: forall i o. Gesso.Canvas.Input Unit i o
 canvasInput =
   { name: "hello"
   , localState: unit
   , app:
-      Gesso.Application.mkApplication
-        $ Gesso.Application.defaultApp
-            { window = Gesso.Application.fullscreen
-            , render = Just $ Gesso.Application.continuous render
-            }
+      Gesso.Application.defaultApp
+        { window = Gesso.Application.fullscreen
+        , render = render
+        }
   , viewBox: Gesso.Dimensions.p1080
   , interactions: Gesso.Interactions.default
   }
@@ -93,25 +93,24 @@ Finally, we tell Gesso to `run` a `canvas` component, using the `canvasInput` we
 The input to the canvas component tells it how big the drawing should be, what kind of state it should track, and how to render the state. More advanced tutorials will also add updating the state, and responding to input like mouse events.
 
 ```purescript
-canvasInput :: forall g i o. Gesso.Canvas.Input Unit g i o
+canvasInput :: forall i o. Gesso.Canvas.Input Unit i o
 canvasInput =
   { name: "hello"
   , localState: unit
   , app:
-      Gesso.Application.mkApplication
-        $ Gesso.Application.defaultApp
-            { window = Gesso.Application.fullscreen
-            , render = Just $ Gesso.Application.continuous render
-            }
+      Gesso.Application.defaultApp
+        { window = Gesso.Application.fullscreen
+        , render = render
+        }
   , viewBox: Gesso.Dimensions.p1080
   , interactions: Gesso.Interactions.default
   }
 ```
 
-The canvas's `Input` type takes four type variables. The `localState` must always be set, but in this example there is no state, so we use the `Unit` type. The other variables are for interacting with Halogen controls outside of the canvas. Since this example is canvas-only, we can leave them open.
+The canvas's `Input` type takes three type variables. The first, `localState`, must always be set, but in this example there is no state, so we use the `Unit` type. The other variables are for interacting with Halogen controls outside of the canvas. Since this example is canvas-only, we can leave them open.
 
 ```purescript
-canvasInput :: forall g i o. Gesso.Canvas.Input Unit g i o
+canvasInput :: forall i o. Gesso.Canvas.Input Unit i o
 canvasInput =
 ```
 
@@ -129,18 +128,17 @@ Because there is no state in this example, we use the `Unit` type and its only v
 
 The application parameter is where the render is where the render function and canvas element size are set. There are many parameters that will not be needed for every Gesso application, so the easiest way to create the application input is to start with the default.
 
-Using [record update syntax](https://github.com/purescript/documentation/blob/master/language/Records.md#record-update), we can set just the parameters we need:
+Using [record update syntax](https://github.com/purescript/documentation/blob/master/language/Records.md#record-update), we can start with the `defaultApp` defined in `Gesso.Application` and set only the parameters we need:
 
 - This will be a `fullscreen` application. We could also make it a fixed size, or stretch to fill available space.
-- It will render `continuously` (every animation frame) using the `render` function we define below.
+- It will render using the `render` function we define below.
 
 ```purescript
   , app:
-      Gesso.Application.mkApplication
-        $ Gesso.Application.defaultApp
-            { window = Gesso.Application.fullscreen
-            , render = Just $ Gesso.Application.continuous render
-            }
+      Gesso.Application.defaultApp
+        { window = Gesso.Application.fullscreen
+        , render = render
+        }
 ```
 
 `viewBox` defines the drawing's coordinate system. With a fullscreen or stretched canvas, the drawing will remain centered and scale until it is just big (or small) enough to be completely contained in the available space. Therefore, coordinates in the drawing may not be the same size as coordinates on the rest of the page. Gesso provides functions to convert between the two coordinate systems, which appear in more advanced tutorials.
@@ -160,7 +158,7 @@ The process is essentially the same as setting the `viewBox` on an SVG with [`pr
 
 ### `render`
 
-The `render` function has several inputs. In this example, we only need the canvas context, so the others are ignored with a `_` character.
+The `render` function has several inputs. In this example, we only need the canvas context, so the others are ignored with an underscore (`_`) character.
 
 Using the Canvas API bindings from [`purescript-canvas`](https://pursuit.purescript.org/packages/purescript-canvas/4.0.0), we print a message on our drawing. You could also use any other Canvas API bindings that work with the `Context2D` type from `Graphics.Canvas`.
 
@@ -172,4 +170,4 @@ render _ _ _ context = do
 
 ## Next Steps
 
-The next tutorial, [Bouncing Ball](https://github.com/smilack/purescript-gesso/blob/master/docs/tutorials/bouncing-ball.md), introduces application state and the update function.
+The next example, [Bouncing Ball](../bouncing-ball/README.md), introduces application state and the update function.
