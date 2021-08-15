@@ -16,6 +16,8 @@ Then, you can build each example (or all of them) with npm scripts:
 npm run example-all
 
 npm run example-hello
+npm run example-bouncing-ball
+npm run example-controlling-ball
 npm run example-clock
 npm run example-unit-grid
 npm run example-paint
@@ -27,7 +29,9 @@ This creates an `example.js` file in the example's `dist` folder. Open `examples
 
 See each example's `README` for more detail and an explanation of its implementation:
 
-- [Hello](https://github.com/smilack/purescript-gesso/tree/master/examples/hello) is the most minimal example that renders anything
-- [Clock](https://github.com/smilack/purescript-gesso/tree/master/examples/clock) is a more complex drawing using the scaling functions that renders the current system time as an analog clock
-- [Unit Grid](https://github.com/smilack/purescript-gesso/tree/master/examples/unit-grid) adds mouse events to show where the user clicked on a grid
-- [Paint](https://github.com/smilack/purescript-gesso/tree/master/examples/paint) is a Halogen application with an embedded Gesso component. It uses Halogen queries to communicate between the Gesso component and parent component.
+- [Hello](hello) is the most minimal example that renders anything
+- [Clock](clock) is a more complex drawing using the scaling functions that renders the current system time as an analog clock
+- [Unit Grid](unit-grid) adds mouse events to show where the user clicked on a grid
+- [Paint](paint) is a Halogen application with an embedded Gesso component. It uses Halogen queries to communicate between the Gesso component and parent component.
+- [Bouncing Ball](bouncing-ball) - a circle that moves around the drawing and bounces off the edges.
+- [Controlling the Ball](controlling-ball) - move the circle with the mouse or arrow keys.

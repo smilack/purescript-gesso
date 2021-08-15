@@ -74,7 +74,7 @@ $ spago install gesso
 
 ***The documentation is still in progress and some pages are incomplete.***
 
-- Documentation, including a quick-start guide, is in the docs folder.
+- Documentation, including a quick-start guide, is in the [docs](docs) folder.
 - If you encounter a bug, the documentation is unclear or incorrect, or you have ideas for improving the API, open an issue.
 - For general help or questions, create a thread on the [PureScript Discourse instance](https://discourse.purescript.org/) or the [PureScript Discord Server](https://purescript.org/chat).
 
@@ -84,12 +84,12 @@ $ spago install gesso
 
 There are several example programs in the examples folder:
 
-- [Hello](https://github.com/smilack/purescript-gesso/tree/master/examples/hello) is the most minimal example that renders anything
-- [Clock](https://github.com/smilack/purescript-gesso/tree/master/examples/clock) is a more complex drawing using the scaling functions that renders the current system time as an analog clock
-- [Unit Grid](https://github.com/smilack/purescript-gesso/tree/master/examples/unit-grid) adds mouse events to show where the user clicked on a grid
-- [Paint](https://github.com/smilack/purescript-gesso/tree/master/examples/paint) is a Halogen application with an embedded Gesso component. It uses Halogen queries to communicate between the Gesso component and parent component.
-- [Bouncing Ball](https://github.com/smilack/purescript-gesso/tree/master/examples/bouncing-ball) - a circle that moves around the drawing and bounces off the edges.
-- [Controlling the Ball](https://github.com/smilack/purescript-gesso/tree/master/examples/controlling-ball) - move the circle with the mouse or arrow keys.
+- [Hello](examples/hello) is the most minimal example that renders anything
+- [Clock](examples/clock) is a more complex drawing using the scaling functions that renders the current system time as an analog clock
+- [Unit Grid](examples/unit-grid) adds mouse events to show where the user clicked on a grid
+- [Paint](examples/paint) is a Halogen application with an embedded Gesso component. It uses Halogen queries to communicate between the Gesso component and parent component.
+- [Bouncing Ball](examples/bouncing-ball) - a circle that moves around the drawing and bounces off the edges.
+- [Controlling the Ball](examples/controlling-ball) - move the circle with the mouse or arrow keys.
 
 ## Contributing
 
