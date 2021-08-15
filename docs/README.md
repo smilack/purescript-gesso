@@ -1,9 +1,9 @@
 # Gesso Documentation
 
-- [Quick Start/Tutorials]() - Step-by-step projects for Gesso newcomers
-- [How do I...?]() - Q&A about more obscure features
-- [Reference Guide]() - Detailed look at types and functions
-- [Discussions]() - Philosophy behind why features work a certain way or overviews of relevant non-Gesso-specific topics
+- [Quick Start/Tutorials](#quick-starttutorials) - Step-by-step projects for Gesso newcomers
+- [How do I...?](#how-do-i) - Q&A about more obscure features
+- [Reference Guide](#reference-guide) - Detailed look at types and functions
+- [Discussions](#discussions) - Philosophy behind why features work a certain way or overviews of relevant non-Gesso-specific topics
 
 ## Quick Start/Tutorials
 
