@@ -10,9 +10,9 @@ You provide Gesso with:
 
 - Initial application state
 - Window mode (fullscreen, fixed size, or stretch to fit another element) and a view box (origin point, width, and height, like an SVG)
-- Render function and whether to render continuously or only when the state changes
-- Update function run before each render
-- Event handlers
+- Render function
+- (Optionally) Update function run before each render
+- (Optionally) Event handlers
 - (Optionally) I/O functions to communicate with a parent application
 
 Then, Gesso:
@@ -27,7 +27,7 @@ Then, Gesso:
 ### Is Gesso a...
 
 - **Canvas API?** No, while Gesso gives you easy access to the `Context2D` type, it is agnostic about the way you interact with it. You could use the official Canvas bindings in [purescript-canvas](https://pursuit.purescript.org/packages/purescript-canvas), another library with higher-level bindings, or your own custom ones.
-- **Game engine?** No, Gesso does not provide anything like a physics engine, asset pipeline, or audio functions that a complete game engine might include. However, because Gesso uses `requestAnimationFrame` to run your update and rendering functions, you could certainly make a game with Gesso if you wanted to mix and match other libraries or write your own handling for physics, sound, etc.
+- **Game engine?** No, Gesso does not provide anything like a physics engine, asset pipeline, or audio functions that a complete game engine might include. However, because Gesso uses `requestAnimationFrame` to run your update and rendering functions, you could certainly make a game with Gesso if you wanted to mix and match with other libraries or write your own handling for physics, sound, etc.
 
 ## Installation
 
@@ -76,7 +76,7 @@ $ spago install gesso
 
 - Documentation, including a quick-start guide, is in the docs folder.
 - If you encounter a bug, the documentation is unclear or incorrect, or you have ideas for improving the API, open an issue.
-- For general help or questions, create a thread on the [PureScript Discourse](https://discourse.purescript.org/).
+- For general help or questions, create a thread on the [PureScript Discourse instance](https://discourse.purescript.org/) or the [PureScript Discord Server](https://purescript.org/chat).
 
 ## Examples
 
