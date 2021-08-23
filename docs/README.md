@@ -40,6 +40,8 @@ These how-to guides address specific questions a developer might have after spen
 
 * How do I render fonts consistently at different sizes?
 
+* How do I know what part of the canvas is visible?
+
 ## Reference Guide
 
 ***Coming Soon***
