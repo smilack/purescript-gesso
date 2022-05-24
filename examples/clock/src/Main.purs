@@ -97,7 +97,7 @@ render _ _ scale@{ toRectangle, screen, viewBox } context = do
   drawNumber :: Int -> Effect Unit
   drawNumber i = do
     let
-      angle = (_ - eta) <<< (_ * tau / 12.0) <<< toNumber $ i `mod` 12
+      angle = (_ - eta) <<< (_ * (tau / 12.0)) <<< toNumber $ i `mod` 12
 
       x = clock.x + (0.775 * clock.r * cos angle)
 
@@ -118,13 +118,13 @@ render _ _ scale@{ toRectangle, screen, viewBox } context = do
     else
       Canvas.setLineWidth context $ scale.width.toCr 3.0
     let
-      angle = (_ * tau / 60.0) <<< toNumber $ i
+      angle = (_ * (tau / 60.0)) <<< toNumber $ i
     drawLineSegment angle 0.9 0.95
 
   drawHourHand :: Number -> Number -> Effect Unit
   drawHourHand hour minute = do
     let
-      angle = (_ - eta) <<< (_ * tau / 12.0) $ (_ + minute / 60.0) $ hour
+      angle = (_ - eta) <<< (_ * (tau / 12.0)) $ (_ + (minute / 60.0)) $ hour
     Canvas.setLineCap context Canvas.Round
     Canvas.setStrokeStyle context "black"
     Canvas.setLineWidth context $ scale.width.toCr 16.0
@@ -133,7 +133,7 @@ render _ _ scale@{ toRectangle, screen, viewBox } context = do
   drawMinuteHand :: Number -> Number -> Effect Unit
   drawMinuteHand minute second = do
     let
-      angle = (_ - eta) <<< (_ * tau / 60.0) $ (_ + second / 60.0) $ minute
+      angle = (_ - eta) <<< (_ * (tau / 60.0)) $ (_ + (second / 60.0)) $ minute
     Canvas.setLineCap context Canvas.Round
     Canvas.setStrokeStyle context "black"
     Canvas.setLineWidth context $ scale.width.toCr 16.0
@@ -142,7 +142,7 @@ render _ _ scale@{ toRectangle, screen, viewBox } context = do
   drawSecondHand :: Number -> Effect Unit
   drawSecondHand second = do
     let
-      angle = (_ - eta) <<< (_ * tau / 60.0) $ second
+      angle = (_ - eta) <<< (_ * (tau / 60.0)) $ second
     Canvas.setLineCap context Canvas.Square
     Canvas.setStrokeStyle context "#DD0000"
     Canvas.setLineWidth context $ scale.width.toCr 7.0
