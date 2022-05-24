@@ -5,6 +5,7 @@ import Data.Array (range)
 import Data.Foldable (sequence_, traverse_)
 import Data.Int (toNumber, floor, round)
 import Data.Maybe (Maybe(..))
+import Data.Number (tau)
 import Effect (Effect)
 import Gesso (runGessoAff, awaitBody, run) as G
 import Gesso.Application as GApp
@@ -14,7 +15,6 @@ import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
 import Gesso.Time as GTime
 import Graphics.Canvas as Canvas
-import Math (tau)
 
 main :: Effect Unit
 main =

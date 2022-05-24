@@ -2,6 +2,7 @@ module Example.ControllingBall.Main where
 
 import Prelude
 import Data.Maybe (Maybe(..))
+import Data.Number (pi)
 import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application as GApp
@@ -11,7 +12,6 @@ import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
 import Gesso.Time as GTime
 import Graphics.Canvas as Canvas
-import Math (pi)
 import Web.UIEvent.KeyboardEvent as KEv
 
 main :: Effect Unit

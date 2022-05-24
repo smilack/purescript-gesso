@@ -2,6 +2,7 @@ module Example.BouncingBall.Main where
 
 import Prelude
 import Data.Maybe (Maybe(..))
+import Data.Number (pi)
 import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application as GApp
@@ -10,7 +11,6 @@ import Gesso.Dimensions as GDims
 import Gesso.Interactions as GInt
 import Gesso.Time as GTime
 import Graphics.Canvas as Canvas
-import Math (pi)
 
 main :: Effect Unit
 main =

@@ -1,6 +1,5 @@
 let config = ../../spago.dhall
 
 in config // {
-  sources = config.sources # [ "examples/bouncing-ball/**/*.purs" ],
-  dependencies = config.dependencies # [ "math" ]
+  sources = config.sources # [ "examples/bouncing-ball/**/*.purs" ]
 }

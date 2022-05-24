@@ -7,7 +7,6 @@ in config // {
     [ "arrays"
     , "datetime"
     , "enums"
-    , "math"
     , "now"
     ]
 }

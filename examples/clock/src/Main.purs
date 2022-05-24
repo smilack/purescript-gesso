@@ -5,6 +5,7 @@ import Data.Array (range)
 import Data.Enum (fromEnum)
 import Data.Foldable (sequence_)
 import Data.Int (toNumber, floor)
+import Data.Number (cos, sin, pi, tau)
 import Data.Time as Time
 import Effect (Effect)
 import Effect.Now (nowTime) as Now
@@ -15,7 +16,6 @@ import Gesso.Dimensions as GDim
 import Gesso.Interactions as GInt
 import Gesso.Time as GTime
 import Graphics.Canvas as Canvas
-import Math (cos, sin, pi, tau)
 
 main :: Effect Unit
 main =
