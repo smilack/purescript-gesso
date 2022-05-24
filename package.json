@@ -12,7 +12,8 @@
     "example-paint": "spago --config examples/paint/spago.dhall bundle-app --main Example.Paint.Main --to examples/paint/dist/example.js"
   },
   "devDependencies": {
-    "purescript": "0.14.0",
-    "spago": "^0.18.1"
+    "purescript": "0.15.2",
+    "spago": "^0.20.9",
+    "esbuild": "^0.14.39"
   }
 }
