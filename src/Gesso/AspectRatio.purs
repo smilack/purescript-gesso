@@ -20,8 +20,7 @@ import Prelude
 
 -- | The `AspectRatio` type follows the normal convention of width:height,
 -- | so `AspectRatio 16.0 9.0` is 16:9.
-data AspectRatio
-  = AspectRatio Number Number
+data AspectRatio = AspectRatio Number Number
 
 instance showAspectRatio :: Show AspectRatio where
   show = show <<< toNumber

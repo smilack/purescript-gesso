@@ -35,20 +35,17 @@ import Halogen.HTML.Properties (IProp)
 -- | This is the type of the `on` functions from `Gesso.Interactions.Events`.
 -- | For example,
 -- | `onClick :: forall r i. (MouseEvent -> i) -> IProp (onClick :: MouseEvent | r) i`
-type EventProp event i
-  = (event -> i) -> IProp HTMLcanvas i
+type EventProp event i = (event -> i) -> IProp HTMLcanvas i
 
 -- | Alias for an event handler, which receives an event and returns an
 -- | `UpdateFunction`. An `UpdateFunction` receives a time delta (`Gesso.Time`),
 -- | a coordinate scaler (`Gesso.Dimensions`), and the current state, and may
 -- | return an updated state if the state should change in response to the
 -- | event.
-type Handler event localState
-  = event -> App.UpdateFunction localState
+type Handler event localState = event -> App.UpdateFunction localState
 
 -- | Like a regular [`Handler`](#t:Handler) but runs in `Effect`.
-type EffectHandler event localState
-  = event -> App.EffectUpdateFunction localState
+type EffectHandler event localState = event -> App.EffectUpdateFunction localState
 
 -- | An `Interaction` is a combination of an event property
 -- | ([`EventProp`](#t:EventProp) e.g., `onClick`) and an event handler, which
@@ -58,8 +55,7 @@ data Interaction event localState i
   | Effectful (EventProp event i) (EffectHandler event localState)
 
 -- | Alias for an array of [`Interaction`s](#t:Interaction)
-type InteractionList event localState i
-  = Array (Interaction event localState i)
+type InteractionList event localState i = Array (Interaction event localState i)
 
 -- | `Interactions` is a record containing arrays of interactions for each type
 -- | of event that Canvas supports.
@@ -77,8 +73,7 @@ type InteractionList event localState i
 -- |
 -- | I think, barring some trick I'm not aware of, I have to separate the
 -- | Interactions into separate lists for each event.
-type Interactions localState i
-  =
+type Interactions localState i =
   { base :: InteractionList Event localState i
   , clipboard :: InteractionList ClipboardEvent localState i
   , focus :: InteractionList FocusEvent localState i

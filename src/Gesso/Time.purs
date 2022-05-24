@@ -34,8 +34,7 @@ requestAnimationFrame fn = map RequestAnimationFrameId <<< _requestAnimationFram
 -- | A number representing a specific time in milliseconds. See
 -- | [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp)
 newtype Timestamp :: forall k. k -> Type
-newtype Timestamp a
-  = Timestamp Number
+newtype Timestamp a = Timestamp Number
 
 -- | A phantom type for tagging Timestamps
 data Now
@@ -44,12 +43,10 @@ data Now
 data Prev
 
 -- | Alias for a timestamp representing the time the current frame started
-type TimestampCurrent
-  = Timestamp Now
+type TimestampCurrent = Timestamp Now
 
 -- | Alias for a timestamp representing the time the previous frame started
-type TimestampPrevious
-  = Timestamp Prev
+type TimestampPrevious = Timestamp Prev
 
 -- | Mark a current time as the new previous time
 toPrev :: TimestampCurrent -> TimestampPrevious
@@ -57,8 +54,7 @@ toPrev = coerce
 
 -- | A record containing a current timestamp, the previous timestamp, and the
 -- | difference between them. All values are in milliseconds.
-type Delta
-  = { now :: TimestampCurrent, prev :: TimestampPrevious, delta :: Number }
+type Delta = { now :: TimestampCurrent, prev :: TimestampPrevious, delta :: Number }
 
 -- | Create a Delta record from a current and a previous timestamp.
 delta :: TimestampCurrent -> TimestampPrevious -> Delta

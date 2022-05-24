@@ -8,19 +8,15 @@ import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties as HP
 import Type.Proxy (Proxy(..))
 
-type Slot slot
-  = forall q. H.Slot q Output slot
+type Slot slot = forall q. H.Slot q Output slot
 
 _colorButton = Proxy :: Proxy "colorButton"
 
-type State
-  = { color :: String, selected :: String }
+type State = { color :: String, selected :: String }
 
-type Input
-  = State
+type Input = State
 
-data Output
-  = Clicked String
+data Output = Clicked String
 
 data Action
   = ClickedAction String
@@ -34,9 +30,9 @@ component =
     , eval:
         H.mkEval
           $ H.defaultEval
-            { handleAction = handleAction
-            , receive = Just <<< Update
-            }
+              { handleAction = handleAction
+              , receive = Just <<< Update
+              }
     }
 
 render :: forall s m. State -> H.ComponentHTML Action s m
@@ -45,11 +41,11 @@ render { color, selected } =
     [ onClick \_ -> ClickedAction color
     , style
         $ ("background-color: " <> color <> ";")
-          <> "width: 72px;"
-          <> "height: 72px;"
-          <> "margin: 6px 12px;"
-          <> "cursor: pointer;"
-          <> selectedStyle
+            <> "width: 72px;"
+            <> "height: 72px;"
+            <> "margin: 6px 12px;"
+            <> "cursor: pointer;"
+            <> selectedStyle
     ]
     []
   where

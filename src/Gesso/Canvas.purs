@@ -43,8 +43,7 @@ import Web.HTML.Window (toEventTarget, document)
 
 -- | The Halogen slot type for Canvas, which is used to include it inside
 -- | another Halogen component.
-type Slot input output slot
-  = H.Slot (Query input) (Output output) slot
+type Slot input output slot = H.Slot (Query input) (Output output) slot
 
 -- | A proxy type for Canvas provided for convenience, for use with Slot.
 _gessoCanvas = Proxy :: Proxy "gessoCanvas"
@@ -75,8 +74,7 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- | - `rafId` is the ID of the most recently requested animation frame. It's
 -- |   set when `requestAnimationFrame` is called and cleared when the animation
 -- |   frame callback runs.
-type State localState appInput appOutput
-  =
+type State localState appInput appOutput =
   { name :: String
   , app :: App.AppSpec Context2D localState appInput appOutput
   , localState :: localState
@@ -108,13 +106,11 @@ data Action localState
 
 -- | The component's output type is defined by the `OutputMode` in the
 -- | `Application.AppSpec`.
-newtype Output appOutput
-  = Output appOutput
+newtype Output appOutput = Output appOutput
 
 -- | The component's input type is defined by the `InputReceiver` in the
 -- | `Application.AppSpec`.
-data Query appInput a
-  = Input appInput a
+data Query appInput a = Input appInput a
 
 -- | The input provided when the Canvas component is created. The component has
 -- | no `receive` defined in its `EvalSpec` (see [`component`](#v:component)'s
@@ -128,8 +124,7 @@ data Query appInput a
 -- | - `viewBox` is the desired dimensions for the drawing surface.
 -- | - `interactions` is the events which will be attached to the
 -- |    canvas element.
-type Input localState appInput appOutput
-  =
+type Input localState appInput appOutput =
   { name :: String
   , app :: App.AppSpec Context2D localState appInput appOutput
   , localState :: localState
@@ -150,11 +145,11 @@ component =
     , eval:
         H.mkEval
           $ H.defaultEval
-            { handleAction = handleAction
-            , handleQuery = handleQuery
-            , initialize = Just Initialize
-            , finalize = Just Finalize
-            }
+              { handleAction = handleAction
+              , handleQuery = handleQuery
+              , initialize = Just Initialize
+              , finalize = Just Finalize
+              }
     }
 
 -- | Get initial state for Canvas. Most values are copied directly from the
@@ -197,8 +192,8 @@ render
 render { name, clientRect, app, interactions } =
   canvas
     $ [ id name, style $ App.windowCss app.window, tabIndex 0 ]
-      <> GI.toProps QueueUpdate interactions
-      <> maybe [] Dims.toSizeProps clientRect
+        <> GI.toProps QueueUpdate interactions
+        <> maybe [] Dims.toSizeProps clientRect
   where
   style :: forall r i. CSS.CSS -> IProp (style :: String | r) i
   style =
@@ -457,9 +452,9 @@ subscribeResize = do
   wnd <- H.liftEffect window
   H.subscribe
     $ HE.eventListener
-      (EventType "resize")
-      (toEventTarget wnd)
-      (const $ Just HandleResize)
+        (EventType "resize")
+        (toEventTarget wnd)
+        (const $ Just HandleResize)
 
 -- | Save the updated local state of the application. Compare the old and new
 -- | states in the `OutputProducer` function and send output, if necessary.

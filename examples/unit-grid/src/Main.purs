@@ -22,8 +22,7 @@ main =
     body <- G.awaitBody
     G.run GC.component input body
 
-type LocalState
-  =
+type LocalState =
   { mousePos :: Maybe GDim.Point
   , clicked :: Maybe GDim.Point
   }

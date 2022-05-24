@@ -24,8 +24,7 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Record (merge) as Record
 
-type CanvasState
-  =
+type CanvasState =
   {
   | CanvasIO'
       ( mouseCell :: Maybe { x :: Int, y :: Int }
@@ -34,16 +33,13 @@ type CanvasState
       )
   }
 
-type RootState
-  = CanvasIO
+type RootState = CanvasIO
 
-type CanvasIO
-  = { | CanvasIO' () }
+type CanvasIO = { | CanvasIO' () }
 
 -- These are all the things that Root needs to know. If Root is aware
 --   of mouseCell, it changes the global state too often, causing lag.
-type CanvasIO' r
-  =
+type CanvasIO' r =
   ( showGrid :: Boolean
   , color :: String
   , pixels :: List Pixel
@@ -51,13 +47,11 @@ type CanvasIO' r
   | r
   )
 
-newtype Pixel
-  = Pixel { x :: Int, y :: Int, color :: String }
+newtype Pixel = Pixel { x :: Int, y :: Int, color :: String }
 
 derive instance eqPixel :: Eq Pixel
 
-type Slots
-  =
+type Slots =
   ( colorButton :: CB.Slot Int
   , gessoCanvas :: GC.Slot CanvasIO CanvasIO Unit
   )
@@ -132,8 +126,8 @@ render state =
       , HH.ul
           [ style "list-style-type: none;" ]
           $ history styles.redo (reverse state.redo)
-            <> [ HH.li [ style styles.place ] [ HH.span [ style styles.line ] [] ] ]
-            <> history "" state.pixels
+              <> [ HH.li [ style styles.place ] [ HH.span [ style styles.line ] [] ] ]
+              <> history "" state.pixels
       ]
 
   history sty pixels = fromFoldable $ map listItem pixels
@@ -149,10 +143,10 @@ render state =
     HH.span
       [ style
           $ "display: inline-block;"
-            <> "width: 10px;"
-            <> "height: 10px;"
-            <> "border: 1px black solid;"
-            <> ("background-color: " <> color)
+              <> "width: 10px;"
+              <> "height: 10px;"
+              <> "border: 1px black solid;"
+              <> ("background-color: " <> color)
       ]
       []
 

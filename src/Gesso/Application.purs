@@ -40,8 +40,7 @@ import Gesso.Time as T
 -- | - `input` is an [`InputReceiver`](#t:InputReceiver) that defines how the
 -- |   state should change in response to receiving input from the host
 -- |   application.
-type AppSpec context local input output
-  =
+type AppSpec context local input output =
   { window :: WindowMode
   , render :: RenderFunction context local
   , update :: Update local
@@ -97,8 +96,8 @@ fullscreen = Fullscreen
 -- |
 -- | The render function may run any operations in `Effect`, not just functions
 -- | related to drawing on the canvas.
-type RenderFunction context local
-  = local -> T.Delta -> D.Scaler -> context -> Effect Unit
+type RenderFunction context local =
+  local -> T.Delta -> D.Scaler -> context -> Effect Unit
 
 -- | An `UpdateFunction` gets a `Delta` record from `Gesso.Time`, a `Scaler`
 -- | from `Gesso.Dimensions`, and the current local state, and may return an
@@ -108,12 +107,11 @@ type RenderFunction context local
 -- | There is another version called
 -- | [`EffectUpdateFunction`](#t:EffectUpdateFunction) which has access to
 -- | `Effect`s.
-type UpdateFunction local
-  = T.Delta -> D.Scaler -> local -> Maybe local
+type UpdateFunction local = T.Delta -> D.Scaler -> local -> Maybe local
 
 -- | Like [`UpdateFunction`](#t:UpdateFunction) but runs in an `Effect` context.
-type EffectUpdateFunction local
-  = T.Delta -> D.Scaler -> local -> Effect (Maybe local)
+type EffectUpdateFunction local =
+  T.Delta -> D.Scaler -> local -> Effect (Maybe local)
 
 -- | A type representing functions that update the local state of the component.
 -- | The update function can be pure or run in `Effect`.
@@ -146,14 +144,13 @@ runUpdate delta scaler state =
 
 -- | An alias for a function that receives input from the host application and
 -- | may update the local state in response to the input.
-type InputReceiver local input
-  = input -> UpdateFunction local
+type InputReceiver local input = input -> UpdateFunction local
 
 -- | An alias for a function that compares old and new local states and may
 -- | send output based on the difference. The old state comes first and the new
 -- | state comes second.
-type OutputProducer local output
-  = T.Delta -> D.Scaler -> local -> local -> Maybe output
+type OutputProducer local output =
+  T.Delta -> D.Scaler -> local -> local -> Maybe output
 
 -- | Get the appropriate CSS for the screen element based on the `WindowMode`.
 windowCss :: WindowMode -> CSS.CSS

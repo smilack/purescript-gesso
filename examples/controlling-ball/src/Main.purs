@@ -20,11 +20,9 @@ main =
     body <- Gesso.awaitBody
     Gesso.run Gesso.canvas canvasInput body
 
-type State
-  = { x :: Number, y :: Number, radius :: Number, keys :: Keys }
+type State = { x :: Number, y :: Number, radius :: Number, keys :: Keys }
 
-type Keys
-  = { up :: Boolean, down :: Boolean, left :: Boolean, right :: Boolean }
+type Keys = { up :: Boolean, down :: Boolean, left :: Boolean, right :: Boolean }
 
 canvasInput :: forall i o. GCan.Input State i o
 canvasInput =

@@ -124,16 +124,13 @@ data Size
   | HeightAndRatio HR
 
 -- | A shorthand for a record with `width` and `height` fields.
-type WH
-  = { width :: Number, height :: Number }
+type WH = { width :: Number, height :: Number }
 
 -- | A shorthand for a record with `width` and `aspectRatio` fields.
-type WR
-  = { width :: Number, aspectRatio :: AspectRatio }
+type WR = { width :: Number, aspectRatio :: AspectRatio }
 
 -- | A shorthand for a record with `height` and `aspectRatio` fields.
-type HR
-  = { height :: Number, aspectRatio :: AspectRatio }
+type HR = { height :: Number, aspectRatio :: AspectRatio }
 
 -- | Construct a side from `width` and `height`.
 fromWidthAndHeight :: WH -> Size
@@ -191,12 +188,10 @@ derive instance eqSize :: Eq Size
 -- Point type --
 ----------------
 -- | A `Point` is constructed from an `x` and a `y` value.
-newtype Point
-  = Point P
+newtype Point = Point P
 
 -- | A shorthand for a record with `x` and `y` fields.
-type P
-  = { x :: Number, y :: Number }
+type P = { x :: Number, y :: Number }
 
 -- | Construct a `Point` from `x` and `y` values.
 fromXAndY :: P -> Point
@@ -229,8 +224,7 @@ derive instance eqPoint :: Eq Point
 -- | [`ClientRect`](#t:ClientRect) and [`ViewBox`](#t:ViewBox) are the two kinds
 -- | of dimensions.
 data Dimensions :: Type -> Type
-data Dimensions a
-  = Dimensions Point Size
+data Dimensions a = Dimensions Point Size
 
 instance positionedDimensions :: Positioned (Dimensions a) where
   getX (Dimensions p _) = getX p
@@ -253,8 +247,7 @@ derive instance eqDimensions :: Eq (Dimensions a)
 data ClientRect'
 
 -- | `ClientRect` represents the actual size and position of an HTML element.
-type ClientRect
-  = Dimensions ClientRect'
+type ClientRect = Dimensions ClientRect'
 
 instance showClientRect :: Show (Dimensions ClientRect') where
   show = ("ClientRect " <> _) <<< showDimensioned
@@ -275,8 +268,7 @@ fromDOMRect { left, top, width, height } =
 data ViewBox'
 
 -- | `ViewBox` represents the desired drawing area for an application.
-type ViewBox
-  = Dimensions ViewBox'
+type ViewBox = Dimensions ViewBox'
 
 instance showViewBox :: Show (Dimensions ViewBox') where
   show = ("ViewBox " <> _) <<< showDimensioned
@@ -321,8 +313,7 @@ fromPointAndSize = Dimensions
 -- |
 -- | `toRectangle` is a helper that converts from a `Dimensioned` type to the
 -- | `Rectangle` type from `Graphics.Canvas`.
-type Scaler
-  =
+type Scaler =
   { scale :: Number
   , viewBox :: ViewBox
   , screen :: ClientRect

@@ -18,8 +18,8 @@ main =
     body <- Gesso.awaitBody
     Gesso.run Gesso.canvas canvasInput body
 
-type State
-  = { x :: Number, vx :: Number, y :: Number, vy :: Number, radius :: Number }
+type State =
+  { x :: Number, vx :: Number, y :: Number, vy :: Number, radius :: Number }
 
 canvasInput :: forall i o. GCan.Input State i o
 canvasInput =
@@ -57,7 +57,8 @@ updateV position radius min max velocity
   | position - radius + velocity < min = 1.0
   | otherwise = velocity
 
-render :: State -> GTime.Delta -> GDims.Scaler -> Canvas.Context2D -> Effect Unit
+render
+  :: State -> GTime.Delta -> GDims.Scaler -> Canvas.Context2D -> Effect Unit
 render { x, y, radius } _ scale context = do
   Canvas.clearRect context (scale.toRectangle scale.screen)
   Canvas.setFillStyle context "red"
