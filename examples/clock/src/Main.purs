@@ -54,7 +54,7 @@ render _ _ scale@{ toRectangle, screen, viewBox } context = do
   -- Center dot
   Canvas.setFillStyle context "#888888"
   Canvas.fillPath context do
-    Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: scale.width.toCr 15.0 }
+    Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: scale.width.toCr 15.0, useCounterClockwise: false }
   where
   clock =
     { x: scale.x.toCr $ (GDim.getWidth viewBox) / 2.0
@@ -79,11 +79,11 @@ render _ _ scale@{ toRectangle, screen, viewBox } context = do
   drawFrame = do
     Canvas.setFillStyle context "#eeeeee"
     Canvas.fillPath context do
-      Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r }
+      Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r, useCounterClockwise: false }
     Canvas.setStrokeStyle context "#888888"
     Canvas.setLineWidth context $ scale.width.toCr 25.0
     Canvas.strokePath context do
-      Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r }
+      Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r, useCounterClockwise: false }
 
   drawNumbers :: Effect Unit
   drawNumbers = do

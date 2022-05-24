@@ -101,7 +101,7 @@ render { clicked, mousePos } _ scale context = do
         Canvas.setStrokeStyle context "black"
         Canvas.setLineWidth context $ scale.width.toCr 0.01
         Canvas.strokePath context do
-          Canvas.arc context { x: GDim.getX p, y: GDim.getY p, radius: scale.width.toCr 0.05, start: 0.0, end: tau }
+          Canvas.arc context { x: GDim.getX p, y: GDim.getY p, radius: scale.width.toCr 0.05, start: 0.0, end: tau, useCounterClockwise: false }
         drawCross (GDim.getX p) (GDim.getY p) 0.05
     where
     size = show $ floor $ scale.width.toCr 0.2

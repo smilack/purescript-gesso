@@ -110,4 +110,4 @@ render { x, y, radius } _ scale context = do
   Canvas.clearRect context (scale.toRectangle scale.screen)
   Canvas.setFillStyle context "red"
   Canvas.fillPath context do
-    Canvas.arc context { x, y, radius, start: 0.0, end: 2.0 * pi }
+    Canvas.arc context { x, y, radius, start: 0.0, end: 2.0 * pi, useCounterClockwise: false }
