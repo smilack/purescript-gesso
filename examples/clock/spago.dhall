@@ -8,5 +8,6 @@ in config // {
     , "datetime"
     , "enums"
     , "now"
+    , "numbers"
     ]
 }
