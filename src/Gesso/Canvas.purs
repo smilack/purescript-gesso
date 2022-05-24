@@ -34,11 +34,11 @@ import Halogen.HTML.Properties (IProp, id, tabIndex)
 import Halogen.Query.Event as HE
 import Halogen.Subscription as HS
 import Type.Proxy (Proxy(..))
+import Web.DOM.Element (Element, DOMRect, getBoundingClientRect)
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.Event.Event (EventType(..))
 import Web.HTML (window)
 import Web.HTML.HTMLDocument (toNonElementParentNode)
-import Web.HTML.HTMLElement (getBoundingClientRect, fromElement, HTMLElement, DOMRect)
 import Web.HTML.Window (toEventTarget, document)
 
 -- | The Halogen slot type for Canvas, which is used to include it inside
@@ -82,7 +82,7 @@ type State localState appInput appOutput
   , localState :: localState
   , viewBox :: Dims.ViewBox
   , clientRect :: Maybe Dims.ClientRect
-  , canvas :: Maybe HTMLElement
+  , canvas :: Maybe Element
   , context :: Maybe Context2D
   , scaler :: Maybe Dims.Scaler
   , resizeSub :: Maybe H.SubscriptionId
@@ -407,15 +407,15 @@ getContext name = do
   pure mcontext
 
 -- | Attempt to find the `canvas` element on the page.
-getCanvasElement :: String -> Effect (Maybe HTMLElement)
+getCanvasElement :: String -> Effect (Maybe Element)
 getCanvasElement name = do
   doc <- document =<< window
   mcanvas <- getElementById name $ toNonElementParentNode doc
-  pure $ mcanvas >>= fromElement
+  pure mcanvas
 
 -- | Attempt to get the bounding client rect for an HTML element and convert it
 -- | to a `ClientRect` value.
-getCanvasClientRect :: Maybe HTMLElement -> Effect (Maybe Dims.ClientRect)
+getCanvasClientRect :: Maybe Element -> Effect (Maybe Dims.ClientRect)
 getCanvasClientRect mcanvas = do
   (mbounding :: Maybe DOMRect) <- traverse getBoundingClientRect mcanvas
   pure $ Dims.fromDOMRect <$> mbounding

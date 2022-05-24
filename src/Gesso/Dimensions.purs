@@ -41,7 +41,7 @@ import Gesso.AspectRatio (AspectRatio)
 import Gesso.AspectRatio as AR
 import Graphics.Canvas (Rectangle)
 import Halogen.HTML.Properties as HP
-import Web.HTML.HTMLElement (DOMRect)
+import Web.DOM.Element (DOMRect)
 import Web.UIEvent.MouseEvent (pageX, pageY, MouseEvent)
 
 -----------------
@@ -412,17 +412,17 @@ mkScaler viewBox clientRect@(Dimensions _ crSize) =
 
   c = getWidth viewBox / getWidth actualVB
 
-  x' = (_ - w' $ getX viewBox) <<< (_ + margin.w) <<< w'
+  x' = (_ - (w' $ getX viewBox)) <<< (_ + margin.w) <<< w'
 
   w' = (_ / c)
 
-  y' = (_ - h' $ getY viewBox) <<< (_ + margin.h) <<< h'
+  y' = (_ - (h' $ getY viewBox)) <<< (_ + margin.h) <<< h'
 
   h' = (_ / c)
 
   toVb =
-    { x': (_ + getX viewBox) <<< (_ * c) <<< (_ - getX clientRect + margin.w)
-    , y': (_ + getY viewBox) <<< (_ * c) <<< (_ - getY clientRect + margin.h)
+    { x': (_ + getX viewBox) <<< (_ * c) <<< (_ - (getX clientRect + margin.w))
+    , y': (_ + getY viewBox) <<< (_ * c) <<< (_ - (getY clientRect + margin.h))
     , w': (_ * c)
     , h': (_ * c)
     }

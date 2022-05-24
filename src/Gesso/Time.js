@@ -1,6 +1,4 @@
-"use strict"
-
-exports._requestAnimationFrame = function (fn) {
+export function _requestAnimationFrame(fn) {
   return function (window) {
     return function () {
       return window.requestAnimationFrame(fn);
@@ -8,7 +6,7 @@ exports._requestAnimationFrame = function (fn) {
   };
 };
 
-exports.cancelAnimationFrame = function (id) {
+export function cancelAnimationFrame(id) {
   return function (window) {
     return function () {
       return window.cancelAnimationFrame(id);
