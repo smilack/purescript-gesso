@@ -2,7 +2,7 @@
 Welcome to a Spago project!
 You can edit this file as you like.
 -}
-{ name = "my-project"
+{ name = "purescript-gesso"
 , dependencies =
   [ "aff"
   , "canvas"
@@ -17,7 +17,6 @@ You can edit this file as you like.
   , "lists"
   , "maybe"
   , "prelude"
-  , "psci-support"
   , "safe-coerce"
   , "tuples"
   , "web-clipboard"

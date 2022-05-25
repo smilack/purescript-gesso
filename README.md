@@ -35,7 +35,8 @@ This library has not been published on Pursuit yet. To use it in your project, i
 
 ```dhall
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.13.8-20210118/packages.dhall sha256:a59c5c93a68d5d066f3815a89f398bcf00e130a51cb185b2da29b20e2d8ae115
+      https://github.com/purescript/package-sets/releases/download/psc-0.15.0-20220523/packages.dhall
+        sha256:985f90fa68fd8b43b14c777d6ec2c161c4dd9009563b6f51685a54e4a26bf8ff
 
 in  upstream
 ```
@@ -45,23 +46,31 @@ On the line after `in upstream`, add this:
 ```dhall
 with gesso =
   { repo = "https://github.com/smilack/purescript-gesso.git"
-  , version = "v0.1-alpha"
+  , version = "v0.2-beta"
   , dependencies =
-    [ "aff-bus"
+    [ "aff"
     , "canvas"
     , "console"
-    , "debug"
+    , "css"
+    , "dom-indexed"
     , "effect"
+    , "foldable-traversable"
     , "halogen"
-    , "halogen-css"
-    , "halogen-hooks"
-    , "newtype"
-    , "psci-support"
-    , "record"
+    , "halogen-subscriptions"
+    , "integers"
+    , "lists"
+    , "maybe"
+    , "prelude"
+    , "safe-coerce"
+    , "tuples"
+    , "web-clipboard"
+    , "web-dom"
+    , "web-events"
+    , "web-html"
+    , "web-touchevents"
+    , "web-uievents"
     ]
   }
-with css.version = "e5beb6b16f14e7d4dc10a0bb930c936fe9dde88a"
-with css.repo = "https://github.com/purescript-contrib/purescript-css.git"
 ```
 
 Finally, run Spago's install command:
