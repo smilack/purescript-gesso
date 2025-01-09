@@ -1,0 +1,34 @@
+package:
+  dependencies:
+    - gesso
+    - aff
+    - arrays
+    - canvas
+    - console
+    - css
+    - datetime
+    - dom-indexed
+    - effect
+    - enums
+    - foldable-traversable
+    - halogen
+    - halogen-subscriptions
+    - integers
+    - lists
+    - maybe
+    - now
+    - numbers
+    - prelude
+    - safe-coerce
+    - tuples
+    - web-clipboard
+    - web-dom
+    - web-events
+    - web-html
+    - web-touchevents
+    - web-uievents
+  name: gesso-example-clock
+  bundle:
+    outfile: "dist/example.js"
+    extraArgs:
+      - "--source-maps"
