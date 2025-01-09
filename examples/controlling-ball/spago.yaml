@@ -25,6 +25,5 @@ package:
     - web-uievents
   name: gesso-example-controlling-ball
   bundle:
+    module: Example.ControllingBall.Main
     outfile: "dist/example.js"
-    extraArgs:
-      - "--source-maps"

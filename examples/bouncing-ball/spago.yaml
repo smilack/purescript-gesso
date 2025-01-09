@@ -25,6 +25,5 @@ package:
     - web-uievents
   name: gesso-example-bouncing-ball
   bundle:
+    module: Example.BouncingBall.Main
     outfile: "dist/example.js"
-    extraArgs:
-      - "--source-maps"

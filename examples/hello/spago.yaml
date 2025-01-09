@@ -24,6 +24,5 @@ package:
     - web-uievents
   name: gesso-example-hello
   bundle:
+    module: Example.Hello.Main
     outfile: "dist/example.js"
-    extraArgs:
-      - "--source-maps"

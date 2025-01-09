@@ -29,6 +29,5 @@ package:
     - web-uievents
   name: gesso-example-clock
   bundle:
+    module: Example.Clock.Main
     outfile: "dist/example.js"
-    extraArgs:
-      - "--source-maps"

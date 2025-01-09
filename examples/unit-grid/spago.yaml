@@ -26,6 +26,5 @@ package:
     - web-uievents
   name: gesso-example-unit-grid
   bundle:
+    module: Example.UnitGrid.Main
     outfile: "dist/example.js"
-    extraArgs:
-      - "--source-maps"

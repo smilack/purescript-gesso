@@ -1,7 +1,7 @@
 set -e
-npm run --silent example-hello
-npm run --silent example-bouncing-ball
-npm run --silent example-controlling-ball
-npm run --silent example-clock
-npm run --silent example-unit-grid
-npm run --silent example-paint
+spago bundle --source-maps -p gesso-example-bouncing-ball
+spago bundle --source-maps -p gesso-example-clock
+spago bundle --source-maps -p gesso-example-controlling-ball
+spago bundle --source-maps -p gesso-example-hello
+spago bundle --source-maps -p gesso-example-paint
+spago bundle --source-maps -p gesso-example-unit-grid

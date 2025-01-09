@@ -26,6 +26,5 @@ package:
     - web-uievents
   name: gesso-example-paint
   bundle:
+    module: Example.Paint.Main
     outfile: "dist/example.js"
-    extraArgs:
-      - "--source-maps"
