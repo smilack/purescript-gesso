@@ -6,14 +6,18 @@ Gesso (pronounced [['dʒɛsoʊ]](https://en.wikipedia.org/wiki/Help:IPA/English)
 
 ### What does Gesso do?
 
+Gesso is designed to get you drawing on a `<canvas>` element with PureScript as quickly and easily as possible.
+
 You provide Gesso with:
 
-- Initial application state
-- Window mode (fullscreen, fixed size, or stretch to fit another element) and a view box (origin point, width, and height, like an SVG)
 - Render function
-- (Optionally) Update function run before each render
-- (Optionally) Event handlers
-- (Optionally) I/O functions to communicate with a parent application
+- Window mode (fullscreen, fixed size, or stretch to fit another element)
+- View box (origin, width, and height — like an SVG)
+- Initial application state
+- Optionally:
+  - Update function to run before each render
+  - Event handlers
+  - I/O functions to communicate with a parent application
 
 Then, Gesso:
 
@@ -22,11 +26,11 @@ Then, Gesso:
 - Tracks local state through updates, I/O, and events
 - Updates and renders during animation frames
 - Passes the current time and a viewport scaler to your functions
-- Adjusts to window resizing
+- Automatically accounts for window resizing
 
 ### Is Gesso a...
 
-- **Canvas API?** No, while Gesso gives you easy access to the `Context2D` type, it is agnostic about the way you interact with it. You could use the official Canvas bindings in [purescript-canvas](https://pursuit.purescript.org/packages/purescript-canvas), another library with higher-level bindings, or your own custom ones.
+- **Canvas API?** No, while Gesso gives you easy access to a `Context2D` object, it is agnostic about the way you interact with it. You could use the official canvas bindings in [purescript-canvas](https://pursuit.purescript.org/packages/purescript-canvas), another library with higher-level bindings, or your own custom ones. In fact, the original idea for Gesso was to simplify experimenting with custom canvas bindings.
 - **Game engine?** No, Gesso does not provide anything like a physics engine, asset pipeline, or audio functions that a complete game engine might include. However, because Gesso uses `requestAnimationFrame` to run your update and rendering functions, you could certainly make a game with Gesso if you wanted to mix and match with other libraries or write your own handling for physics, sound, etc.
 
 ## Installation
