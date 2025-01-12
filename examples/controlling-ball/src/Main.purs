@@ -32,27 +32,27 @@ canvasInput =
       GApp.defaultApp
         { window = GApp.fullscreen
         , render = render
-        , update = GApp.pureUpdate update
+        , update = update
         }
   , viewBox: GDims.p1080
   , interactions: GInt.default { keyboard = [ keyDown, keyUp ], mouse = [ mouseDown ] }
   }
 
 mouseDown :: forall i. GInt.Interaction GEv.MouseEvent State i
-mouseDown = GInt.mkInteraction GEv.onMouseDown go
+mouseDown = GInt.Interaction GEv.onMouseDown go
   where
-  go :: GEv.MouseEvent -> GTime.Delta -> GDims.Scaler -> State -> Maybe State
-  go event _ _ state =
+  go :: GEv.MouseEvent -> GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
+  go event _ _ state = pure $
     let
       point = GDims.fromMouseEvent event
     in
       Just state { x = GDims.getX point, y = GDims.getY point }
 
 keyDown :: forall i. GInt.Interaction GEv.KeyboardEvent State i
-keyDown = GInt.mkInteraction GEv.onKeyDown go
+keyDown = GInt.Interaction GEv.onKeyDown go
   where
-  go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Maybe State
-  go event _ _ state = case KEv.key event of
+  go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
+  go event _ _ state = pure $ case KEv.key event of
     "ArrowUp" -> Just state { keys { up = true } }
     "ArrowDown" -> Just state { keys { down = true } }
     "ArrowLeft" -> Just state { keys { left = true } }
@@ -60,18 +60,18 @@ keyDown = GInt.mkInteraction GEv.onKeyDown go
     _ -> Nothing
 
 keyUp :: forall i. GInt.Interaction GEv.KeyboardEvent State i
-keyUp = GInt.mkInteraction GEv.onKeyUp go
+keyUp = GInt.Interaction GEv.onKeyUp go
   where
-  go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Maybe State
-  go event _ _ state = case KEv.key event of
+  go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
+  go event _ _ state = pure $ case KEv.key event of
     "ArrowUp" -> Just state { keys { up = false } }
     "ArrowDown" -> Just state { keys { down = false } }
     "ArrowLeft" -> Just state { keys { left = false } }
     "ArrowRight" -> Just state { keys { right = false } }
     _ -> Nothing
 
-update :: GTime.Delta -> GDims.Scaler -> State -> Maybe State
-update _ scale state@{ x, y, radius, keys: { up, down, left, right } } =
+update :: GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
+update _ scale state@{ x, y, radius, keys: { up, down, left, right } } = pure $
   Just
     state
       { x = updateP x radius xMin xMax vx

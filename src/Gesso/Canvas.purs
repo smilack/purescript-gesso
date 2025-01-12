@@ -2,16 +2,17 @@
 -- | calling requestAnimationFrame, attaching events, and running render and
 -- | update functions.
 module Gesso.Canvas
-  ( component
+  ( Action
   , Input
-  , Action
-  , Output(..)
   , Query(..)
   , Slot
+  , Output(..)
   , _gessoCanvas
+  , component
   ) where
 
 import Prelude
+
 import CSS as CSS
 import Data.Foldable (foldr, traverse_)
 import Data.Function (on)
@@ -28,6 +29,7 @@ import Gesso.Dimensions as Dims
 import Gesso.Interactions as GI
 import Gesso.Time as T
 import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
+import Halogen (liftEffect)
 import Halogen as H
 import Halogen.HTML (AttrName(..), memoized, canvas, attr)
 import Halogen.HTML.Properties (IProp, id, tabIndex)
@@ -87,8 +89,8 @@ type State localState appInput appOutput =
   , emitterSub :: Maybe H.SubscriptionId
   , listener :: Maybe (HS.Listener (Action localState))
   , interactions :: GI.Interactions localState (Action localState)
-  , queuedUpdates :: List (App.Update localState)
-  , processingUpdates :: List (App.Update localState)
+  , queuedUpdates :: List (App.UpdateFunction localState)
+  , processingUpdates :: List (App.UpdateFunction localState)
   , rafId :: Maybe T.RequestAnimationFrameId
   }
 
@@ -99,7 +101,7 @@ data Action localState
   | Tick (Maybe T.TimestampPrevious)
   | Finalize
   | StateUpdated T.Delta Dims.Scaler localState
-  | QueueUpdate (App.Update localState)
+  | QueueUpdate (App.UpdateFunction localState)
   | UpdatesProcessed
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
@@ -326,7 +328,7 @@ queueAnimationFrame
   -> Maybe (HS.Listener (Action localState))
   -> Maybe Context2D
   -> Maybe Dims.Scaler
-  -> List (App.Update localState)
+  -> List (App.UpdateFunction localState)
   -> localState
   -> App.AppSpec Context2D localState appInput appOutput
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots output m Unit
@@ -376,13 +378,13 @@ queueAnimationFrame mLastTime mlistener mcontext mscaler queuedUpdates localStat
   applyUpdate
     :: T.Delta
     -> Dims.Scaler
-    -> App.Update localState
+    -> App.UpdateFunction localState
     -> Effect (Tuple StateChanged localState)
     -> Effect (Tuple StateChanged localState)
   applyUpdate delta scaler update s = do
     (_ /\ state) <- s
 
-    mstate' <- App.runUpdate delta scaler state update
+    mstate' <- update delta scaler state
 
     case mstate' of
       Just state' -> pure $ Changed /\ state'
@@ -468,7 +470,8 @@ saveNewState
 saveNewState delta scaler state' = do
   { app, localState } <- H.get
   H.modify_ (_ { localState = state' })
-  traverse_ (H.raise <<< Output) $ app.output delta scaler localState state'
+  mOutput <- liftEffect $ app.output delta scaler localState state'
+  traverse_ (H.raise <<< Output) mOutput
 
 -- | Receiving input from the host application. Convert it into an `Update` and
 -- | call `handleAction` to add it to the update queue.
@@ -479,5 +482,5 @@ handleQuery
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m (Maybe a)
 handleQuery (Input inData a) = do
   { input } <- H.gets _.app
-  handleAction $ QueueUpdate $ App.pureUpdate $ input inData
+  handleAction $ QueueUpdate $ input inData
   pure (Just a)

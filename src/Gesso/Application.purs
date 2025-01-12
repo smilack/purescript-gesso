@@ -9,11 +9,6 @@ module Gesso.Application
   , fullscreen
   , RenderFunction
   , UpdateFunction
-  , EffectUpdateFunction
-  , Update
-  , pureUpdate
-  , effectUpdate
-  , runUpdate
   , OutputProducer
   , InputReceiver
   , windowCss
@@ -32,8 +27,8 @@ import Gesso.Time as T
 -- |   element should size and position itself.
 -- | - `render` is a `[RenderFunction](#t:RenderFunction)` which defines what is
 -- |   drawn on the component.
--- | - `update` is an `[Update](#t:Update)` which contains an update function to
--- |   run on each frame. It may be a pure function or use `Effect`s.
+-- | - `update` is an `[UpdateFunction](#t:UpdateFunction)` which runs on each
+-- |   frame, just before `render`.
 -- | - `output` is an [`OutputProducer`](#t:OutputProducer) which defines how
 -- |   (or if) the component should send information out to the host
 -- |   application.
@@ -43,7 +38,7 @@ import Gesso.Time as T
 type AppSpec context local input output =
   { window :: WindowMode
   , render :: RenderFunction context local
-  , update :: Update local
+  , update :: UpdateFunction local
   , output :: OutputProducer local output
   , input :: InputReceiver local input
   }
@@ -56,13 +51,13 @@ defaultApp
 defaultApp =
   { window: fixed D.sizeless
   , render: \_ _ _ _ -> pure unit
-  , update: PureUpdate $ \_ _ _ -> Nothing
-  , output: \_ _ _ _ -> Nothing
-  , input: \_ _ _ _ -> Nothing
+  , update: \_ _ _ -> pure Nothing
+  , output: \_ _ _ _ -> pure Nothing
+  , input: \_ _ _ _ -> pure Nothing
   }
 
 -- | There are three modes that determine the size and position of a Gesso
--- | component:
+-- | canvas component:
 -- |
 -- | - `Fixed` creates a screen of the specified size
 -- | - `Stretch` expands to fill its containing element
@@ -101,56 +96,20 @@ type RenderFunction context local =
 
 -- | An `UpdateFunction` gets a `Delta` record from `Gesso.Time`, a `Scaler`
 -- | from `Gesso.Dimensions`, and the current local state, and may return an
--- | updated local state if changes are necessary. This type is used by both
--- | the Update type and Interaction handlers.
--- |
--- | There is another version called
--- | [`EffectUpdateFunction`](#t:EffectUpdateFunction) which has access to
--- | `Effect`s.
-type UpdateFunction local = T.Delta -> D.Scaler -> local -> Maybe local
-
--- | Like [`UpdateFunction`](#t:UpdateFunction) but runs in an `Effect` context.
-type EffectUpdateFunction local =
+-- | updated local state if changes are necessary (or `Nothing` if there was no
+-- | change). This type is also used by Interaction handlers.
+type UpdateFunction local =
   T.Delta -> D.Scaler -> local -> Effect (Maybe local)
 
--- | A type representing functions that update the local state of the component.
--- | The update function can be pure or run in `Effect`.
-data Update local
-  = PureUpdate (UpdateFunction local)
-  | EffectUpdate (EffectUpdateFunction local)
-
--- | Create an [`Update`](#t:Update) with a pure function.
-pureUpdate :: forall local. UpdateFunction local -> Update local
-pureUpdate = PureUpdate
-
--- | Create an [`Update`](#t:Update) with an effectful function.
-effectUpdate :: forall local. EffectUpdateFunction local -> Update local
-effectUpdate = EffectUpdate
-
--- | Run an [`Update`](#t:Update), getting back a value in an `Effect` context
--- | regardless of the type of the underlying update function. A `Nothing`
--- | result indicates no change to the state is needed.
-runUpdate
-  :: forall local
-   . T.Delta
-  -> D.Scaler
-  -> local
-  -> Update local
-  -> Effect (Maybe local)
-runUpdate delta scaler state =
-  case _ of
-    PureUpdate fn -> pure $ fn delta scaler state
-    EffectUpdate fn -> fn delta scaler state
-
 -- | An alias for a function that receives input from the host application and
--- | may update the local state in response to the input.
+-- | produces an update function in response.
 type InputReceiver local input = input -> UpdateFunction local
 
 -- | An alias for a function that compares old and new local states and may
 -- | send output based on the difference. The old state comes first and the new
 -- | state comes second.
 type OutputProducer local output =
-  T.Delta -> D.Scaler -> local -> local -> Maybe output
+  T.Delta -> D.Scaler -> local -> local -> Effect (Maybe output)
 
 -- | Get the appropriate CSS for the screen element based on the `WindowMode`.
 windowCss :: WindowMode -> CSS.CSS

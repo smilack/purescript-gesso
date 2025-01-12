@@ -12,13 +12,10 @@
 module Gesso.Interactions
   ( EventProp
   , Handler
-  , EffectHandler
-  , Interaction
+  , Interaction(..)
   , InteractionList
   , Interactions
   , default
-  , mkInteraction
-  , mkEffectInteraction
   , toProps
   , mousePosition
   ) where
@@ -26,7 +23,7 @@ module Gesso.Interactions
 import Prelude
 import Data.Maybe (Maybe(..))
 import DOM.HTML.Indexed (HTMLcanvas)
-import Gesso.Application (Update, pureUpdate, effectUpdate, UpdateFunction, EffectUpdateFunction) as App
+import Gesso.Application (UpdateFunction) as App
 import Gesso.Dimensions as Dims
 import Gesso.Interactions.Events as Events
 import Gesso.Interactions.Events (Event, ClipboardEvent, FocusEvent, KeyboardEvent, TouchEvent, DragEvent, MouseEvent, WheelEvent)
@@ -44,35 +41,16 @@ type EventProp event i = (event -> i) -> IProp HTMLcanvas i
 -- | event.
 type Handler event localState = event -> App.UpdateFunction localState
 
--- | Like a regular [`Handler`](#t:Handler) but runs in `Effect`.
-type EffectHandler event localState = event -> App.EffectUpdateFunction localState
-
 -- | An `Interaction` is a combination of an event property
--- | ([`EventProp`](#t:EventProp) e.g., `onClick`) and an event handler, which
--- | can be pure or effectful.
-data Interaction event localState i
-  = Pure (EventProp event i) (Handler event localState)
-  | Effectful (EventProp event i) (EffectHandler event localState)
+-- | ([`EventProp`](#t:EventProp) e.g., `onClick`) and an event handler.
+data Interaction event localState i =
+  Interaction (EventProp event i) (Handler event localState)
 
 -- | Alias for an array of [`Interaction`s](#t:Interaction)
 type InteractionList event localState i = Array (Interaction event localState i)
 
 -- | `Interactions` is a record containing arrays of interactions for each type
 -- | of event that Canvas supports.
--- |
--- | Originally I wanted to have the interaction type be
--- | `Interaction event localState i` and a use a single list of interactions,
--- | but because two interactions could have different event types, the list
--- | wouldn't typecheck.
--- |
--- | I tried `Interaction localState i` with a variant for each event, but to
--- | add it to the screen HTML element, it would need to unify with an
--- | `event -> Action` function passed from Canvas, and then that function would
--- | be too generic to match with each event type from each variant of
--- | `Interaction`.
--- |
--- | I think, barring some trick I'm not aware of, I have to separate the
--- | Interactions into separate lists for each event.
 type Interactions localState i =
   { base :: InteractionList Event localState i
   , clipboard :: InteractionList ClipboardEvent localState i
@@ -89,13 +67,10 @@ type Interactions localState i =
 -- | be whatever `Action` type the component has, like `QueueUpdate` in Canvas.
 toProps
   :: forall localState i
-   . (App.Update localState -> i)
+   . (App.UpdateFunction localState -> i)
   -> Interactions localState i
   -> Array (IProp HTMLcanvas i)
 toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
-  -- I tried to put these all in an array and foldMap it, but it didn't work
-  --   since they're different types.
-  -- I might be able to make a ToProp typeclass and use existential types?
   map toProp base
     <> map toProp clipboard
     <> map toProp focus
@@ -106,12 +81,8 @@ toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel
     <> map toProp wheel
   where
   toProp :: forall e. Interaction e localState i -> IProp HTMLcanvas i
-  toProp = case _ of
-    Pure onEvent handler ->
-      onEvent $ toCallback <<< App.pureUpdate <<< handler
-
-    Effectful onEvent handler ->
-      onEvent $ toCallback <<< App.effectUpdate <<< handler
+  toProp (Interaction onEvent handler) =
+    onEvent $ toCallback <<< handler
 
 -- | An [`Interactions`](#t:Interactions) record containing no interactions. The
 -- | attributes can be overridden individually instead of manually creating a
@@ -130,24 +101,6 @@ default =
   , wheel: []
   }
 
--- | Create an [`Interaction`](#t:Interaction) from an
--- | [`EventProp`](#t:EventProp) and a pure event [`Handler`](#t:Handler).
-mkInteraction
-  :: forall event localState i
-   . EventProp event i
-  -> Handler event localState
-  -> Interaction event localState i
-mkInteraction = Pure
-
--- | Create an [`Interaction`](#t:Interaction) from an
--- | [`EventProp`](#t:EventProp) and an [`EffectHandler`](#t:EffectHandler).
-mkEffectInteraction
-  :: forall event localState i
-   . EventProp event i
-  -> EffectHandler event localState
-  -> Interaction event localState i
-mkEffectInteraction = Effectful
-
 -- | A useful example [`Interaction`](#t:Interaction) that updates the mouse
 -- | position on every `MouseMove` event, which works with all state types that
 -- | are records containing at least a
@@ -156,7 +109,7 @@ mousePosition
   :: forall moreState i
    . Interaction MouseEvent { mousePos :: Maybe Dims.Point | moreState } i
 mousePosition =
-  mkInteraction Events.onMouseMove getMousePos
+  Interaction Events.onMouseMove getMousePos
   where
-  getMousePos event _ _ state =
+  getMousePos event _ _ state = pure $
     Just state { mousePos = Just $ Dims.fromMouseEvent event }

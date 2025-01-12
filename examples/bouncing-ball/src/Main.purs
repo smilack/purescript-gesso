@@ -29,14 +29,14 @@ canvasInput =
       GApp.defaultApp
         { window = GApp.fullscreen
         , render = render
-        , update = GApp.pureUpdate update
+        , update = update
         }
   , viewBox: GDims.p1080
   , interactions: GInt.default
   }
 
-update :: GTime.Delta -> GDims.Scaler -> State -> Maybe State
-update _ scale { x, vx, y, vy, radius } =
+update :: GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
+update _ scale { x, vx, y, vy, radius } = pure $
   Just { x: x + vx', vx: vx', y: y + vy', vy: vy', radius }
   where
   xMin = GDims.getX scale.screen

@@ -6450,26 +6450,6 @@
     Fullscreen2.value = new Fullscreen2();
     return Fullscreen2;
   }();
-  var PureUpdate = /* @__PURE__ */ function() {
-    function PureUpdate2(value0) {
-      this.value0 = value0;
-    }
-    ;
-    PureUpdate2.create = function(value0) {
-      return new PureUpdate2(value0);
-    };
-    return PureUpdate2;
-  }();
-  var EffectUpdate = /* @__PURE__ */ function() {
-    function EffectUpdate2(value0) {
-      this.value0 = value0;
-    }
-    ;
-    EffectUpdate2.create = function(value0) {
-      return new EffectUpdate2(value0);
-    };
-    return EffectUpdate2;
-  }();
   var windowCss = /* @__PURE__ */ function() {
     var common = key(valString)(fromString(isStringKey)("outline"))("none");
     var fix = function(size4) {
@@ -6508,28 +6488,8 @@
         return full;
       }
       ;
-      throw new Error("Failed pattern match at Gesso.Application (line 157, column 13 - line 160, column 21): " + [v.constructor.name]);
+      throw new Error("Failed pattern match at Gesso.Application (line 116, column 13 - line 119, column 21): " + [v.constructor.name]);
     };
-  }();
-  var runUpdate = function(delta2) {
-    return function(scaler) {
-      return function(state3) {
-        return function(v) {
-          if (v instanceof PureUpdate) {
-            return pure3(v.value0(delta2)(scaler)(state3));
-          }
-          ;
-          if (v instanceof EffectUpdate) {
-            return v.value0(delta2)(scaler)(state3);
-          }
-          ;
-          throw new Error("Failed pattern match at Gesso.Application (line 141, column 3 - line 143, column 45): " + [v.constructor.name]);
-        };
-      };
-    };
-  };
-  var pureUpdate = /* @__PURE__ */ function() {
-    return PureUpdate.create;
   }();
   var fullscreen = /* @__PURE__ */ function() {
     return Fullscreen.value;
@@ -6537,48 +6497,43 @@
   var fixed = /* @__PURE__ */ function() {
     return Fixed.create;
   }();
-  var effectUpdate = /* @__PURE__ */ function() {
-    return EffectUpdate.create;
-  }();
-  var defaultApp = /* @__PURE__ */ function() {
-    return {
-      window: fixed(sizeless),
-      render: function(v) {
-        return function(v1) {
-          return function(v2) {
-            return function(v3) {
-              return pure3(unit);
-            };
+  var defaultApp = {
+    window: /* @__PURE__ */ fixed(sizeless),
+    render: function(v) {
+      return function(v1) {
+        return function(v2) {
+          return function(v3) {
+            return pure3(unit);
           };
         };
-      },
-      update: new PureUpdate(function(v) {
-        return function(v1) {
-          return function(v2) {
-            return Nothing.value;
+      };
+    },
+    update: function(v) {
+      return function(v1) {
+        return function(v2) {
+          return pure3(Nothing.value);
+        };
+      };
+    },
+    output: function(v) {
+      return function(v1) {
+        return function(v2) {
+          return function(v3) {
+            return pure3(Nothing.value);
           };
         };
-      }),
-      output: function(v) {
-        return function(v1) {
-          return function(v2) {
-            return function(v3) {
-              return Nothing.value;
-            };
+      };
+    },
+    input: function(v) {
+      return function(v1) {
+        return function(v2) {
+          return function(v3) {
+            return pure3(Nothing.value);
           };
         };
-      },
-      input: function(v) {
-        return function(v1) {
-          return function(v2) {
-            return function(v3) {
-              return Nothing.value;
-            };
-          };
-        };
-      }
-    };
-  }();
+      };
+    }
+  };
 
   // output/Web.HTML.Event.EventTypes/index.js
   var domcontentloaded = "DOMContentLoaded";
@@ -6586,48 +6541,12 @@
   // output/Gesso.Interactions/index.js
   var append7 = /* @__PURE__ */ append(semigroupArray);
   var map9 = /* @__PURE__ */ map(functorArray);
-  var Pure = /* @__PURE__ */ function() {
-    function Pure3(value0, value15) {
-      this.value0 = value0;
-      this.value1 = value15;
-    }
-    ;
-    Pure3.create = function(value0) {
-      return function(value15) {
-        return new Pure3(value0, value15);
-      };
-    };
-    return Pure3;
-  }();
-  var Effectful = /* @__PURE__ */ function() {
-    function Effectful2(value0, value15) {
-      this.value0 = value0;
-      this.value1 = value15;
-    }
-    ;
-    Effectful2.create = function(value0) {
-      return function(value15) {
-        return new Effectful2(value0, value15);
-      };
-    };
-    return Effectful2;
-  }();
   var toProps = function(toCallback) {
     return function(v) {
       var toProp = function(v1) {
-        if (v1 instanceof Pure) {
-          return v1.value0(function($26) {
-            return toCallback(pureUpdate(v1.value1($26)));
-          });
-        }
-        ;
-        if (v1 instanceof Effectful) {
-          return v1.value0(function($27) {
-            return toCallback(effectUpdate(v1.value1($27)));
-          });
-        }
-        ;
-        throw new Error("Failed pattern match at Gesso.Interactions (line 109, column 12 - line 114, column 60): " + [v1.constructor.name]);
+        return v1.value0(function($25) {
+          return toCallback(v1.value1($25));
+        });
       };
       return append7(map9(toProp)(v.base))(append7(map9(toProp)(v.clipboard))(append7(map9(toProp)(v.focus))(append7(map9(toProp)(v.keyboard))(append7(map9(toProp)(v.touch))(append7(map9(toProp)(v.drag))(append7(map9(toProp)(v.mouse))(map9(toProp)(v.wheel))))))));
     };
@@ -7192,15 +7111,15 @@
 
   // output/Control.Applicative.Free/index.js
   var identity6 = /* @__PURE__ */ identity(categoryFn);
-  var Pure2 = /* @__PURE__ */ function() {
-    function Pure3(value0) {
+  var Pure = /* @__PURE__ */ function() {
+    function Pure2(value0) {
       this.value0 = value0;
     }
     ;
-    Pure3.create = function(value0) {
-      return new Pure3(value0);
+    Pure2.create = function(value0) {
+      return new Pure2(value0);
     };
-    return Pure3;
+    return Pure2;
   }();
   var Lift = /* @__PURE__ */ function() {
     function Lift3(value0) {
@@ -7240,7 +7159,7 @@
         return function(nat) {
           return function(func) {
             return function(count) {
-              if (func instanceof Pure2) {
+              if (func instanceof Pure) {
                 return new Tuple(new Cons({
                   func: pure14(func.value0),
                   count
@@ -7307,7 +7226,7 @@
   var functorFreeAp = {
     map: function(f) {
       return function(x) {
-        return mkAp(new Pure2(f))(x);
+        return mkAp(new Pure(f))(x);
       };
     }
   };
@@ -7321,7 +7240,7 @@
           var $tco_done = false;
           var $tco_result;
           function $tco_loop(v) {
-            if (v.value1.value0 instanceof Pure2) {
+            if (v.value1.value0 instanceof Pure) {
               var v1 = goApply1(v.value0)(v.value1.value1)(pure14(v.value1.value0.value0));
               if (v1 instanceof Left) {
                 $tco_done = true;
@@ -7385,7 +7304,7 @@
   };
   var applicativeFreeAp = /* @__PURE__ */ function() {
     return {
-      pure: Pure2.create,
+      pure: Pure.create,
       Apply0: function() {
         return applyFreeAp;
       }
@@ -8498,25 +8417,28 @@
     });
   };
   var saveNewState = function(dictMonadAff) {
+    var liftEffect7 = liftEffect(monadEffectHalogenM(dictMonadAff.MonadEffect0()));
     return function(delta2) {
       return function(scaler) {
         return function(state$prime) {
           return bind5(get2)(function(v) {
             return discard1(modify_3(function(v1) {
-              var $84 = {};
-              for (var $85 in v1) {
-                if ({}.hasOwnProperty.call(v1, $85)) {
-                  $84[$85] = v1[$85];
+              var $87 = {};
+              for (var $88 in v1) {
+                if ({}.hasOwnProperty.call(v1, $88)) {
+                  $87[$88] = v1[$88];
                 }
                 ;
               }
               ;
-              $84.localState = state$prime;
-              return $84;
+              $87.localState = state$prime;
+              return $87;
             }))(function() {
-              return traverse_5(function($162) {
-                return raise(Output($162));
-              })(v.app.output(delta2)(scaler)(v.localState)(state$prime));
+              return bind5(liftEffect7(v.app.output(delta2)(scaler)(v.localState)(state$prime)))(function(mOutput) {
+                return traverse_5(function($165) {
+                  return raise(Output($165));
+                })(mOutput);
+              });
             });
           });
         };
@@ -8525,11 +8447,11 @@
   };
   var render = function(v) {
     var style2 = function() {
-      var $163 = attr2("style");
-      var $164 = fromMaybe("");
-      var $165 = rules([]);
-      return function($166) {
-        return $163($164(renderedInline($165(runS($166)))));
+      var $166 = attr2("style");
+      var $167 = fromMaybe("");
+      var $168 = rules([]);
+      return function($169) {
+        return $166($167(renderedInline($168(runS($169)))));
       };
     }();
     return canvas(append11([id2(v.name), style2(windowCss(v.app.window)), tabIndex(0)])(append11(toProps(QueueUpdate.create)(v.interactions))(maybe([])(toSizeProps2)(v.clientRect))));
@@ -8552,7 +8474,7 @@
                       return notify(mlistener.value0);
                     }
                     ;
-                    throw new Error("Failed pattern match at Gesso.Canvas (line 352, column 12 - line 354, column 40): " + [mlistener.constructor.name]);
+                    throw new Error("Failed pattern match at Gesso.Canvas (line 354, column 12 - line 356, column 40): " + [mlistener.constructor.name]);
                   }();
                   var applyUpdate = function(delta2) {
                     return function(scaler) {
@@ -8560,7 +8482,7 @@
                         return function(s) {
                           return function __do2() {
                             var v = s();
-                            var mstate$prime = runUpdate(delta2)(scaler)(v.value1)(update)();
+                            var mstate$prime = update(delta2)(scaler)(v.value1)();
                             if (mstate$prime instanceof Just) {
                               return new Tuple(Changed.value, mstate$prime.value0);
                             }
@@ -8569,7 +8491,7 @@
                               return s();
                             }
                             ;
-                            throw new Error("Failed pattern match at Gesso.Canvas (line 387, column 5 - line 389, column 19): " + [mstate$prime.constructor.name]);
+                            throw new Error("Failed pattern match at Gesso.Canvas (line 389, column 5 - line 391, column 19): " + [mstate$prime.constructor.name]);
                           };
                         };
                       };
@@ -8590,7 +8512,7 @@
                                 return unit;
                               }
                               ;
-                              throw new Error("Failed pattern match at Gesso.Canvas (line 369, column 5 - line 371, column 32): " + [v.value0.constructor.name]);
+                              throw new Error("Failed pattern match at Gesso.Canvas (line 371, column 5 - line 373, column 32): " + [v.value0.constructor.name]);
                             })();
                             notify(listener)(UpdatesProcessed.value)();
                             return app.render(v.value1)(delta2)(scaler)(context)();
@@ -8669,22 +8591,22 @@
               return bind5(liftEffect7(getCanvasElement(v1.name)))(function(mcanvas) {
                 return bind5(liftEffect7(getCanvasClientRect(mcanvas)))(function(clientRect) {
                   return modify_3(function(v2) {
-                    var $114 = {};
-                    for (var $115 in v2) {
-                      if ({}.hasOwnProperty.call(v2, $115)) {
-                        $114[$115] = v2[$115];
+                    var $117 = {};
+                    for (var $118 in v2) {
+                      if ({}.hasOwnProperty.call(v2, $118)) {
+                        $117[$118] = v2[$118];
                       }
                       ;
                     }
                     ;
-                    $114.context = mcontext;
-                    $114.resizeSub = new Just(resizeSub);
-                    $114.emitterSub = new Just(emitterSub);
-                    $114.listener = new Just(v.listener);
-                    $114.clientRect = clientRect;
-                    $114.canvas = mcanvas;
-                    $114.scaler = map19(mkScaler(v1.viewBox))(clientRect);
-                    return $114;
+                    $117.context = mcontext;
+                    $117.resizeSub = new Just(resizeSub);
+                    $117.emitterSub = new Just(emitterSub);
+                    $117.listener = new Just(v.listener);
+                    $117.clientRect = clientRect;
+                    $117.canvas = mcanvas;
+                    $117.scaler = map19(mkScaler(v1.viewBox))(clientRect);
+                    return $117;
                   });
                 });
               });
@@ -8699,17 +8621,17 @@
     return bind5(get2)(function(v) {
       return bind5(liftEffect7(getCanvasClientRect(v.canvas)))(function(clientRect) {
         return modify_3(function(v1) {
-          var $122 = {};
-          for (var $123 in v1) {
-            if ({}.hasOwnProperty.call(v1, $123)) {
-              $122[$123] = v1[$123];
+          var $125 = {};
+          for (var $126 in v1) {
+            if ({}.hasOwnProperty.call(v1, $126)) {
+              $125[$126] = v1[$126];
             }
             ;
           }
           ;
-          $122.clientRect = clientRect;
-          $122.scaler = map19(mkScaler(v.viewBox))(clientRect);
-          return $122;
+          $125.clientRect = clientRect;
+          $125.scaler = map19(mkScaler(v.viewBox))(clientRect);
+          return $125;
         });
       });
     });
@@ -8735,17 +8657,17 @@
         return bind5(get2)(function(v1) {
           var tryUpdates = append14(v1.queuedUpdates)(v1.processingUpdates);
           return discard1(modify_3(function(v2) {
-            var $129 = {};
-            for (var $130 in v2) {
-              if ({}.hasOwnProperty.call(v2, $130)) {
-                $129[$130] = v2[$130];
+            var $132 = {};
+            for (var $133 in v2) {
+              if ({}.hasOwnProperty.call(v2, $133)) {
+                $132[$133] = v2[$133];
               }
               ;
             }
             ;
-            $129.queuedUpdates = Nil.value;
-            $129.processingUpdates = tryUpdates;
-            return $129;
+            $132.queuedUpdates = Nil.value;
+            $132.processingUpdates = tryUpdates;
+            return $132;
           }))(function() {
             return queueAnimationFrame1(v.value0)(v1.listener)(v1.context)(v1.scaler)(tryUpdates)(v1.localState)(v1.app);
           });
@@ -8761,32 +8683,32 @@
           return v1.queuedUpdates;
         }))(function(queuedUpdates) {
           return modify_3(function(v1) {
-            var $140 = {};
-            for (var $141 in v1) {
-              if ({}.hasOwnProperty.call(v1, $141)) {
-                $140[$141] = v1[$141];
+            var $143 = {};
+            for (var $144 in v1) {
+              if ({}.hasOwnProperty.call(v1, $144)) {
+                $143[$144] = v1[$144];
               }
               ;
             }
             ;
-            $140.queuedUpdates = new Cons(v.value0, queuedUpdates);
-            return $140;
+            $143.queuedUpdates = new Cons(v.value0, queuedUpdates);
+            return $143;
           });
         });
       }
       ;
       if (v instanceof UpdatesProcessed) {
         return modify_3(function(v1) {
-          var $144 = {};
-          for (var $145 in v1) {
-            if ({}.hasOwnProperty.call(v1, $145)) {
-              $144[$145] = v1[$145];
+          var $147 = {};
+          for (var $148 in v1) {
+            if ({}.hasOwnProperty.call(v1, $148)) {
+              $147[$148] = v1[$148];
             }
             ;
           }
           ;
-          $144.processingUpdates = Nil.value;
-          return $144;
+          $147.processingUpdates = Nil.value;
+          return $147;
         });
       }
       ;
@@ -8796,35 +8718,35 @@
       ;
       if (v instanceof FrameRequested) {
         return modify_3(function(v1) {
-          var $150 = {};
-          for (var $151 in v1) {
-            if ({}.hasOwnProperty.call(v1, $151)) {
-              $150[$151] = v1[$151];
+          var $153 = {};
+          for (var $154 in v1) {
+            if ({}.hasOwnProperty.call(v1, $154)) {
+              $153[$154] = v1[$154];
             }
             ;
           }
           ;
-          $150.rafId = new Just(v.value0);
-          return $150;
+          $153.rafId = new Just(v.value0);
+          return $153;
         });
       }
       ;
       if (v instanceof FrameFired) {
         return modify_3(function(v1) {
-          var $154 = {};
-          for (var $155 in v1) {
-            if ({}.hasOwnProperty.call(v1, $155)) {
-              $154[$155] = v1[$155];
+          var $157 = {};
+          for (var $158 in v1) {
+            if ({}.hasOwnProperty.call(v1, $158)) {
+              $157[$158] = v1[$158];
             }
             ;
           }
           ;
-          $154.rafId = Nothing.value;
-          return $154;
+          $157.rafId = Nothing.value;
+          return $157;
         });
       }
       ;
-      throw new Error("Failed pattern match at Gesso.Canvas (line 228, column 16 - line 265, column 50): " + [v.constructor.name]);
+      throw new Error("Failed pattern match at Gesso.Canvas (line 230, column 16 - line 267, column 50): " + [v.constructor.name]);
     };
   };
   var handleQuery = function(dictMonadAff) {
@@ -8833,7 +8755,7 @@
       return bind5(gets2(function(v1) {
         return v1.app;
       }))(function(v1) {
-        return discard1(handleAction1(new QueueUpdate(pureUpdate(v1.input(v.value0)))))(function() {
+        return discard1(handleAction1(new QueueUpdate(v1.input(v.value0))))(function() {
           return pure1(new Just(v.value1));
         });
       });
