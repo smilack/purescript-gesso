@@ -13,3 +13,7 @@ export function cancelAnimationFrame(id) {
     };
   };
 };
+
+export function _now() {
+  return performance.now();
+}

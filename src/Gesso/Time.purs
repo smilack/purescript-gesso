@@ -3,20 +3,17 @@ module Gesso.Time
   ( requestAnimationFrame
   , cancelAnimationFrame
   , RequestAnimationFrameId
-  , TimestampCurrent
-  , TimestampPrevious
-  , Timestamp
   , Now
-  , Prev
-  , toPrev
+  , Last
+  , elapse
   , Delta
   , delta
+  , stamp
   ) where
 
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, mkEffectFn1)
-import Prelude (Unit, map, (<<<), (-), ($))
-import Safe.Coerce (coerce)
+import Prelude (Unit, map, (<<<), (-))
 import Web.HTML (Window)
 
 -- | A `RequestAnimationFrameId` is returned when calling
@@ -29,7 +26,7 @@ foreign import cancelAnimationFrame
   :: RequestAnimationFrameId -> Window -> Effect Unit
 
 foreign import _requestAnimationFrame
-  :: EffectFn1 Number Unit -> Window -> Effect Int
+  :: EffectFn1 Now Unit -> Window -> Effect RequestAnimationFrameId
 
 -- | An interface to `window.requestAnimationFrame` which passes the timestamp
 -- | argument to the callback function.
@@ -37,38 +34,39 @@ foreign import _requestAnimationFrame
 -- | Provided because `requestAnimationFrame` in `Web.HTML.Window` only accepts
 -- | an `Effect Unit` instead of a function of `Number -> Effect Unit`.
 requestAnimationFrame
-  :: (TimestampCurrent -> Effect Unit)
+  :: (Now -> Effect Unit)
   -> Window
   -> Effect RequestAnimationFrameId
-requestAnimationFrame fn = map RequestAnimationFrameId <<<
-  _requestAnimationFrame (mkEffectFn1 $ fn <<< Timestamp)
+requestAnimationFrame = _requestAnimationFrame <<< mkEffectFn1
 
--- | A number representing a specific time in milliseconds. See
+-- | Get the current `DOMHighResTimeStamp` from `performance.now`.
+foreign import _now :: Effect Now
+
+-- | The current time in milliseconds. See
 -- | [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp)
-newtype Timestamp :: forall k. k -> Type
-newtype Timestamp a = Timestamp Number
+newtype Now = Now Number
 
--- | A phantom type for tagging Timestamps
-data Now
+-- | A time in the past, in milliseconds, representing the last time an
+-- | animation frame fired.
+newtype Last = Last Number
 
--- | A phantom type for tagging Timestamps
-data Prev
+-- | Convert a current time into a previous time.
+elapse :: Now -> Last
+elapse (Now t) = Last t
 
--- | Alias for a timestamp representing the time the current frame started
-type TimestampCurrent = Timestamp Now
-
--- | Alias for a timestamp representing the time the previous frame started
-type TimestampPrevious = Timestamp Prev
-
--- | Mark a current time as the new previous time
-toPrev :: TimestampCurrent -> TimestampPrevious
-toPrev = coerce
-
--- | A record containing a current timestamp, the previous timestamp, and the
--- | difference between them. All values are in milliseconds.
-type Delta =
-  { now :: TimestampCurrent, prev :: TimestampPrevious, delta :: Number }
+-- | A record containing a current time, a previous time, and the difference
+-- | between them. All values are in milliseconds.
+type Delta = { now :: Number, last :: Number, delta :: Number }
 
 -- | Create a Delta record from a current and a previous timestamp.
-delta :: TimestampCurrent -> TimestampPrevious -> Delta
-delta now@(Timestamp n) prev@(Timestamp p) = { prev, now, delta: n - p }
+delta :: Now -> Last -> Delta
+delta (Now now) (Last last) = { now, last, delta: now - last }
+
+-- | Create a Delta record using just a previous time and pass it to a function
+-- | of `Delta -> anything`. Used to convert an
+-- | [`Application.UpdateFunction`](Gesso.Application.html#t:UpdateFunction)
+-- | into an
+-- | [`Application.TimestampedUpdate`](Gesso.Application.html#t:TimestampedUpdate).
+-- | Requires an Effect context in order to check the current time.
+stamp :: forall a. Last -> (Delta -> a) -> Effect a
+stamp last f = f `map` map (_ `delta` last) _now
