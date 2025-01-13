@@ -19,17 +19,29 @@ import Prelude (Unit, map, (<<<), (-), ($))
 import Safe.Coerce (coerce)
 import Web.HTML (Window)
 
+-- | A `RequestAnimationFrameId` is returned when calling
+-- | `requestAnimationFrame`. This can be used to cancel the request.
 newtype RequestAnimationFrameId = RequestAnimationFrameId Int
 
-foreign import cancelAnimationFrame :: RequestAnimationFrameId -> Window -> Effect Unit
+-- | Cancel a request for an animation frame using the `RequestAnimationFrameId`
+-- | returned by `requestAnimationFrame`.
+foreign import cancelAnimationFrame
+  :: RequestAnimationFrameId -> Window -> Effect Unit
 
-foreign import _requestAnimationFrame :: EffectFn1 Number Unit -> Window -> Effect Int
+foreign import _requestAnimationFrame
+  :: EffectFn1 Number Unit -> Window -> Effect Int
 
--- | An interface to JavaScript's `window.requestAnimationFrame` which provides
--- | the timestamp argument to the callback function. `requestAnimationFrame` in
--- | `Web.HTML.Window` only accepts and `Effect Unit` instead of a function.
-requestAnimationFrame :: (TimestampCurrent -> Effect Unit) -> Window -> Effect RequestAnimationFrameId
-requestAnimationFrame fn = map RequestAnimationFrameId <<< _requestAnimationFrame (mkEffectFn1 $ fn <<< Timestamp)
+-- | An interface to `window.requestAnimationFrame` which passes the timestamp
+-- | argument to the callback function.
+-- |
+-- | Provided because `requestAnimationFrame` in `Web.HTML.Window` only accepts
+-- | an `Effect Unit` instead of a function of `Number -> Effect Unit`.
+requestAnimationFrame
+  :: (TimestampCurrent -> Effect Unit)
+  -> Window
+  -> Effect RequestAnimationFrameId
+requestAnimationFrame fn = map RequestAnimationFrameId <<<
+  _requestAnimationFrame (mkEffectFn1 $ fn <<< Timestamp)
 
 -- | A number representing a specific time in milliseconds. See
 -- | [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp)
@@ -54,7 +66,8 @@ toPrev = coerce
 
 -- | A record containing a current timestamp, the previous timestamp, and the
 -- | difference between them. All values are in milliseconds.
-type Delta = { now :: TimestampCurrent, prev :: TimestampPrevious, delta :: Number }
+type Delta =
+  { now :: TimestampCurrent, prev :: TimestampPrevious, delta :: Number }
 
 -- | Create a Delta record from a current and a previous timestamp.
 delta :: TimestampCurrent -> TimestampPrevious -> Delta
