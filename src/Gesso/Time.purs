@@ -13,7 +13,7 @@ module Gesso.Time
 
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, mkEffectFn1)
-import Prelude (Unit, map, (<<<), (-))
+import Prelude (Unit, (<<<), (-), bind, pure)
 import Web.HTML (Window)
 
 -- | A `RequestAnimationFrameId` is returned when calling
@@ -39,11 +39,8 @@ requestAnimationFrame
   -> Effect RequestAnimationFrameId
 requestAnimationFrame = _requestAnimationFrame <<< mkEffectFn1
 
--- | Get the current `DOMHighResTimeStamp` from `performance.now`.
-foreign import _now :: Effect Now
-
--- | The current time in milliseconds. See
--- | [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp)
+-- | The current time in milliseconds, or the time at which a value became
+-- | `Stamped`.
 newtype Now = Now Number
 
 -- | A time in the past, in milliseconds, representing the last time an
@@ -54,19 +51,38 @@ newtype Last = Last Number
 elapse :: Now -> Last
 elapse (Now t) = Last t
 
--- | A record containing a current time, a previous time, and the difference
--- | between them. All values are in milliseconds.
+-- | A current time, a previous time, and the difference between them. All
+-- | values are in milliseconds.
+-- |
+-- | Typically, `last` will be the last time an animation frame fired. `now`
+-- | will either represent:
+-- |
+-- | * for per-frame updates and rendering, the current animation frame time, or
+-- | * for interactions and input, the time when a function was queued
 type Delta = { now :: Number, last :: Number, delta :: Number }
 
 -- | Create a Delta record from a current and a previous timestamp.
 delta :: Now -> Last -> Delta
 delta (Now now) (Last last) = { now, last, delta: now - last }
 
--- | Create a Delta record using just a previous time and pass it to a function
--- | of `Delta -> anything`. Used to convert an
--- | [`Application.UpdateFunction`](Gesso.Application.html#t:UpdateFunction)
--- | into an
--- | [`Application.TimestampedUpdate`](Gesso.Application.html#t:TimestampedUpdate).
--- | Requires an Effect context in order to check the current time.
-stamp :: forall a. Last -> (Delta -> a) -> Effect a
-stamp last f = f `map` map (_ `delta` last) _now
+-- | Get the current `DOMHighResTimeStamp` from `performance.now`.
+-- |
+-- | See [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp)
+foreign import _now :: Effect Now
+
+-- | An item and a specific time associated with that item. Used for comparing
+-- | timestamped values produced by [`stamp`](#v:stamp).
+type Stamped a = { time :: Number, item :: a }
+
+-- | For a `Last` timestamp and a function `f :: Delta -> a`, such as:
+-- | ```purescript
+-- | UpdateFunction s :: Delta -> TimestampedUpdate s
+-- | ```
+-- | in [`Application`](Gesso.Application.html#t:UpdateFunction), create a
+-- | `Delta` using the current time and return the current time and the result
+-- | of applying the `Delta` to `f`.
+stamp :: forall a. Last -> (Delta -> a) -> Effect (Stamped a)
+stamp last f = do
+  n@(Now t) <- _now
+  let d = delta n last
+  pure { time: t, item: f d }
