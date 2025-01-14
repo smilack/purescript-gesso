@@ -99,7 +99,7 @@ data Action localState
   = Initialize
   | HandleResize
   | FirstTick
-  | Tick (Maybe T.Last)
+  | Tick T.Last
   | Finalize
   | StateUpdated T.Delta Dims.Scaler localState
   | QueueUpdate (App.UpdateFunction localState)
@@ -234,13 +234,13 @@ handleAction
 handleAction = case _ of
   Initialize -> do
     initialize
-    handleAction $ Tick Nothing
+    handleAction FirstTick
 
   HandleResize -> updateClientRect
 
-  FirstTick -> pure unit
+  FirstTick -> H.get >>= (_.listener >>> getFirstFrameTime)
 
-  Tick mLastTime -> do
+  Tick lastTime -> do
     { listener, context, localState, app, scaler, queuedUpdates, processingUpdates } <- H.get
     -- Prepend any newly queued updates to the list of updates we've tried to
     --   process, then empty the main queue and replace the processing queue
@@ -253,7 +253,7 @@ handleAction = case _ of
           , processingUpdates = tryUpdates
           }
       )
-    queueAnimationFrame mLastTime listener context scaler tryUpdates localState app
+    queueAnimationFrame lastTime listener context scaler tryUpdates localState app
 
   Finalize -> unsubscribe
 
@@ -299,6 +299,26 @@ initialize = do
         }
     )
 
+-- | Request one animation frame in order to get a timestamp to start from.
+getFirstFrameTime
+  :: forall componentState localState slots output m
+   . MonadAff m
+  => Maybe (HS.Listener (Action localState))
+  -> H.HalogenM componentState (Action localState) slots output m Unit
+getFirstFrameTime listener =
+  H.liftEffect do
+    wnd <- window
+    rafId <- T.requestAnimationFrame firstFrameCallback wnd
+    notify (FrameRequested rafId)
+  where
+  firstFrameCallback :: T.Now -> Effect Unit
+  firstFrameCallback timestamp = do
+    notify FrameFired
+    notify (Tick $ T.elapse timestamp)
+
+  notify :: Action localState -> Effect Unit
+  notify action = void $ sequence $ HS.notify <$> listener <@> action
+
 -- | Runs update and render functions:
 -- |
 -- | First, get the window reference to call `requestAnimationFrame` with
@@ -330,7 +350,7 @@ initialize = do
 queueAnimationFrame
   :: forall localState appInput appOutput slots output m
    . MonadAff m
-  => Maybe (T.Last)
+  => T.Last
   -> Maybe (HS.Listener (Action localState))
   -> Maybe Context2D
   -> Maybe Dims.Scaler
@@ -338,7 +358,7 @@ queueAnimationFrame
   -> localState
   -> App.AppSpec Context2D localState appInput appOutput
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots output m Unit
-queueAnimationFrame mLastTime mlistener mcontext mscaler queuedUpdates localState app = do
+queueAnimationFrame lastTime mlistener mcontext mscaler queuedUpdates localState app = do
   H.liftEffect do
     wnd <- window
     rafId <- T.requestAnimationFrame rafCallback wnd
@@ -347,14 +367,14 @@ queueAnimationFrame mLastTime mlistener mcontext mscaler queuedUpdates localStat
   rafCallback :: T.Now -> Effect Unit
   rafCallback timestamp = do
     notify FrameFired
-    mdelta <- pure $ T.delta timestamp <$> mLastTime
+    delta <- pure $ T.delta timestamp lastTime
     _ <-
       sequence $ updateAndRender
         <$> mlistener
-        <*> mdelta
+        <*> Just delta
         <*> mcontext
         <*> mscaler
-    notify $ Tick $ Just $ T.elapse timestamp
+    notify $ Tick $ T.elapse timestamp
 
   notify :: Action localState -> Effect Unit
   notify = case mlistener of
