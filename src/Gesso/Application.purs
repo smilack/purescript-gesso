@@ -9,6 +9,7 @@ module Gesso.Application
   , fullscreen
   , RenderFunction
   , UpdateFunction
+  , TimestampedUpdate
   , OutputProducer
   , InputReceiver
   , windowCss
@@ -97,9 +98,15 @@ type RenderFunction context local =
 -- | An `UpdateFunction` gets a `Delta` record from `Gesso.Time`, a `Scaler`
 -- | from `Gesso.Dimensions`, and the current local state, and may return an
 -- | updated local state if changes are necessary (or `Nothing` if there was no
--- | change). This type is also used by Interaction handlers.
+-- | change). This type is also used by Interaction handlers and when receiving
+-- | input from a host application.
 type UpdateFunction local =
-  T.Delta -> D.Scaler -> local -> Effect (Maybe local)
+  T.Delta -> TimestampedUpdate local
+
+-- | A partially applied [`UpdateFunction`](#t:UpdateFunction) that already has
+-- | a `Delta` record.
+type TimestampedUpdate local =
+  D.Scaler -> local -> Effect (Maybe local)
 
 -- | An alias for a function that receives input from the host application and
 -- | produces an update function in response.

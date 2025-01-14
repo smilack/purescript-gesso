@@ -98,7 +98,8 @@ type State localState appInput appOutput =
 data Action localState
   = Initialize
   | HandleResize
-  | Tick (Maybe T.TimestampPrevious)
+  | FirstTick
+  | Tick (Maybe T.Last)
   | Finalize
   | StateUpdated T.Delta Dims.Scaler localState
   | QueueUpdate (App.UpdateFunction localState)
@@ -106,7 +107,7 @@ data Action localState
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
 
--- | The component's output type is defined by the `OutputMode` in the
+-- | The component's output type is defined by the `OutputProducer` in the
 -- | `Application.AppSpec`.
 newtype Output appOutput = Output appOutput
 
@@ -210,6 +211,9 @@ render { name, clientRect, app, interactions } =
 -- |   request the first animation frame.
 -- | - `HandleResize`: Window resized, get new client rect and recalculate
 -- |   `scaler` functions.
+-- | - `FirstTick`: Request an animation frame that only checks the time and
+-- |   then starts the `Tick` loop, so that `Tick` can start out knowing the
+-- |   frame timing.
 -- | - `Tick`: Request an animation frame. When animating, `Tick` passes the
 -- |   animation frame timestamp to itself so it can calculate the delta between
 -- |   frames.
@@ -233,6 +237,8 @@ handleAction = case _ of
     handleAction $ Tick Nothing
 
   HandleResize -> updateClientRect
+
+  FirstTick -> pure unit
 
   Tick mLastTime -> do
     { listener, context, localState, app, scaler, queuedUpdates, processingUpdates } <- H.get
@@ -324,7 +330,7 @@ initialize = do
 queueAnimationFrame
   :: forall localState appInput appOutput slots output m
    . MonadAff m
-  => Maybe (T.TimestampPrevious)
+  => Maybe (T.Last)
   -> Maybe (HS.Listener (Action localState))
   -> Maybe Context2D
   -> Maybe Dims.Scaler
@@ -338,7 +344,7 @@ queueAnimationFrame mLastTime mlistener mcontext mscaler queuedUpdates localStat
     rafId <- T.requestAnimationFrame rafCallback wnd
     notify $ FrameRequested rafId
   where
-  rafCallback :: T.TimestampCurrent -> Effect Unit
+  rafCallback :: T.Now -> Effect Unit
   rafCallback timestamp = do
     notify FrameFired
     mdelta <- pure $ T.delta timestamp <$> mLastTime
@@ -348,7 +354,7 @@ queueAnimationFrame mLastTime mlistener mcontext mscaler queuedUpdates localStat
         <*> mdelta
         <*> mcontext
         <*> mscaler
-    notify $ Tick $ Just $ T.toPrev timestamp
+    notify $ Tick $ Just $ T.elapse timestamp
 
   notify :: Action localState -> Effect Unit
   notify = case mlistener of
