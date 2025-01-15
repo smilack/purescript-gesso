@@ -2,21 +2,16 @@
 -- | all Gesso applications, regardless of the rendering component.
 module Gesso.Application
   ( AppSpec
-  , defaultApp
-  , WindowMode
-  , fixed
-  , stretch
-  , fullscreen
-  , RenderFunction
-  , UpdateFunction
-  , TimestampedUpdate
-  , OutputProducer
   , InputReceiver
-  , windowCss
+  , OutputProducer
+  , RenderFunction
+  , TimestampedUpdate
+  , UpdateFunction
+  , WindowMode(..)
+  , defaultApp
   ) where
 
 import Prelude
-import CSS as CSS
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Gesso.Dimensions as D
@@ -50,7 +45,7 @@ defaultApp
   :: forall context local input output
    . AppSpec context local input output
 defaultApp =
-  { window: fixed D.sizeless
+  { window: Fixed D.sizeless
   , render: \_ _ _ _ -> pure unit
   , update: \_ _ _ -> pure Nothing
   , output: \_ _ _ _ -> pure Nothing
@@ -68,18 +63,6 @@ data WindowMode
   = Fixed D.Size
   | Stretch
   | Fullscreen
-
--- | Create a `Fixed` [`WindowMode`](#t:WindowMode)
-fixed :: D.Size -> WindowMode
-fixed = Fixed
-
--- | Create a `Stretch` [`WindowMode`](#t:WindowMode)
-stretch :: WindowMode
-stretch = Stretch
-
--- | Create a `Fullscreen` [`WindowMode`](#t:WindowMode)
-fullscreen :: WindowMode
-fullscreen = Fullscreen
 
 -- | An alias for a canvas rendering function.
 -- |
@@ -117,31 +100,3 @@ type InputReceiver local input = input -> UpdateFunction local
 -- | state comes second.
 type OutputProducer local output =
   T.Delta -> D.Scaler -> local -> local -> Effect (Maybe output)
-
--- | Get the appropriate CSS for the screen element based on the `WindowMode`.
-windowCss :: WindowMode -> CSS.CSS
-windowCss = case _ of
-  Fixed size -> fix size
-  Stretch -> stretched
-  Fullscreen -> full
-  where
-  common = do
-    CSS.key (CSS.fromString "outline") "none"
-
-  fix size = do
-    D.toSizeCss size
-    common
-
-  stretched = do
-    CSS.width $ CSS.pct 100.0
-    CSS.height $ CSS.pct 100.0
-    common
-
-  full = do
-    CSS.width $ CSS.pct 100.0
-    CSS.height $ CSS.pct 100.0
-    CSS.position CSS.absolute
-    CSS.left $ CSS.pct 50.0
-    CSS.top $ CSS.pct 50.0
-    CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
-    common

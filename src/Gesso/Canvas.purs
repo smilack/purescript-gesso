@@ -13,35 +13,33 @@ module Gesso.Canvas
 
 import Prelude
 
-import CSS as CSS
 import Data.Foldable (foldr, traverse_)
 import Data.Function (on)
 import Data.List (List, (:))
 import Data.List as List
-import Data.Maybe (Maybe(..), maybe, fromMaybe)
-import Data.Traversable (traverse, sequence)
+import Data.Maybe (Maybe(..), maybe)
+import Data.Traversable (sequence)
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as App
+import Gesso.Canvas.Element as GEl
 import Gesso.Dimensions as Dims
 import Gesso.Interactions as GI
 import Gesso.Time as T
-import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
+import Graphics.Canvas (Context2D)
 import Halogen (liftEffect)
 import Halogen as H
-import Halogen.HTML (AttrName(..), memoized, canvas, attr)
-import Halogen.HTML.Properties (IProp, id, tabIndex)
+import Halogen.HTML (memoized, canvas)
+import Halogen.HTML.Properties (id, tabIndex)
 import Halogen.Query.Event as HE
 import Halogen.Subscription as HS
 import Type.Proxy (Proxy(..))
-import Web.DOM.Element (Element, DOMRect, getBoundingClientRect)
-import Web.DOM.NonElementParentNode (getElementById)
+import Web.DOM.Element (Element)
 import Web.Event.Event (EventType(..))
 import Web.HTML (window)
-import Web.HTML.HTMLDocument (toNonElementParentNode)
-import Web.HTML.Window (toEventTarget, document)
+import Web.HTML.Window (toEventTarget)
 
 -- | The Halogen slot type for Canvas, which is used to include it inside
 -- | another Halogen component.
@@ -181,34 +179,22 @@ initialState { name, app, localState, viewBox, interactions } =
   , rafId: Nothing
   }
 
--- | Canvas component's render function. Size/position CSS comes from
--- | `Application`, event properties come from `Interactions`, and
--- | `width`/`height` attributes come from `Dimensions`.
--- |
--- | The `width` and `height` attributes may be different from the size CSS. The
--- | CSS controls the area that the element takes up on the page, while the HTML
--- | attributes control the coordinate system of the drawing area.
+-- | Render Canvas component. The `width` and `height` attributes may be
+-- | different from the CSS width and height. The CSS controls the area that the
+-- | element takes up on the page, while the HTML attributes control the
+-- | coordinate system of the drawing area.
 render
   :: forall localState appInput appOutput slots m
    . State localState appInput appOutput
   -> H.ComponentHTML (Action localState) slots m
 render { name, clientRect, app, interactions } =
-  canvas
-    $ [ id name, style $ App.windowCss app.window, tabIndex 0 ]
-        <> GI.toProps QueueUpdate interactions
-        <> maybe [] Dims.toSizeProps clientRect
-  where
-  style :: forall r i. CSS.CSS -> IProp (style :: String | r) i
-  style =
-    attr (AttrName "style")
-      <<< fromMaybe ""
-      <<< CSS.renderedInline
-      <<< CSS.rules []
-      <<< CSS.runS
+  canvas $ [ id name, GEl.style app.window, tabIndex 0 ]
+    <> GI.toProps QueueUpdate interactions
+    <> maybe [] Dims.toSizeProps clientRect
 
 -- | - `Initialize`: Create `context`, `resizeSub`, `emitterSub`, `listener`,
--- |   `clientRect`, `canvas`, and `scaler` values. Then recurse with `Tick` to
--- |   request the first animation frame.
+-- |   `clientRect`, `canvas`, and `scaler` values. Then recurse with
+-- |   `FirstTick` to request the first animation frame.
 -- | - `HandleResize`: Window resized, get new client rect and recalculate
 -- |   `scaler` functions.
 -- | - `FirstTick`: Request an animation frame that only checks the time and
@@ -284,9 +270,9 @@ initialize = do
   { emitter, listener } <- H.liftEffect HS.create
   emitterSub <- H.subscribe emitter
   { name, viewBox } <- H.get
-  mcontext <- H.liftEffect $ getContext name
-  mcanvas <- H.liftEffect $ getCanvasElement name
-  clientRect <- H.liftEffect $ getCanvasClientRect mcanvas
+  mcontext <- H.liftEffect $ GEl.getContext name
+  mcanvas <- H.liftEffect $ GEl.getCanvasElement name
+  clientRect <- H.liftEffect $ GEl.getCanvasClientRect mcanvas
   H.modify_
     ( _
         { context = mcontext
@@ -422,27 +408,6 @@ data StateChanged
   = Changed
   | DidNotChange
 
--- | Attempt to get the `Context2D` for this component's `canvas` element.
-getContext :: String -> Effect (Maybe Context2D)
-getContext name = do
-  mcanvas <- getCanvasElementById name
-  mcontext <- traverse getContext2D mcanvas
-  pure mcontext
-
--- | Attempt to find the `canvas` element on the page.
-getCanvasElement :: String -> Effect (Maybe Element)
-getCanvasElement name = do
-  doc <- document =<< window
-  mcanvas <- getElementById name $ toNonElementParentNode doc
-  pure mcanvas
-
--- | Attempt to get the bounding client rect for an HTML element and convert it
--- | to a `ClientRect` value.
-getCanvasClientRect :: Maybe Element -> Effect (Maybe Dims.ClientRect)
-getCanvasClientRect mcanvas = do
-  (mbounding :: Maybe DOMRect) <- traverse getBoundingClientRect mcanvas
-  pure $ Dims.fromDOMRect <$> mbounding
-
 -- | Get a new `clientRect` for the `canvas` element and create a new scaler for
 -- | it, saving both to the component state.
 updateClientRect
@@ -451,7 +416,7 @@ updateClientRect
   => H.HalogenM (State localState appInput appOutput) action slots output m Unit
 updateClientRect = do
   { canvas, viewBox } <- H.get
-  clientRect <- H.liftEffect $ getCanvasClientRect canvas
+  clientRect <- H.liftEffect $ GEl.getCanvasClientRect canvas
   H.modify_
     ( _
         { clientRect = clientRect
