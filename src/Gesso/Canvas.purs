@@ -18,7 +18,7 @@ import Data.Function (on)
 import Data.List (List, (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
-import Data.Traversable (sequence, traverse)
+import Data.Traversable (traverse)
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
@@ -106,7 +106,7 @@ type State localState appInput appOutput =
 data Action localState
   = Initialize
   | HandleResize
-  | FirstTick
+  | FirstTick (Action localState -> Effect Unit)
   | Tick T.Last
   | Finalize
   | StateUpdated T.Delta Dims.Scaler localState
@@ -222,41 +222,39 @@ handleAction
   => Action localState
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m Unit
 handleAction = case _ of
-  Initialize -> do
-    initialize
-    handleAction FirstTick
+  Initialize -> initialize >>= (FirstTick >>> handleAction)
 
   HandleResize -> updateClientRect
 
-  FirstTick -> do
-    state <- H.get
-    let
-      notify = (_.notify) <$> state.dom
-    case notify of
-      Nothing -> pure unit
-      Just notif -> getFirstFrameTime notif
+  FirstTick notify -> H.liftEffect $ getFirstFrame notify
 
-  Tick lastTime -> do
-    { dom, localState, app, queuedUpdates, processingUpdates } <- H.get
-    -- Prepend any newly queued updates to the list of updates we've tried to
-    --   process, then empty the main queue and replace the processing queue
-    --   with the sum of both.
-    let
-      tryUpdates = queuedUpdates <> processingUpdates
-    H.modify_
-      ( _
-          { queuedUpdates = List.Nil
-          , processingUpdates = tryUpdates
-          }
-      )
-    queueAnimationFrame
-      lastTime
-      (_.notify <$> dom)
-      (_.context <$> dom)
-      (_.scaler <$> dom)
-      tryUpdates
-      localState
-      app
+  Tick lastTime -> H.gets _.dom >>= case _ of
+    -- if we get to this point and the dom stuff isn't available, something's
+    --   wrong, so just close
+    Nothing -> handleAction Finalize
+
+    -- otherwise, update and render
+    Just dom -> do
+      { localState, app, queuedUpdates, processingUpdates } <- H.get
+      -- Prepend any newly queued updates to the list of updates we've tried to
+      --   process, then empty the main queue and replace the processing queue
+      --   with the sum of both.
+      let
+        tryUpdates = queuedUpdates <> processingUpdates
+      H.modify_
+        ( _
+            { queuedUpdates = List.Nil
+            , processingUpdates = tryUpdates
+            }
+        )
+      H.liftEffect $ queueAnimationFrame
+        lastTime
+        dom.notify
+        dom.context
+        dom.scaler
+        tryUpdates
+        localState
+        app
 
   Finalize -> unsubscribe
 
@@ -281,7 +279,13 @@ handleAction = case _ of
 initialize
   :: forall localState appInput appOutput slots output m
    . MonadAff m
-  => H.HalogenM (State localState appInput appOutput) (Action localState) slots output m Unit
+  => H.HalogenM
+       (State localState appInput appOutput)
+       (Action localState)
+       slots
+       output
+       m
+       (Action localState -> Effect Unit)
 initialize = do
   resizeSub <- subscribeResize
   { emitter, listener } <- H.liftEffect HS.create
@@ -301,113 +305,85 @@ initialize = do
         , subscriptions = Just { resize: resizeSub, emitter: emitterSub }
         }
     )
+  pure notify
+
+-- | The reusable chunk of requesting a frame
+requestAnimationFrame
+  :: forall localState
+   . (Action localState -> Effect Unit)
+  -> (T.Now -> Effect Unit)
+  -> Effect Unit
+requestAnimationFrame notify callback =
+  window >>= T.requestAnimationFrame callback >>= (FrameRequested >>> notify)
 
 -- | Request one animation frame in order to get a timestamp to start from.
-getFirstFrameTime
-  :: forall componentState localState slots output m
-   . MonadAff m
-  => (Action localState -> Effect Unit)
-  -> H.HalogenM componentState (Action localState) slots output m Unit
-getFirstFrameTime notify =
-  H.liftEffect do
-    wnd <- window
-    rafId <- T.requestAnimationFrame firstFrameCallback wnd
-    notify (FrameRequested rafId)
+getFirstFrame
+  :: forall localState
+   . (Action localState -> Effect Unit)
+  -> Effect Unit
+getFirstFrame notify = requestAnimationFrame notify firstFrameCallback
   where
   firstFrameCallback :: T.Now -> Effect Unit
-  firstFrameCallback timestamp = do
-    notify FrameFired
-    notify (Tick $ T.elapse timestamp)
+  firstFrameCallback timestamp =
+    notify FrameFired *> notify (Tick $ T.elapse timestamp)
 
 -- | Runs update and render functions:
 -- |
--- | First, get the window reference to call `requestAnimationFrame` with
--- | `rafCallback`. `rafCallback` is a closure so that it has access to the
--- | values passed in from the component state. `requestAnimationFrame` returns
--- | an ID which we send to the component via a listener and the
--- | `FrameRequested` action.
+-- | An animation frame is requested in order to run `rafCallback`, calculates
+-- | the time delta based on the current and previous timestamps and calls
+-- | `updateAndRender`.
 -- |
--- | `rafCallback` emits a `FrameFired` action indicating the callback started.
--- | Next, it calculates the time delta based on the current and previous
--- | timestamps. If there is no previous timestamp, the `updateAndRender` call
--- | is skipped and another frame requested.
--- |
--- | The `updateAndRender` call could also be skipped because the client rect
--- | hasn't been found, so there is no scaler, or the canvas element hasn't
--- | been found, so there is no context, or the listener and emitter haven't
--- | been created.
--- |
--- | `updateAndRender` takes the list of queued update handlers and adds the
+-- | `updateAndRender` takes the list of queued update handlers and prepends the
 -- | component's update function. It folds over the list, calling each update
--- | function, and tracking whether any of them changes the state. If they do, a
--- | `StateUpdated` Action is emitted, which will persist the change back to the
--- | component and cause the component to check whether the change needs to be
--- | outputted. Next, an action is emitted to let the component know that the
+-- | function, and tracking whether any of them changes the state. If one does,
+-- | a `StateUpdated` action is emitted, which will persist the change back to
+-- | the component and cause the component to check whether the change needs to
+-- | be outputted. Next, an action is emitted to let the component know that the
 -- | updates in the `processingUpdates` queue are complete. Finally, it calls
 -- | the app's render function.
 -- |
 -- | After `updateAndRender`, a `Tick` is emitted to request the next frame.
 queueAnimationFrame
-  :: forall localState appInput appOutput slots output m
-   . MonadAff m
-  => T.Last
-  -> Maybe (Action localState -> Effect Unit)
-  -> Maybe Context2D
-  -> Maybe Dims.Scaler
+  :: forall localState appInput appOutput
+   . T.Last
+  -> (Action localState -> Effect Unit)
+  -> Context2D
+  -> Dims.Scaler
   -> List (App.UpdateFunction localState)
   -> localState
   -> App.AppSpec Context2D localState appInput appOutput
-  -> H.HalogenM (State localState appInput appOutput) (Action localState) slots output m Unit
-queueAnimationFrame lastTime mnotify mcontext mscaler queuedUpdates localState app = do
-  H.liftEffect do
-    wnd <- window
-    rafId <- T.requestAnimationFrame rafCallback wnd
-    notify $ FrameRequested rafId
+  -> Effect Unit
+queueAnimationFrame lastTime notify context scaler queuedUpdates localState app =
+  requestAnimationFrame notify rafCallback
   where
   rafCallback :: T.Now -> Effect Unit
   rafCallback timestamp = do
     notify FrameFired
-    delta <- pure $ T.delta timestamp lastTime
-    _ <-
-      sequence $ updateAndRender
-        <$> mnotify
-        <*> Just delta
-        <*> mcontext
-        <*> mscaler
+    updateAndRender $ T.delta timestamp lastTime
     notify $ Tick $ T.elapse timestamp
 
-  notify :: Action localState -> Effect Unit
-  notify = case mnotify of
-    Nothing -> const $ pure unit
-    Just n -> n
-
-  updateAndRender
-    :: (Action localState -> Effect Unit)
-    -> T.Delta
-    -> Context2D
-    -> Dims.Scaler
-    -> Effect Unit
-  updateAndRender notif delta context scaler = do
+  updateAndRender :: T.Delta -> Effect Unit
+  updateAndRender delta = do
     changed /\ state' <-
       foldr
-        (applyUpdate delta scaler)
+        (applyUpdate delta)
         (pure (DidNotChange /\ localState))
         (app.update : queuedUpdates)
 
     case changed of
-      Changed -> notif $ StateUpdated delta scaler state'
+      Changed -> notify $ StateUpdated delta scaler state'
       DidNotChange -> pure unit
 
-    notif UpdatesProcessed
+    notify UpdatesProcessed
+
     app.render state' delta scaler context
 
   applyUpdate
     :: T.Delta
-    -> Dims.Scaler
     -> App.UpdateFunction localState
     -> Effect (Tuple StateChanged localState)
     -> Effect (Tuple StateChanged localState)
-  applyUpdate delta scaler update s = do
+  applyUpdate delta update s = do
     (_ /\ state) <- s
 
     mstate' <- update delta scaler state
@@ -446,10 +422,11 @@ unsubscribe
   :: forall localState appInput appOutput action slots output m
    . MonadAff m
   => H.HalogenM (State localState appInput appOutput) action slots output m Unit
-unsubscribe = do
-  msubs <- H.gets _.subscriptions
-  traverse_ H.unsubscribe (_.resize <$> msubs)
-  traverse_ H.unsubscribe (_.emitter <$> msubs)
+unsubscribe =
+  H.gets _.subscriptions
+    >>= traverse_ \subs -> do
+      H.unsubscribe subs.resize
+      H.unsubscribe subs.emitter
 
 -- | Subscribe to window resize events and fire the `HandleResize` `Action` when
 -- | they occur.
