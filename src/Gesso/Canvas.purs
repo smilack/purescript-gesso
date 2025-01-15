@@ -18,7 +18,7 @@ import Data.Function (on)
 import Data.List (List, (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
-import Data.Traversable (sequence)
+import Data.Traversable (sequence, traverse)
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
@@ -31,12 +31,11 @@ import Gesso.Time as T
 import Graphics.Canvas (Context2D)
 import Halogen (liftEffect)
 import Halogen as H
-import Halogen.HTML (memoized, canvas)
+import Halogen.HTML (memoized, canvas) as HH
 import Halogen.HTML.Properties (id, tabIndex)
 import Halogen.Query.Event as HE
 import Halogen.Subscription as HS
 import Type.Proxy (Proxy(..))
-import Web.DOM.Element (Element)
 import Web.Event.Event (EventType(..))
 import Web.HTML (window)
 import Web.HTML.Window (toEventTarget)
@@ -80,7 +79,7 @@ type State localState appInput appOutput =
   , localState :: localState
   , viewBox :: Dims.ViewBox
   , clientRect :: Maybe Dims.ClientRect
-  , canvas :: Maybe Element
+  , canvas :: Maybe GEl.Canvas
   , context :: Maybe Context2D
   , scaler :: Maybe Dims.Scaler
   , resizeSub :: Maybe H.SubscriptionId
@@ -142,7 +141,7 @@ component
 component =
   H.mkComponent
     { initialState
-    , render: memoized (eq `on` _.clientRect) render
+    , render: HH.memoized (eq `on` _.clientRect) render
     , eval:
         H.mkEval
           $ H.defaultEval
@@ -188,7 +187,7 @@ render
    . State localState appInput appOutput
   -> H.ComponentHTML (Action localState) slots m
 render { name, clientRect, app, interactions } =
-  canvas $ [ id name, GEl.style app.window, tabIndex 0 ]
+  HH.canvas $ [ id name, GEl.style app.window, tabIndex 0 ]
     <> GI.toProps QueueUpdate interactions
     <> maybe [] Dims.toSizeProps clientRect
 
@@ -270,9 +269,9 @@ initialize = do
   { emitter, listener } <- H.liftEffect HS.create
   emitterSub <- H.subscribe emitter
   { name, viewBox } <- H.get
-  mcontext <- H.liftEffect $ GEl.getContext name
-  mcanvas <- H.liftEffect $ GEl.getCanvasElement name
-  clientRect <- H.liftEffect $ GEl.getCanvasClientRect mcanvas
+  mcontext <- H.liftEffect $ GEl.getContextByAppName name
+  mcanvas <- H.liftEffect $ GEl.getCanvasByAppName name
+  clientRect <- H.liftEffect $ traverse GEl.getCanvasClientRect mcanvas
   H.modify_
     ( _
         { context = mcontext
@@ -416,7 +415,7 @@ updateClientRect
   => H.HalogenM (State localState appInput appOutput) action slots output m Unit
 updateClientRect = do
   { canvas, viewBox } <- H.get
-  clientRect <- H.liftEffect $ GEl.getCanvasClientRect canvas
+  clientRect <- H.liftEffect $ traverse GEl.getCanvasClientRect canvas
   H.modify_
     ( _
         { clientRect = clientRect

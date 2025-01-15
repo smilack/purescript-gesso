@@ -1,11 +1,13 @@
 module Gesso.Canvas.Element
-  ( getContext
-  , getCanvasElement
+  ( Canvas
+  , getCanvasByAppName
   , getCanvasClientRect
+  , getContextByAppName
   , style
   ) where
 
 import Prelude
+
 import CSS (CSS)
 import CSS as CSS
 import Data.Maybe (Maybe, fromMaybe)
@@ -16,32 +18,39 @@ import Gesso.Dimensions as Dimensions
 import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
 import Halogen.HTML (AttrName(..), attr)
 import Halogen.HTML.Properties (IProp)
-import Web.DOM.Element (Element, DOMRect, getBoundingClientRect)
+import Web.DOM.Element (Element, getBoundingClientRect)
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.HTML (window)
 import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.Window (document)
 
+-- | Wrapper for a `Web.DOM.Element.Element` to tag elements that came from this
+-- | module.
+newtype Canvas = Canvas Element
+
+-- | Wrapper for `getElementById` which returns a `Canvas`.
+-- |
+-- | `getElementById` from `Web.DOM.NonElementParentNode`, which returns a
+-- | `Web.DOM.Element.Element`, is different from `getCanvasElementById` from
+-- | `Graphics.Canvas`, which returns a `Graphics.Canvas.CanvasElement`, so
+-- | they're unfortunately incompatible.
+getCanvasByAppName :: String -> Effect (Maybe Canvas)
+getCanvasByAppName name =
+  window
+    >>= document
+      >>> map toNonElementParentNode
+    >>= getElementById name
+      >>> map (map Canvas)
+
+-- | Get the bounding client rect for a `Canvas` element and convert it to a
+-- | `ClientRect` value.
+getCanvasClientRect :: Canvas -> Effect Dimensions.ClientRect
+getCanvasClientRect (Canvas canvas) =
+  Dimensions.fromDOMRect <$> getBoundingClientRect canvas
+
 -- | Attempt to get the `Context2D` for this component's `canvas` element.
-getContext :: String -> Effect (Maybe Context2D)
-getContext name = do
-  mcanvas <- getCanvasElementById name
-  mcontext <- traverse getContext2D mcanvas
-  pure mcontext
-
--- | Attempt to find the `canvas` element on the page.
-getCanvasElement :: String -> Effect (Maybe Element)
-getCanvasElement name = do
-  doc <- document =<< window
-  mcanvas <- getElementById name $ toNonElementParentNode doc
-  pure mcanvas
-
--- | Attempt to get the bounding client rect for an HTML element and convert it
--- | to a `ClientRect` value.
-getCanvasClientRect :: Maybe Element -> Effect (Maybe Dimensions.ClientRect)
-getCanvasClientRect mcanvas = do
-  (mbounding :: Maybe DOMRect) <- traverse getBoundingClientRect mcanvas
-  pure $ Dimensions.fromDOMRect <$> mbounding
+getContextByAppName :: String -> Effect (Maybe Context2D)
+getContextByAppName name = getCanvasElementById name >>= traverse getContext2D
 
 style :: forall r i. Application.WindowMode -> IProp (style :: String | r) i
 style =
