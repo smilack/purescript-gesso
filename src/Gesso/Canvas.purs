@@ -51,20 +51,25 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |
 -- | - `name` is the name of the application, which doubles as the HTML `id` for
 -- |   the canvas element.
--- | - `app` is the Application Spec.
--- | - `localState` is the local state of the application.
--- | - `viewBox` is the position and dimensions of the drawing surface.
--- | - `clientRect` is the actual position and dimensions of the canvas element.
--- | - `canvas` is the canvas element.
--- | - `context` is the `Context2D` for the canvas element.
--- | - `scaler` is the scaler record that converts between viewbox and client
--- |   rect coordinates.
--- | - `resizeSub` is a subscription to window resize events, to re-get the
--- |   `clientRect` and recreate the `scaler`.
--- | - `emitterSub` is a subscription to the `listener`.
--- | - `listener` is part of a paired listener/emitter used to send Actions from
--- |   `requestAnimationFrame` callbacks to the component.
+-- | - `app` is an `AppSpec`.
+-- | - `localState` is the state of the application.
+-- | - `viewBox` is the position and dimensions of the drawing area.
 -- | - `interactions` is the events attached to the canvas element.
+-- | - `dom`: DOM-related fields available after initialization:
+-- |   - `clientRect` is the actual position and dimensions of the canvas
+-- |     element.
+-- |   - `canvas` is the canvas element.
+-- |   - `context` is the `Context2D` for the canvas element.
+-- |   - `scaler` is the scaler record that converts between viewbox and client
+-- |     rect coordinates.
+-- |   - `listener` is part of a listener/emitter pair used to send Actions from
+-- |     `requestAnimationFrame` callbacks to the component.
+-- | - `subscriptions`: Event subscriptions created during initialization and
+-- |   kept until the application is destroyed.
+-- |   - `resize` is a subscription to window resize events, to re-check the
+-- |     `clientRect` and recreate the `scaler`.
+-- |   - `emitter` is part of a listener/emitter pair used to send Actions from
+-- |     `requestAnimationFrame` callbacks to the component.
 -- | - `queuedUpdates` is a list of interactions and Query inputs waiting to be
 -- |   applied.
 -- | - `processingUpdates` is a list of interactions and Query inputs that have
@@ -78,14 +83,20 @@ type State localState appInput appOutput =
   , app :: App.AppSpec Context2D localState appInput appOutput
   , localState :: localState
   , viewBox :: Dims.ViewBox
-  , clientRect :: Maybe Dims.ClientRect
-  , canvas :: Maybe GEl.Canvas
-  , context :: Maybe Context2D
-  , scaler :: Maybe Dims.Scaler
-  , resizeSub :: Maybe H.SubscriptionId
-  , emitterSub :: Maybe H.SubscriptionId
-  , listener :: Maybe (HS.Listener (Action localState))
   , interactions :: GI.Interactions localState (Action localState)
+  , dom ::
+      Maybe
+        { clientRect :: Dims.ClientRect
+        , canvas :: GEl.Canvas
+        , context :: Context2D
+        , scaler :: Dims.Scaler
+        , listener :: HS.Listener (Action localState)
+        }
+  , subscriptions ::
+      Maybe
+        { resize :: H.SubscriptionId
+        , emitter :: H.SubscriptionId
+        }
   , queuedUpdates :: List (App.UpdateFunction localState)
   , processingUpdates :: List (App.UpdateFunction localState)
   , rafId :: Maybe T.RequestAnimationFrameId
@@ -141,7 +152,7 @@ component
 component =
   H.mkComponent
     { initialState
-    , render: HH.memoized (eq `on` _.clientRect) render
+    , render: HH.memoized (eq `on` (_.dom >>> map _.clientRect)) render
     , eval:
         H.mkEval
           $ H.defaultEval
@@ -165,14 +176,9 @@ initialState { name, app, localState, viewBox, interactions } =
   , app
   , localState
   , viewBox
-  , clientRect: Nothing
-  , canvas: Nothing
-  , context: Nothing
-  , scaler: Nothing
-  , resizeSub: Nothing
-  , emitterSub: Nothing
-  , listener: Nothing
   , interactions
+  , dom: Nothing
+  , subscriptions: Nothing
   , queuedUpdates: List.Nil
   , processingUpdates: List.Nil
   , rafId: Nothing
@@ -186,13 +192,12 @@ render
   :: forall localState appInput appOutput slots m
    . State localState appInput appOutput
   -> H.ComponentHTML (Action localState) slots m
-render { name, clientRect, app, interactions } =
+render { name, dom, app, interactions } =
   HH.canvas $ [ id name, GEl.style app.window, tabIndex 0 ]
     <> GI.toProps QueueUpdate interactions
-    <> maybe [] Dims.toSizeProps clientRect
+    <> maybe [] Dims.toSizeProps (_.clientRect <$> dom)
 
--- | - `Initialize`: Create `context`, `resizeSub`, `emitterSub`, `listener`,
--- |   `clientRect`, `canvas`, and `scaler` values. Then recurse with
+-- | - `Initialize`: Create `subscriptions` and `dom` records, then recurse with
 -- |   `FirstTick` to request the first animation frame.
 -- | - `HandleResize`: Window resized, get new client rect and recalculate
 -- |   `scaler` functions.
@@ -223,10 +228,13 @@ handleAction = case _ of
 
   HandleResize -> updateClientRect
 
-  FirstTick -> H.get >>= (_.listener >>> getFirstFrameTime)
+  FirstTick -> do
+    state <- H.get
+    let mlistener = (_.listener) <$> state.dom
+    getFirstFrameTime mlistener
 
   Tick lastTime -> do
-    { listener, context, localState, app, scaler, queuedUpdates, processingUpdates } <- H.get
+    { dom, localState, app, queuedUpdates, processingUpdates } <- H.get
     -- Prepend any newly queued updates to the list of updates we've tried to
     --   process, then empty the main queue and replace the processing queue
     --   with the sum of both.
@@ -238,7 +246,14 @@ handleAction = case _ of
           , processingUpdates = tryUpdates
           }
       )
-    queueAnimationFrame lastTime listener context scaler tryUpdates localState app
+    queueAnimationFrame
+      lastTime
+      (_.listener <$> dom)
+      (_.context <$> dom)
+      (_.scaler <$> dom)
+      tryUpdates
+      localState
+      app
 
   Finalize -> unsubscribe
 
@@ -274,13 +289,12 @@ initialize = do
   clientRect <- H.liftEffect $ traverse GEl.getCanvasClientRect mcanvas
   H.modify_
     ( _
-        { context = mcontext
-        , resizeSub = Just resizeSub
-        , emitterSub = Just emitterSub
-        , listener = Just listener
-        , clientRect = clientRect
-        , canvas = mcanvas
-        , scaler = Dims.mkScaler viewBox <$> clientRect
+        { dom = { clientRect: _, canvas: _, context: _, scaler: _, listener }
+            <$> clientRect
+            <*> mcanvas
+            <*> mcontext
+            <*> (Dims.mkScaler viewBox <$> clientRect)
+        , subscriptions = Just { resize: resizeSub, emitter: emitterSub }
         }
     )
 
@@ -414,14 +428,17 @@ updateClientRect
    . MonadAff m
   => H.HalogenM (State localState appInput appOutput) action slots output m Unit
 updateClientRect = do
-  { canvas, viewBox } <- H.get
-  clientRect <- H.liftEffect $ traverse GEl.getCanvasClientRect canvas
-  H.modify_
-    ( _
-        { clientRect = clientRect
-        , scaler = Dims.mkScaler viewBox <$> clientRect
-        }
-    )
+  state <- H.get
+  d' <- H.liftEffect $ case state.dom of
+    Nothing -> pure state.dom
+    Just d -> do
+      let
+        can = d.canvas
+        vb = state.viewBox
+      cliRec <- GEl.getCanvasClientRect can
+      pure $ Just $ d { clientRect = cliRec, scaler = Dims.mkScaler vb cliRec }
+  let state' = state { dom = d' }
+  H.put state'
 
 -- | Unsubscribe from window resize events and paired listener/emitter.
 unsubscribe
@@ -429,10 +446,9 @@ unsubscribe
    . MonadAff m
   => H.HalogenM (State localState appInput appOutput) action slots output m Unit
 unsubscribe = do
-  mresizeSub <- H.gets _.resizeSub
-  traverse_ H.unsubscribe mresizeSub
-  memitterSub <- H.gets _.emitterSub
-  traverse_ H.unsubscribe memitterSub
+  msubs <- H.gets _.subscriptions
+  traverse_ H.unsubscribe (_.resize <$> msubs)
+  traverse_ H.unsubscribe (_.emitter <$> msubs)
 
 -- | Subscribe to window resize events and fire the `HandleResize` `Action` when
 -- | they occur.
