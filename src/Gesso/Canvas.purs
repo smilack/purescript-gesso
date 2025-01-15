@@ -62,7 +62,7 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |   - `context` is the `Context2D` for the canvas element.
 -- |   - `scaler` is the scaler record that converts between viewbox and client
 -- |     rect coordinates.
--- |   - `listener` is part of a listener/emitter pair used to send Actions from
+-- |   - `notify` is part of a listener/emitter pair used to send Actions from
 -- |     `requestAnimationFrame` callbacks to the component.
 -- | - `subscriptions`: Event subscriptions created during initialization and
 -- |   kept until the application is destroyed.
@@ -90,7 +90,7 @@ type State localState appInput appOutput =
         , canvas :: GEl.Canvas
         , context :: Context2D
         , scaler :: Dims.Scaler
-        , listener :: HS.Listener (Action localState)
+        , notify :: Action localState -> Effect Unit
         }
   , subscriptions ::
       Maybe
@@ -230,8 +230,11 @@ handleAction = case _ of
 
   FirstTick -> do
     state <- H.get
-    let mlistener = (_.listener) <$> state.dom
-    getFirstFrameTime mlistener
+    let
+      notify = (_.notify) <$> state.dom
+    case notify of
+      Nothing -> pure unit
+      Just notif -> getFirstFrameTime notif
 
   Tick lastTime -> do
     { dom, localState, app, queuedUpdates, processingUpdates } <- H.get
@@ -248,7 +251,7 @@ handleAction = case _ of
       )
     queueAnimationFrame
       lastTime
-      (_.listener <$> dom)
+      (_.notify <$> dom)
       (_.context <$> dom)
       (_.scaler <$> dom)
       tryUpdates
@@ -282,6 +285,7 @@ initialize
 initialize = do
   resizeSub <- subscribeResize
   { emitter, listener } <- H.liftEffect HS.create
+  let notify = HS.notify listener
   emitterSub <- H.subscribe emitter
   { name, viewBox } <- H.get
   mcontext <- H.liftEffect $ GEl.getContextByAppName name
@@ -289,7 +293,7 @@ initialize = do
   clientRect <- H.liftEffect $ traverse GEl.getCanvasClientRect mcanvas
   H.modify_
     ( _
-        { dom = { clientRect: _, canvas: _, context: _, scaler: _, listener }
+        { dom = { clientRect: _, canvas: _, context: _, scaler: _, notify }
             <$> clientRect
             <*> mcanvas
             <*> mcontext
@@ -302,9 +306,9 @@ initialize = do
 getFirstFrameTime
   :: forall componentState localState slots output m
    . MonadAff m
-  => Maybe (HS.Listener (Action localState))
+  => (Action localState -> Effect Unit)
   -> H.HalogenM componentState (Action localState) slots output m Unit
-getFirstFrameTime listener =
+getFirstFrameTime notify =
   H.liftEffect do
     wnd <- window
     rafId <- T.requestAnimationFrame firstFrameCallback wnd
@@ -314,9 +318,6 @@ getFirstFrameTime listener =
   firstFrameCallback timestamp = do
     notify FrameFired
     notify (Tick $ T.elapse timestamp)
-
-  notify :: Action localState -> Effect Unit
-  notify action = void $ sequence $ HS.notify <$> listener <@> action
 
 -- | Runs update and render functions:
 -- |
@@ -350,14 +351,14 @@ queueAnimationFrame
   :: forall localState appInput appOutput slots output m
    . MonadAff m
   => T.Last
-  -> Maybe (HS.Listener (Action localState))
+  -> Maybe (Action localState -> Effect Unit)
   -> Maybe Context2D
   -> Maybe Dims.Scaler
   -> List (App.UpdateFunction localState)
   -> localState
   -> App.AppSpec Context2D localState appInput appOutput
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots output m Unit
-queueAnimationFrame lastTime mlistener mcontext mscaler queuedUpdates localState app = do
+queueAnimationFrame lastTime mnotify mcontext mscaler queuedUpdates localState app = do
   H.liftEffect do
     wnd <- window
     rafId <- T.requestAnimationFrame rafCallback wnd
@@ -369,24 +370,24 @@ queueAnimationFrame lastTime mlistener mcontext mscaler queuedUpdates localState
     delta <- pure $ T.delta timestamp lastTime
     _ <-
       sequence $ updateAndRender
-        <$> mlistener
+        <$> mnotify
         <*> Just delta
         <*> mcontext
         <*> mscaler
     notify $ Tick $ T.elapse timestamp
 
   notify :: Action localState -> Effect Unit
-  notify = case mlistener of
+  notify = case mnotify of
     Nothing -> const $ pure unit
-    Just listener -> HS.notify listener
+    Just n -> n
 
   updateAndRender
-    :: HS.Listener (Action localState)
+    :: (Action localState -> Effect Unit)
     -> T.Delta
     -> Context2D
     -> Dims.Scaler
     -> Effect Unit
-  updateAndRender listener delta context scaler = do
+  updateAndRender notif delta context scaler = do
     changed /\ state' <-
       foldr
         (applyUpdate delta scaler)
@@ -394,10 +395,10 @@ queueAnimationFrame lastTime mlistener mcontext mscaler queuedUpdates localState
         (app.update : queuedUpdates)
 
     case changed of
-      Changed -> HS.notify listener $ StateUpdated delta scaler state'
+      Changed -> notif $ StateUpdated delta scaler state'
       DidNotChange -> pure unit
 
-    HS.notify listener UpdatesProcessed
+    notif UpdatesProcessed
     app.render state' delta scaler context
 
   applyUpdate
