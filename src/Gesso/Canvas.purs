@@ -120,9 +120,15 @@ newtype Output appOutput = Output appOutput
 -- | `Application.AppSpec`.
 data Query appInput a = Input appInput a
 
--- | The input provided when the Canvas component is created. The component has
--- | no `receive` defined in its `EvalSpec` (see [`component`](#v:component)'s
--- | use of `defaultEval`), so this input is only read once.
+-- | The input provided when the Canvas component is created. Because, of these
+-- | fields, the only one that should be changed from outside the component is
+-- | `localState`, the component has no `receive` defined in its `EvalSpec` (see
+-- | [`component`](#v:component)'s use of `defaultEval`) so that this input is
+-- | only read once.
+-- |
+-- | Instead, for outside changes to `localState`, an `input` function can be
+-- | provided in the `AppSpec`, and the `input` function will have access to the
+-- | same arguments as a regular update function.
 -- |
 -- | - `name` is the name of the application, which doubles as the HTML `id` for
 -- |   the canvas element. (Related:
@@ -141,7 +147,7 @@ type Input localState appInput appOutput =
   }
 
 -- | Definition of the Canvas component. `render` is memoized so that it only
--- | re-renders when the size of the element changes.
+-- | re-renders when the dimensions of the canvas element change.
 component
   :: forall localState appInput appOutput m
    . MonadAff m
@@ -192,7 +198,7 @@ render
 render { name, dom, app, interactions } =
   HH.canvas $ [ id name, GEl.style app.window, tabIndex 0 ]
     <> GI.toProps QueueUpdate interactions
-    <> maybe [] Dims.toSizeProps (_.clientRect <$> dom)
+    <> maybe [] Dims.toSizeProps (dom <#> _.clientRect)
 
 -- | - `Initialize`: Create `subscriptions` and `dom` records, then recurse with
 -- |   `FirstTick` to request the first animation frame.
@@ -367,6 +373,7 @@ queueAnimationFrame lastTime context scaler queuedUpdates localState app notify 
   rafCallback :: T.Now -> Effect Unit
   rafCallback timestamp = updateAndRender (T.delta timestamp lastTime)
 
+  -- TODO: There's a better way to do this and `applyUpdate`. Writer monad?
   updateAndRender :: T.Delta -> Effect Unit
   updateAndRender delta = do
     changed /\ state' <-
@@ -455,9 +462,9 @@ saveNewState
   -> localState
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m Unit
 saveNewState delta scaler state' = do
-  { app, localState } <- H.get
+  { app: { output }, localState } <- H.get
   H.modify_ (_ { localState = state' })
-  mOutput <- liftEffect $ app.output delta scaler localState state'
+  mOutput <- liftEffect $ output delta scaler localState state'
   traverse_ (H.raise <<< Output) mOutput
 
 -- | Receiving input from the host application. Convert it into an `Update` and
@@ -468,6 +475,6 @@ handleQuery
   => Query appInput a
   -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m (Maybe a)
 handleQuery (Input inData a) = do
-  { input } <- H.gets _.app
+  { app: { input } } <- H.get
   handleAction $ QueueUpdate $ input inData
   pure (Just a)
