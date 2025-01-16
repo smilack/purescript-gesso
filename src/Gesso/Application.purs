@@ -17,20 +17,16 @@ import Effect (Effect)
 import Gesso.Dimensions as D
 import Gesso.Time as T
 
--- | An `AppSpec` is a record consisting of the following fields:
+-- | `AppSpec` holds information about the setup and behavior of a Gesso
+-- | component.
 -- |
--- | - `window` is a [`WindowMode`](#t:WindowMode) that defines how the screen
--- |   element should size and position itself.
--- | - `render` is a `[RenderFunction](#t:RenderFunction)` which defines what is
--- |   drawn on the component.
--- | - `update` is an `[UpdateFunction](#t:UpdateFunction)` which runs on each
--- |   frame, just before `render`.
--- | - `output` is an [`OutputProducer`](#t:OutputProducer) which defines how
--- |   (or if) the component should send information out to the host
--- |   application.
--- | - `input` is an [`InputReceiver`](#t:InputReceiver) that defines how the
--- |   state should change in response to receiving input from the host
--- |   application.
+-- | - `window` defines how the screen element should size and position itself.
+-- | - `render` draws on the component every animation frame.
+-- | - `update` runs on each animation frame, just before `render`.
+-- | - `output` defines how (or if) the component should send information out to
+-- |   the host application.
+-- | - `input` defines how the component's state should change in response to
+-- |   receiving input from the host application.
 type AppSpec context local input output =
   { window :: WindowMode
   , render :: RenderFunction context local
@@ -39,8 +35,8 @@ type AppSpec context local input output =
   , input :: InputReceiver local input
   }
 
--- | A default [`AppSpec`](#t:AppSpec) which can be modified piecemeal like
--- | Halogen's `EvalSpec`. It does nothing on its own.
+-- | A default `AppSpec` which can be modified piecemeal like Halogen's
+-- | `EvalSpec`. It does nothing on its own.
 defaultApp
   :: forall context local input output
    . AppSpec context local input output
@@ -53,10 +49,10 @@ defaultApp =
   }
 
 -- | There are three modes that determine the size and position of a Gesso
--- | canvas component:
+-- | component:
 -- |
--- | - `Fixed` creates a screen of the specified size
--- | - `Stretch` expands to fill its containing element
+-- | - `Fixed` creates a screen of the specified size.
+-- | - `Stretch` expands to fill its containing element.
 -- | - `FullScreen` takes up the entire page from the top left corner to the
 -- |   bottom right.
 data WindowMode
@@ -64,39 +60,49 @@ data WindowMode
   | Stretch
   | Fullscreen
 
--- | An alias for a canvas rendering function.
+-- | A function that draws on the component. It knows the following:
 -- |
 -- | - `local` is the local state of the application
--- | - `T.Delta` is a record containing current and previous timestamps and the
+-- | - `Delta` is a record containing current and previous timestamps and the
 -- |   time elapsed since the previous frame.
--- | - `D.Scaler` is a record containg scaling functions for converting drawing
--- |   coordinates to pixel coordinates.
--- | - `context` is the context type for the canvas element, like `Context2D`
+-- | - `Scaler` is a record containg scaling functions for converting canvas
+-- |   coordinates to screen coordinates.
+-- | - `context` is the drawing context of canvas element, like `Context2D`
 -- |
 -- | The render function may run any operations in `Effect`, not just functions
 -- | related to drawing on the canvas.
 type RenderFunction context local =
   local -> T.Delta -> D.Scaler -> context -> Effect Unit
 
--- | An `UpdateFunction` gets a `Delta` record from `Gesso.Time`, a `Scaler`
--- | from `Gesso.Dimensions`, and the current local state, and may return an
--- | updated local state if changes are necessary (or `Nothing` if there was no
--- | change). This type is also used by Interaction handlers and when receiving
--- | input from a host application.
+-- | An function that may update the application state. It runs on every frame,
+-- | before the render function. It knows the following:
+-- |
+-- | - `Delta` is a record containing current and previous timestamps and the
+-- |   time elapsed since the previous frame.
+-- | - `Scaler` is a record containg scaling functions for converting canvas
+-- |   coordinates to screen coordinates.
+-- | - `local` is the local state of the application
+-- |
+-- | The update function may return a new local state if changes are necessary
+-- | (or `Nothing` if not).
+-- |
+-- | This type is also used by Interaction handlers and when receiving input
+-- | from a host application.
 type UpdateFunction local =
   T.Delta -> TimestampedUpdate local
 
--- | A partially applied [`UpdateFunction`](#t:UpdateFunction) that already has
--- | a `Delta` record.
+-- | A partially applied `UpdateFunction` that already has the `Delta` record.
 type TimestampedUpdate local =
   D.Scaler -> local -> Effect (Maybe local)
 
--- | An alias for a function that receives input from the host application and
--- | produces an update function in response.
+-- | An input receiver is a variant of an update function that can receive
+-- | information from the component's parent and produce an update function
+-- | in response.
 type InputReceiver local input = input -> UpdateFunction local
 
--- | An alias for a function that compares old and new local states and may
--- | send output based on the difference. The old state comes first and the new
--- | state comes second.
+-- | When the local state of an application changes, an output producer compares
+-- | the old and new local states and may send output to the component's parent
+-- | based on the difference. The old state is first and the new state is
+-- | second.
 type OutputProducer local output =
   T.Delta -> D.Scaler -> local -> local -> Effect (Maybe output)

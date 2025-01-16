@@ -1,5 +1,15 @@
 -- | This is the main entry point for Gesso applications and contains functions
--- | for running `Aff` values.
+-- | for running `Aff` values. For a Halogen application where Gesso is the
+-- | root component, typical usage of this module would be:
+-- |
+-- | ```purescript
+-- | runGessoAff do
+-- |   body <- awaitBody
+-- |   run canvas canvasInput body
+-- | ```
+-- |
+-- | See [`Gesso.Canvas.Input`](Gesso.Canvas.html#t:Input) for the type of
+-- | `canvasInput`.
 module Gesso
   ( runGessoAff
   , run
@@ -22,13 +32,8 @@ import Web.HTML.HTMLElement (HTMLElement)
 runGessoAff :: forall x. Aff x -> Effect Unit
 runGessoAff = HAff.runHalogenAff
 
--- | Create a Gesso component as a top-level Halogen component in the provided
--- | element.
--- | 
--- | - `component` is any Gesso component such as [`canvas`](#v:canvas)
--- | - `input` is the component's input type
--- | - `element` is the parent element for the component, such as the result of
--- |   [`awaitBody`](#v:awaitBody)
+-- | Create a Gesso component, such as [`canvas`](#v:canvas), as a top-level
+-- | Halogen component in the provided element.
 run
   :: forall input q o
    . H.Component q input o Aff
