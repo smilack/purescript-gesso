@@ -1,6 +1,7 @@
 module Example.UnitGrid.Main where
 
 import Prelude
+
 import Data.Array (range)
 import Data.Foldable (sequence_, traverse_)
 import Data.Int (toNumber, floor, round)
@@ -33,7 +34,7 @@ input =
   , localState: { mousePos: Nothing, clicked: Nothing }
   , app:
       GApp.defaultApp
-        { window = GApp.fullscreen
+        { window = GApp.Fullscreen
         , render = render
         }
   , viewBox:

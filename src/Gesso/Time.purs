@@ -1,22 +1,26 @@
 -- | Timestamps, time deltas, and `requestAnimationFrame`
 module Gesso.Time
-  ( requestAnimationFrame
-  , cancelAnimationFrame
-  , RequestAnimationFrameId
-  , TimestampCurrent
-  , TimestampPrevious
-  , Timestamp
+  ( Delta
+  , Interval
+  , Last
   , Now
-  , Prev
-  , toPrev
-  , Delta
+  , RequestAnimationFrameId
+  , cancelAnimationFrame
   , delta
+  , elapse
+  , hz
+  , requestAnimationFrame
+  , stamp
+  , stampInterval
   ) where
 
+import Prelude
+
+import Data.List (List(..), head, (:))
+import Data.Maybe (maybe)
+import Data.Number (isFinite)
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, mkEffectFn1)
-import Prelude (Unit, map, (<<<), (-), ($))
-import Safe.Coerce (coerce)
 import Web.HTML (Window)
 
 -- | A `RequestAnimationFrameId` is returned when calling
@@ -29,7 +33,7 @@ foreign import cancelAnimationFrame
   :: RequestAnimationFrameId -> Window -> Effect Unit
 
 foreign import _requestAnimationFrame
-  :: EffectFn1 Number Unit -> Window -> Effect Int
+  :: EffectFn1 Now Unit -> Window -> Effect RequestAnimationFrameId
 
 -- | An interface to `window.requestAnimationFrame` which passes the timestamp
 -- | argument to the callback function.
@@ -37,38 +41,116 @@ foreign import _requestAnimationFrame
 -- | Provided because `requestAnimationFrame` in `Web.HTML.Window` only accepts
 -- | an `Effect Unit` instead of a function of `Number -> Effect Unit`.
 requestAnimationFrame
-  :: (TimestampCurrent -> Effect Unit)
+  :: (Now -> Effect Unit)
   -> Window
   -> Effect RequestAnimationFrameId
-requestAnimationFrame fn = map RequestAnimationFrameId <<<
-  _requestAnimationFrame (mkEffectFn1 $ fn <<< Timestamp)
+requestAnimationFrame = _requestAnimationFrame <<< mkEffectFn1
 
--- | A number representing a specific time in milliseconds. See
--- | [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp)
-newtype Timestamp :: forall k. k -> Type
-newtype Timestamp a = Timestamp Number
+-- | The current time in milliseconds, or the time at which a value became
+-- | `Stamped`.
+newtype Now = Now Number
 
--- | A phantom type for tagging Timestamps
-data Now
+-- | A time in the past, in milliseconds.
+newtype Last = Last Number
 
--- | A phantom type for tagging Timestamps
-data Prev
+-- | Convert a current time into a previous time.
+elapse :: Now -> Last
+elapse (Now t) = Last t
 
--- | Alias for a timestamp representing the time the current frame started
-type TimestampCurrent = Timestamp Now
+-- | A current time, a previous time, and the difference between them. All
+-- | values are in milliseconds.
+-- |
+-- | For per-frame updates and the rendering function, `last` is the time of the
+-- | previous animation frame and `now` is the time of the current animation
+-- | frame.
+-- |
+-- | For fixed-rate updates, `last` is the scheduled time of the previous
+-- | fixed-rate update and `now` is the update's scheduled time.
+-- |
+-- | For interaction events and Halogen queries, `last` is the time of the
+-- | previous animation frame and `now` is the event's arrival time.
+type Delta = { now :: Number, last :: Number, delta :: Number }
 
--- | Alias for a timestamp representing the time the previous frame started
-type TimestampPrevious = Timestamp Prev
+-- | Create a Delta from a current time and a previous time.
+delta :: Now -> Last -> Delta
+delta (Now now) (Last last) = { now, last, delta: now - last }
 
--- | Mark a current time as the new previous time
-toPrev :: TimestampCurrent -> TimestampPrevious
-toPrev = coerce
+-- | Get the current `DOMHighResTimeStamp` from `performance.now`.
+-- |
+-- | See [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp)
+foreign import _now :: Effect Now
 
--- | A record containing a current timestamp, the previous timestamp, and the
--- | difference between them. All values are in milliseconds.
-type Delta =
-  { now :: TimestampCurrent, prev :: TimestampPrevious, delta :: Number }
+-- | An item and a specific time associated with that item. Used for comparing
+-- | timestamped values produced by [`stamp`](#v:stamp) and
+-- | [`stampInterval`](#v:stampInterval).
+type Stamped a = { time :: Number, item :: a }
 
--- | Create a Delta record from a current and a previous timestamp.
-delta :: TimestampCurrent -> TimestampPrevious -> Delta
-delta now@(Timestamp n) prev@(Timestamp p) = { prev, now, delta: n - p }
+-- | For a `last` timestamp and a function `f :: Delta -> a` (such as
+-- | `UpdateFunction s :: Delta -> TimestampedUpdate s` in
+-- | [`Application`](Gesso.Application.html#t:UpdateFunction)), create a
+-- | `Delta` between `last` and now, apply the delta to `f`, and return the
+-- | current time and the result of `f delta`.
+stamp :: forall a. Last -> (Delta -> a) -> Effect (Stamped a)
+stamp last f = do
+  n@(Now t) <- _now
+  let d = delta n last
+  pure { time: t, item: f d }
+
+-- | A interval of time, in milliseconds, to space out repeating an action, or
+-- | `Never` perform the action.
+data Interval
+  = Interval Number
+  | Never
+
+-- | Construct an `Interval` from Hz or frames per second. Invalid frequencies
+-- | (`±Infinity`, `NaN`, zero, or negative) result in a `Never` interval.
+hz :: Number -> Interval
+hz fps
+  | not (isFinite fps) = Never
+  | fps <= 0.0 = Never
+  | otherwise = Interval $ 1.0 / fps
+
+-- | Results of repeatedly timestamping a function at certain interval:
+-- |
+-- | * `last`: the timestamp of the latest item in the list
+-- | * `items`: a list of repeated applications of `Delta`s to the function,
+-- |   with timestamps
+type StampedBatch a =
+  { last :: Last
+  , items :: List (Stamped a)
+  }
+
+-- | A dummy `StampedBatch` for `Never` intervals. Contains a valid `Last` time
+-- | just in case.
+emptyBatch :: forall a. Effect (StampedBatch a)
+emptyBatch = { last: _, items: Nil } <$> elapse <$> _now
+
+-- | Repeatedly timestamp a function at a given interval, starting at the last
+-- | time plus the interval, as long as the timestamp is not after the current
+-- | time.
+-- |
+-- | The `last` value returned should be saved by the caller to pass in as the
+-- | `last` argument for the next call to `stampInterval`.
+stampInterval
+  :: forall a
+   . Last
+  -> (Delta -> a)
+  -> Interval
+  -> Effect (StampedBatch a)
+stampInterval last fn = case _ of
+  Never -> emptyBatch
+  Interval ms -> batch <$> schedule Nil last <$> _now
+    where
+    batch :: List (Stamped a) -> StampedBatch a
+    batch items = { last: lastTime items, items }
+
+    lastTime :: List (Stamped a) -> Last
+    lastTime l = maybe last (Last <<< _.time) $ head l
+
+    schedule :: List (Stamped a) -> Last -> Now -> List (Stamped a)
+    schedule items prev@(Last p) now@(Now n)
+      | p + ms >= n = items
+      | otherwise = schedule items' (elapse cur) now
+          where
+          cur@(Now c) = Now $ p + ms
+          items' = { time: c, item: fn (delta cur prev) } : items

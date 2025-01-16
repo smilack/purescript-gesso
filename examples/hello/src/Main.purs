@@ -26,7 +26,7 @@ canvasInput =
   , localState: unit
   , app:
       Gesso.Application.defaultApp
-        { window = Gesso.Application.fullscreen
+        { window = Gesso.Application.Fullscreen
         , render = render
         }
   , viewBox: Gesso.Dimensions.p1080

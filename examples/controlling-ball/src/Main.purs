@@ -1,6 +1,7 @@
 module Example.ControllingBall.Main where
 
 import Prelude
+
 import Data.Maybe (Maybe(..))
 import Data.Number (pi)
 import Effect (Effect)
@@ -30,7 +31,7 @@ canvasInput =
   , localState: { x: 100.0, y: 100.0, radius: 25.0, keys: { up: false, down: false, left: false, right: false } }
   , app:
       GApp.defaultApp
-        { window = GApp.fullscreen
+        { window = GApp.Fullscreen
         , render = render
         , update = update
         }
