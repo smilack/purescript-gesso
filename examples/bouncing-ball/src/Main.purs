@@ -1,6 +1,7 @@
 module Example.BouncingBall.Main where
 
 import Prelude
+
 import Data.Maybe (Maybe(..))
 import Data.Number (pi)
 import Effect (Effect)
@@ -27,7 +28,7 @@ canvasInput =
   , localState: { x: 0.0, vx: 1.0, y: 0.0, vy: 1.0, radius: 25.0 }
   , app:
       GApp.defaultApp
-        { window = GApp.fullscreen
+        { window = GApp.Fullscreen
         , render = render
         , update = update
         }

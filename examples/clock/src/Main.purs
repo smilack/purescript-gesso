@@ -1,6 +1,7 @@
 module Example.Clock.Main where
 
 import Prelude
+
 import Data.Array (range)
 import Data.Enum (fromEnum)
 import Data.Foldable (sequence_)
@@ -32,7 +33,7 @@ input =
   , localState: unit
   , app:
       GApp.defaultApp
-        { window = GApp.fullscreen
+        { window = GApp.Fullscreen
         , render = render
         }
   , viewBox: GDim.p1080
