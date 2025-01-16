@@ -18,7 +18,7 @@ import Data.Function (on)
 import Data.List (List, (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
-import Data.Traversable (traverse)
+import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
@@ -408,17 +408,15 @@ updateClientRect
    . MonadAff m
   => H.HalogenM (State localState appInput appOutput) action slots output m Unit
 updateClientRect = do
-  state <- H.get
-  d' <- H.liftEffect $ case state.dom of
-    Nothing -> pure state.dom
-    Just d -> do
-      let
-        can = d.canvas
-        vb = state.viewBox
-      cliRec <- GEl.getCanvasClientRect can
-      pure $ Just $ d { clientRect = cliRec, scaler = Dims.mkScaler vb cliRec }
-  let state' = state { dom = d' }
-  H.put state'
+  dom' <- H.liftEffect <<< updateDom =<< H.get
+  H.modify_ (_ { dom = dom' })
+  where
+  updateDom { viewBox, dom } = for dom \d -> do
+    clientRect <- GEl.getCanvasClientRect d.canvas
+    pure d
+      { clientRect = clientRect
+      , scaler = Dims.mkScaler viewBox clientRect
+      }
 
 -- | Unsubscribe from window resize events and paired listener/emitter.
 unsubscribe
