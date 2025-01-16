@@ -49,5 +49,9 @@ run component input element = do
 canvas
   :: forall localState appInput appOutput m
    . MonadAff m
-  => H.Component (GCan.Query appInput) (GCan.Input localState appInput appOutput) (GCan.Output appOutput) m
+  => H.Component
+       (GCan.Query appInput)
+       (GCan.Input localState appInput appOutput)
+       (GCan.Output appOutput)
+       m
 canvas = GCan.component

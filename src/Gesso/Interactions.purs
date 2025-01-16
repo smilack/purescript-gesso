@@ -26,7 +26,16 @@ import DOM.HTML.Indexed (HTMLcanvas)
 import Gesso.Application (UpdateFunction) as App
 import Gesso.Dimensions as Dims
 import Gesso.Interactions.Events as Events
-import Gesso.Interactions.Events (Event, ClipboardEvent, FocusEvent, KeyboardEvent, TouchEvent, DragEvent, MouseEvent, WheelEvent)
+import Gesso.Interactions.Events
+  ( Event
+  , ClipboardEvent
+  , FocusEvent
+  , KeyboardEvent
+  , TouchEvent
+  , DragEvent
+  , MouseEvent
+  , WheelEvent
+  )
 import Halogen.HTML.Properties (IProp)
 
 -- | This is the type of the `on` functions from `Gesso.Interactions.Events`.
@@ -70,7 +79,9 @@ toProps
    . (App.UpdateFunction localState -> i)
   -> Interactions localState i
   -> Array (IProp HTMLcanvas i)
-toProps toCallback { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
+toProps
+  toCallback
+  { base, clipboard, focus, keyboard, touch, drag, mouse, wheel } =
   map toProp base
     <> map toProp clipboard
     <> map toProp focus

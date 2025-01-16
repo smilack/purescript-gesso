@@ -151,7 +151,11 @@ type Input localState appInput appOutput =
 component
   :: forall localState appInput appOutput m
    . MonadAff m
-  => H.Component (Query appInput) (Input localState appInput appOutput) (Output appOutput) m
+  => H.Component
+       (Query appInput)
+       (Input localState appInput appOutput)
+       (Output appOutput)
+       m
 component =
   H.mkComponent
     { initialState
@@ -223,7 +227,13 @@ handleAction
   :: forall localState appInput appOutput slots m
    . MonadAff m
   => Action localState
-  -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m Unit
+  -> H.HalogenM
+       (State localState appInput appOutput)
+       (Action localState)
+       slots
+       (Output appOutput)
+       m
+       Unit
 handleAction = case _ of
   Initialize -> initialize >>= (FirstTick >>> handleAction)
 
@@ -367,7 +377,14 @@ queueAnimationFrame
   -> App.AppSpec Context2D localState appInput appOutput
   -> (Action localState -> Effect Unit)
   -> Effect Unit
-queueAnimationFrame lastTime context scaler queuedUpdates localState app notify =
+queueAnimationFrame
+  lastTime
+  context
+  scaler
+  queuedUpdates
+  localState
+  app
+  notify =
   requestAnimationFrame rafCallback notify
   where
   rafCallback :: T.Now -> Effect Unit
@@ -443,7 +460,13 @@ unsubscribe =
 subscribeResize
   :: forall localState appInput appOutput slots output m
    . MonadAff m
-  => H.HalogenM (State localState appInput appOutput) (Action localState) slots output m H.SubscriptionId
+  => H.HalogenM
+       (State localState appInput appOutput)
+       (Action localState)
+       slots
+       output
+       m
+       H.SubscriptionId
 subscribeResize = do
   wnd <- H.liftEffect window
   H.subscribe
@@ -460,7 +483,13 @@ saveNewState
   => T.Delta
   -> Dims.Scaler
   -> localState
-  -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m Unit
+  -> H.HalogenM
+       (State localState appInput appOutput)
+       (Action localState)
+       slots
+       (Output appOutput)
+       m
+       Unit
 saveNewState delta scaler state' = do
   { app: { output }, localState } <- H.get
   H.modify_ (_ { localState = state' })
@@ -473,7 +502,13 @@ handleQuery
   :: forall localState appInput appOutput slots a m
    . MonadAff m
   => Query appInput a
-  -> H.HalogenM (State localState appInput appOutput) (Action localState) slots (Output appOutput) m (Maybe a)
+  -> H.HalogenM
+       (State localState appInput appOutput)
+       (Action localState)
+       slots
+       (Output appOutput)
+       m
+       (Maybe a)
 handleQuery (Input inData a) = do
   { app: { input } } <- H.get
   handleAction $ QueueUpdate $ input inData

@@ -72,7 +72,14 @@ class Sized a where
   getRatio :: a -> AspectRatio
 
 showSized :: forall a. Sized a => a -> String
-showSized s = "{ width: " <> width <> ", height: " <> height <> ", aspectRatio: " <> ar <> " }"
+showSized s =
+  "{ width: "
+    <> width
+    <> ", height: "
+    <> height
+    <> ", aspectRatio: "
+    <> ar
+    <> " }"
   where
   width = show $ getWidth s
 
@@ -101,7 +108,18 @@ toSizeProps sized =
 class (Positioned a, Sized a) <= Dimensioned a
 
 showDimensioned :: forall a. Dimensioned a => a -> String
-showDimensioned d = "{ x: " <> x <> ", y: " <> y <> ", width: " <> width <> ", height: " <> height <> ", aspectRatio: " <> ar <> " }"
+showDimensioned d =
+  "{ x: "
+    <> x
+    <> ", y: "
+    <> y
+    <> ", width: "
+    <> width
+    <> ", height: "
+    <> height
+    <> ", aspectRatio: "
+    <> ar
+    <> " }"
   where
   x = show $ getX d
 
@@ -505,8 +523,12 @@ null = Dimensions origin sizeless
 
 -- | A 1280x720 `ViewBox` at (0, 0).
 p720 :: ViewBox
-p720 = fromPointAndSize origin $ fromHeightAndRatio { height: 720.0, aspectRatio: AR.w16h9 }
+p720 =
+  fromPointAndSize origin
+    $ fromHeightAndRatio { height: 720.0, aspectRatio: AR.w16h9 }
 
 -- | A 1920x1080 `ViewBox` at (0, 0).
 p1080 :: ViewBox
-p1080 = fromPointAndSize origin $ fromHeightAndRatio { height: 1080.0, aspectRatio: AR.w16h9 }
+p1080 =
+  fromPointAndSize origin
+    $ fromHeightAndRatio { height: 1080.0, aspectRatio: AR.w16h9 }
