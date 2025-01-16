@@ -62,14 +62,12 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |   - `context` is the `Context2D` for the canvas element.
 -- |   - `scaler` is the scaler record that converts between viewbox and client
 -- |     rect coordinates.
--- |   - `notify` is part of a listener/emitter pair used to send Actions from
--- |     `requestAnimationFrame` callbacks to the component.
 -- | - `subscriptions`: Event subscriptions created during initialization and
 -- |   kept until the application is destroyed.
 -- |   - `resize` is a subscription to window resize events, to re-check the
 -- |     `clientRect` and recreate the `scaler`.
--- |   - `emitter` is part of a listener/emitter pair used to send Actions from
--- |     `requestAnimationFrame` callbacks to the component.
+-- |   - `emitter` is a subscription to a listener/emitter pair used to send
+-- |     Actions from `requestAnimationFrame` callbacks to the component.
 -- | - `queuedUpdates` is a list of interactions and Query inputs waiting to be
 -- |   applied.
 -- | - `processingUpdates` is a list of interactions and Query inputs that have
@@ -90,7 +88,6 @@ type State localState appInput appOutput =
         , canvas :: GEl.Canvas
         , context :: Context2D
         , scaler :: Dims.Scaler
-        , notify :: Action localState -> Effect Unit
         }
   , subscriptions ::
       Maybe
@@ -107,7 +104,7 @@ data Action localState
   = Initialize
   | HandleResize
   | FirstTick (Action localState -> Effect Unit)
-  | Tick T.Last
+  | Tick (Action localState -> Effect Unit) T.Last
   | Finalize
   | StateUpdated T.Delta Dims.Scaler localState
   | QueueUpdate (App.UpdateFunction localState)
@@ -228,7 +225,7 @@ handleAction = case _ of
 
   FirstTick notify -> H.liftEffect $ getFirstFrame notify
 
-  Tick lastTime -> H.gets _.dom >>= case _ of
+  Tick notify lastTime -> H.gets _.dom >>= case _ of
     -- if we get to this point and the dom stuff isn't available, something's
     --   wrong, so just close
     Nothing -> handleAction Finalize
@@ -249,7 +246,7 @@ handleAction = case _ of
         )
       H.liftEffect $ queueAnimationFrame
         lastTime
-        dom.notify
+        notify
         dom.context
         dom.scaler
         tryUpdates
@@ -287,25 +284,31 @@ initialize
        m
        (Action localState -> Effect Unit)
 initialize = do
-  resizeSub <- subscribeResize
-  { emitter, listener } <- H.liftEffect HS.create
-  let notify = HS.notify listener
-  emitterSub <- H.subscribe emitter
-  { name, viewBox } <- H.get
-  mcontext <- H.liftEffect $ GEl.getContextByAppName name
-  mcanvas <- H.liftEffect $ GEl.getCanvasByAppName name
-  clientRect <- H.liftEffect $ traverse GEl.getCanvasClientRect mcanvas
-  H.modify_
-    ( _
-        { dom = { clientRect: _, canvas: _, context: _, scaler: _, notify }
-            <$> clientRect
-            <*> mcanvas
-            <*> mcontext
-            <*> (Dims.mkScaler viewBox <$> clientRect)
-        , subscriptions = Just { resize: resizeSub, emitter: emitterSub }
-        }
-    )
+  { notify, subscriptions } <- mkSubs
+  dom <- H.liftEffect <<< mkDom =<< H.get
+  H.modify_ (_ { dom = dom, subscriptions = Just subscriptions })
   pure notify
+  where
+  mkSubs = do
+    notifications <- H.liftEffect HS.create
+    emitter <- H.subscribe notifications.emitter
+    resize <- subscribeResize
+    pure
+      { notify: HS.notify notifications.listener
+      , subscriptions: { resize, emitter }
+      }
+
+  mkDom { name, viewBox } = do
+    context <- GEl.getContextByAppName name
+    canvas <- GEl.getCanvasByAppName name
+    clientRect <- traverse GEl.getCanvasClientRect canvas
+    let scaler = Dims.mkScaler viewBox <$> clientRect
+    pure $
+      { clientRect: _, canvas: _, context: _, scaler: _ }
+        <$> clientRect
+        <*> canvas
+        <*> context
+        <*> scaler
 
 -- | The reusable chunk of requesting a frame
 requestAnimationFrame
@@ -325,7 +328,7 @@ getFirstFrame notify = requestAnimationFrame notify firstFrameCallback
   where
   firstFrameCallback :: T.Now -> Effect Unit
   firstFrameCallback timestamp =
-    notify FrameFired *> notify (Tick $ T.elapse timestamp)
+    notify FrameFired *> notify (Tick notify $ T.elapse timestamp)
 
 -- | Runs update and render functions:
 -- |
@@ -360,7 +363,7 @@ queueAnimationFrame lastTime notify context scaler queuedUpdates localState app 
   rafCallback timestamp = do
     notify FrameFired
     updateAndRender $ T.delta timestamp lastTime
-    notify $ Tick $ T.elapse timestamp
+    notify $ Tick notify $ T.elapse timestamp
 
   updateAndRender :: T.Delta -> Effect Unit
   updateAndRender delta = do
