@@ -3,7 +3,6 @@
 module Gesso
   ( runGessoAff
   , run
-  , runWithM
   , canvas
   , module Halogen.Aff
   ) where
@@ -38,26 +37,6 @@ run
   -> Aff Unit
 run component input element = do
   _ <- runUI component input element
-  pure unit
-
--- | Run a Gesso component with any monad implementing ManageState.
--- |
--- | - `runM` is a Natural Transformation from the monad to Aff, runGessoM is an
--- |   example
--- | - `component` is any Gesso component such as [`canvas`](#v:canvas)
--- | - `input` is the component's input type
--- | - `element` is the parent element for the component, such as the result of
--- |   [`awaitBody`](#v:awaitBody)
-runWithM
-  :: forall q i o m
-   . MonadAff m
-  => m ~> Aff
-  -> H.Component q i o m
-  -> i
-  -> HTMLElement
-  -> Aff Unit
-runWithM runM component input element = do
-  _ <- runUI (H.hoist runM component) input element
   pure unit
 
 -- | The Gesso Canvas component. Wraps HTML Canvas and provides an interface for
