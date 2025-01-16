@@ -246,12 +246,12 @@ handleAction = case _ of
         )
       H.liftEffect $ queueAnimationFrame
         lastTime
-        notify
         dom.context
         dom.scaler
         tryUpdates
         localState
         app
+        notify
 
   Finalize -> unsubscribe
 
@@ -310,31 +310,38 @@ initialize = do
         <*> context
         <*> scaler
 
--- | The reusable chunk of requesting a frame
+-- | The reusable chunk of requesting an animation frame:
+-- |
+-- | 1. Request the frame and tell the component that the frame was requested.
+-- | 2. When the frame fires, notify the component that the frame has fired and
+-- |    then call the provided callback function.
+-- | 3. After running the callback, tell the component to start the next Tick.
 requestAnimationFrame
   :: forall localState
-   . (Action localState -> Effect Unit)
-  -> (T.Now -> Effect Unit)
+   . (T.Now -> Effect Unit)
+  -> (Action localState -> Effect Unit)
   -> Effect Unit
-requestAnimationFrame notify callback =
-  window >>= T.requestAnimationFrame callback >>= (FrameRequested >>> notify)
+requestAnimationFrame callback notify =
+  window
+    >>= T.requestAnimationFrame callbackWrapper
+    >>= (FrameRequested >>> notify)
+  where
+  callbackWrapper timestamp =
+    notify FrameFired
+      *> callback timestamp
+      *> tick timestamp
 
--- | Request one animation frame in order to get a timestamp to start from.
+  tick = notify <<< Tick notify <<< T.elapse
+
+-- | Request one animation frame in order to get a timestamp to start counting
+-- | from.
 getFirstFrame
   :: forall localState
    . (Action localState -> Effect Unit)
   -> Effect Unit
-getFirstFrame notify = requestAnimationFrame notify firstFrameCallback
-  where
-  firstFrameCallback :: T.Now -> Effect Unit
-  firstFrameCallback timestamp =
-    notify FrameFired *> notify (Tick notify $ T.elapse timestamp)
+getFirstFrame = requestAnimationFrame (const $ pure unit)
 
 -- | Runs update and render functions:
--- |
--- | An animation frame is requested in order to run `rafCallback`, calculates
--- | the time delta based on the current and previous timestamps and calls
--- | `updateAndRender`.
 -- |
 -- | `updateAndRender` takes the list of queued update handlers and prepends the
 -- | component's update function. It folds over the list, calling each update
@@ -344,26 +351,21 @@ getFirstFrame notify = requestAnimationFrame notify firstFrameCallback
 -- | be outputted. Next, an action is emitted to let the component know that the
 -- | updates in the `processingUpdates` queue are complete. Finally, it calls
 -- | the app's render function.
--- |
--- | After `updateAndRender`, a `Tick` is emitted to request the next frame.
 queueAnimationFrame
   :: forall localState appInput appOutput
    . T.Last
-  -> (Action localState -> Effect Unit)
   -> Context2D
   -> Dims.Scaler
   -> List (App.UpdateFunction localState)
   -> localState
   -> App.AppSpec Context2D localState appInput appOutput
+  -> (Action localState -> Effect Unit)
   -> Effect Unit
-queueAnimationFrame lastTime notify context scaler queuedUpdates localState app =
-  requestAnimationFrame notify rafCallback
+queueAnimationFrame lastTime context scaler queuedUpdates localState app notify =
+  requestAnimationFrame rafCallback notify
   where
   rafCallback :: T.Now -> Effect Unit
-  rafCallback timestamp = do
-    notify FrameFired
-    updateAndRender $ T.delta timestamp lastTime
-    notify $ Tick notify $ T.elapse timestamp
+  rafCallback timestamp = updateAndRender (T.delta timestamp lastTime)
 
   updateAndRender :: T.Delta -> Effect Unit
   updateAndRender delta = do
