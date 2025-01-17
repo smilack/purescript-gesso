@@ -12,13 +12,15 @@ module Gesso.Canvas
 
 import Prelude
 
+import Control.Alt ((<|>))
+import Control.Monad.Writer (Writer, WriterT, lift, runWriter, writer)
 import Data.Foldable (foldr, traverse_)
 import Data.Function (on)
 import Data.List (List, (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
-import Data.Traversable (for, traverse)
-import Data.Tuple (Tuple)
+import Data.Traversable (for, sequence, traverse)
+import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
@@ -251,6 +253,9 @@ handleAction = case _ of
       -- Prepend any newly queued updates to the list of updates we've tried to
       --   process, then empty the main queue and replace the processing queue
       --   with the sum of both.
+
+      {- TODO: apply queued updates here -}
+
       let
         tryUpdates = queuedUpdates <> processingUpdates
       H.modify_
@@ -392,10 +397,10 @@ queueAnimationFrame
   -- TODO: There's a better way to do this and `applyUpdate`. Writer monad?
   updateAndRender :: T.Delta -> Effect Unit
   updateAndRender delta = do
-    changed /\ state' <-
+    state' /\ changed <-
       foldr
         (applyUpdate delta)
-        (pure (DidNotChange /\ localState))
+        (pure (localState /\ DidNotChange))
         (app.update : queuedUpdates)
 
     case changed of
@@ -409,22 +414,29 @@ queueAnimationFrame
   applyUpdate
     :: T.Delta
     -> App.UpdateFunction localState
-    -> Effect (Tuple StateChanged localState)
-    -> Effect (Tuple StateChanged localState)
+    -> Effect (Tuple localState StateChanged)
+    -> Effect (Tuple localState StateChanged)
   applyUpdate delta update s = do
-    (_ /\ state) <- s
+    (state /\ _) <- s
+    runWriter <$> runUpdate state (update delta scaler)
 
-    mstate' <- update delta scaler state
+  runUpdate
+    :: localState
+    -> (localState -> Effect (Maybe localState))
+    -> Effect (Writer StateChanged localState)
+  runUpdate state func = func state <#> change state
 
-    case mstate' of
-      Just state' -> pure $ Changed /\ state'
-      Nothing -> s
+  change :: localState -> Maybe localState -> Writer StateChanged localState
+  change state = writer <<< maybe (state /\ DidNotChange) (_ /\ Changed)
 
 -- | A simple type to track whether the local state changed while running
 -- | interactions and updates.
-data StateChanged
-  = Changed
-  | DidNotChange
+data StateChanged = Changed | DidNotChange
+
+instance Semigroup StateChanged where
+  append Changed DidNotChange = Changed
+  append DidNotChange Changed = Changed
+  append a _ = a
 
 -- | Get a new `clientRect` for the `canvas` element and create a new scaler for
 -- | it, saving both to the component state.
