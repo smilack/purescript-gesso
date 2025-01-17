@@ -39,7 +39,7 @@ canvasInput =
   , interactions: GInt.default { keyboard = [ keyDown, keyUp ], mouse = [ mouseDown ] }
   }
 
-mouseDown :: forall i. GInt.Interaction GEv.MouseEvent State i
+mouseDown :: GInt.Interaction GEv.MouseEvent State
 mouseDown = GInt.Interaction GEv.onMouseDown go
   where
   go :: GEv.MouseEvent -> GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
@@ -49,7 +49,7 @@ mouseDown = GInt.Interaction GEv.onMouseDown go
     in
       Just state { x = GDims.getX point, y = GDims.getY point }
 
-keyDown :: forall i. GInt.Interaction GEv.KeyboardEvent State i
+keyDown :: GInt.Interaction GEv.KeyboardEvent State
 keyDown = GInt.Interaction GEv.onKeyDown go
   where
   go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
@@ -60,7 +60,7 @@ keyDown = GInt.Interaction GEv.onKeyDown go
     "ArrowRight" -> Just state { keys { right = true } }
     _ -> Nothing
 
-keyUp :: forall i. GInt.Interaction GEv.KeyboardEvent State i
+keyUp :: GInt.Interaction GEv.KeyboardEvent State
 keyUp = GInt.Interaction GEv.onKeyUp go
   where
   go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)

@@ -6057,7 +6057,7 @@
         return width2(v.value0.height)(v.value0.aspectRatio);
       }
       ;
-      throw new Error("Failed pattern match at Gesso.Dimensions (line 169, column 14 - line 172, column 74): " + [v.constructor.name]);
+      throw new Error("Failed pattern match at Gesso.Dimensions (line 187, column 14 - line 190, column 74): " + [v.constructor.name]);
     },
     getHeight: function(v) {
       if (v instanceof WidthAndHeight) {
@@ -6072,7 +6072,7 @@
         return v.value0.height;
       }
       ;
-      throw new Error("Failed pattern match at Gesso.Dimensions (line 173, column 15 - line 176, column 40): " + [v.constructor.name]);
+      throw new Error("Failed pattern match at Gesso.Dimensions (line 191, column 15 - line 194, column 40): " + [v.constructor.name]);
     },
     getRatio: function(v) {
       if (v instanceof WidthAndHeight) {
@@ -6087,7 +6087,7 @@
         return v.value0.aspectRatio;
       }
       ;
-      throw new Error("Failed pattern match at Gesso.Dimensions (line 177, column 14 - line 180, column 50): " + [v.constructor.name]);
+      throw new Error("Failed pattern match at Gesso.Dimensions (line 195, column 14 - line 198, column 50): " + [v.constructor.name]);
     }
   };
   var positionedPoint = {
@@ -6206,7 +6206,7 @@
           return keepHeight;
         }
         ;
-        throw new Error("Failed pattern match at Gesso.Dimensions (line 156, column 3 - line 158, column 29): ");
+        throw new Error("Failed pattern match at Gesso.Dimensions (line 174, column 3 - line 176, column 29): ");
       }();
       return go2;
     };
@@ -8683,7 +8683,7 @@
                           return s();
                         }
                         ;
-                        throw new Error("Failed pattern match at Gesso.Canvas (line 403, column 5 - line 405, column 19): " + [mstate$prime.constructor.name]);
+                        throw new Error("Failed pattern match at Gesso.Canvas (line 419, column 5 - line 421, column 19): " + [mstate$prime.constructor.name]);
                       };
                     };
                   };
@@ -8700,7 +8700,7 @@
                         return unit;
                       }
                       ;
-                      throw new Error("Failed pattern match at Gesso.Canvas (line 385, column 5 - line 387, column 32): " + [v.value0.constructor.name]);
+                      throw new Error("Failed pattern match at Gesso.Canvas (line 401, column 5 - line 403, column 32): " + [v.value0.constructor.name]);
                     })();
                     notify2(UpdatesProcessed.value)();
                     return app.render(v.value1)(delta2)(scaler)(context)();
@@ -8845,7 +8845,7 @@
             });
           }
           ;
-          throw new Error("Failed pattern match at Gesso.Canvas (line 234, column 44 - line 260, column 15): " + [v1.constructor.name]);
+          throw new Error("Failed pattern match at Gesso.Canvas (line 243, column 44 - line 269, column 15): " + [v1.constructor.name]);
         });
       }
       ;
@@ -8921,7 +8921,7 @@
         });
       }
       ;
-      throw new Error("Failed pattern match at Gesso.Canvas (line 227, column 16 - line 277, column 50): " + [v.constructor.name]);
+      throw new Error("Failed pattern match at Gesso.Canvas (line 236, column 16 - line 286, column 50): " + [v.constructor.name]);
     };
   };
   var handleQuery = function(dictMonadAff) {

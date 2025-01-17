@@ -251,9 +251,7 @@ extractOutput _ _ state { showGrid, color, pixels, redo } = pure $
   else
     Nothing
 
-highlightCell
-  :: forall i
-   . GInt.Interaction GEv.MouseEvent CanvasState i
+highlightCell :: GInt.Interaction GEv.MouseEvent CanvasState
 highlightCell = GInt.Interaction GEv.onMouseMove getMousePos
   where
   getMousePos event _ scaler state = pure $
@@ -288,14 +286,10 @@ toXY event scale =
   in
     { x, y }
 
-clearHighlight
-  :: forall i
-   . GInt.Interaction GEv.MouseEvent CanvasState i
+clearHighlight :: GInt.Interaction GEv.MouseEvent CanvasState
 clearHighlight = GInt.Interaction GEv.onMouseOut (\_ _ _ s -> pure $ Just s { mouseCell = Nothing })
 
-mouseDown
-  :: forall i
-   . GInt.Interaction GEv.MouseEvent CanvasState i
+mouseDown :: GInt.Interaction GEv.MouseEvent CanvasState
 mouseDown = GInt.Interaction GEv.onMouseDown startDrawing
   where
   startDrawing event _ scaler state = pure $
@@ -306,9 +300,7 @@ mouseDown = GInt.Interaction GEv.onMouseDown startDrawing
     in
       Just state { pixels = p : state.pixels, redo = Nil, mouseDown = true }
 
-mouseUp
-  :: forall i
-   . GInt.Interaction GEv.MouseEvent CanvasState i
+mouseUp :: GInt.Interaction GEv.MouseEvent CanvasState
 mouseUp = GInt.Interaction GEv.onMouseUp (\_ _ _ s -> pure $ Just s { mouseDown = false })
 
 renderApp :: CanvasState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit

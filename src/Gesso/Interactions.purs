@@ -13,7 +13,6 @@ module Gesso.Interactions
   ( EventProp
   , Handler
   , Interaction(..)
-  , InteractionList
   , Interactions
   , default
   , toProps
@@ -43,41 +42,54 @@ import Halogen.HTML.Properties (IProp)
 -- | `onClick :: forall r i. (MouseEvent -> i) -> IProp (onClick :: MouseEvent | r) i`
 type EventProp event i = (event -> i) -> IProp HTMLcanvas i
 
--- | Alias for an event handler, which receives an event and returns an
--- | `UpdateFunction`. An `UpdateFunction` receives a time delta (`Gesso.Time`),
--- | a coordinate scaler (`Gesso.Dimensions`), and the current state, and may
--- | return an updated state if the state should change in response to the
--- | event.
+-- | An event handler is a variant of an update function, which receives an
+-- | event and produces an update function in response.
 type Handler event localState = event -> App.UpdateFunction localState
 
--- | An `Interaction` is a combination of an event property
--- | ([`EventProp`](#t:EventProp) e.g., `onClick`) and an event handler.
-data Interaction event localState i =
-  Interaction (EventProp event i) (Handler event localState)
-
--- | Alias for an array of [`Interaction`s](#t:Interaction)
-type InteractionList event localState i = Array (Interaction event localState i)
+-- | A combination of an event property, e.g. `onClick`, and an event handler.
+data Interaction event localState =
+  Interaction (forall i. EventProp event i) (Handler event localState)
 
 -- | `Interactions` is a record containing arrays of interactions for each type
--- | of event that Canvas supports.
-type Interactions localState i =
-  { base :: InteractionList Event localState i
-  , clipboard :: InteractionList ClipboardEvent localState i
-  , focus :: InteractionList FocusEvent localState i
-  , keyboard :: InteractionList KeyboardEvent localState i
-  , touch :: InteractionList TouchEvent localState i
-  , drag :: InteractionList DragEvent localState i
-  , mouse :: InteractionList MouseEvent localState i
-  , wheel :: InteractionList WheelEvent localState i
+-- | of event that Canvas supports. It's used in
+-- | [`Gesso.Canvas.Input`](Gesso.Canvas.html#t:Input) to add event handlers to
+-- | a component.
+type Interactions localState =
+  { base :: Array (Interaction Event localState)
+  , clipboard :: Array (Interaction ClipboardEvent localState)
+  , focus :: Array (Interaction FocusEvent localState)
+  , keyboard :: Array (Interaction KeyboardEvent localState)
+  , touch :: Array (Interaction TouchEvent localState)
+  , drag :: Array (Interaction DragEvent localState)
+  , mouse :: Array (Interaction MouseEvent localState)
+  , wheel :: Array (Interaction WheelEvent localState)
   }
 
--- | Convert an [`Interactions`](#t:Interactions) record to an array of HTML
--- | properties. `i` - the return value of the `toCallback` parameter - should
--- | be whatever `Action` type the component has, like `QueueUpdate` in Canvas.
+-- | An default `Interactions` record containing no interactions. The
+-- | attributes can be overridden individually instead of manually creating a
+-- | complete but mostly empty record. For example:
+-- |
+-- | `Interactions.default { keyboard = [ a, b, c ] }`
+default :: forall localState. Interactions localState
+default =
+  { base: []
+  , clipboard: []
+  , focus: []
+  , keyboard: []
+  , touch: []
+  , drag: []
+  , mouse: []
+  , wheel: []
+  }
+
+-- | Convert an `Interactions` record to an array of HTML properties. The return
+-- | value of the `toCallback` parameter, `i`, is only known by the component
+-- | and should be whatever `Action` type the component has, like `QueueUpdate`
+-- | in Canvas.
 toProps
   :: forall localState i
    . (App.UpdateFunction localState -> i)
-  -> Interactions localState i
+  -> Interactions localState
   -> Array (IProp HTMLcanvas i)
 toProps
   toCallback
@@ -91,34 +103,16 @@ toProps
     <> map toProp mouse
     <> map toProp wheel
   where
-  toProp :: forall e. Interaction e localState i -> IProp HTMLcanvas i
+  toProp :: forall e. Interaction e localState -> IProp HTMLcanvas i
   toProp (Interaction onEvent handler) =
     onEvent $ toCallback <<< handler
 
--- | An [`Interactions`](#t:Interactions) record containing no interactions. The
--- | attributes can be overridden individually instead of manually creating a
--- | complete but mostly empty record. For example:
--- |
--- | `default { keyboard = [ a, b, c ] }`
-default :: forall localState i. Interactions localState i
-default =
-  { base: []
-  , clipboard: []
-  , focus: []
-  , keyboard: []
-  , touch: []
-  , drag: []
-  , mouse: []
-  , wheel: []
-  }
-
--- | A useful example [`Interaction`](#t:Interaction) that updates the mouse
--- | position on every `MouseMove` event, which works with all state types that
--- | are records containing at least a
--- | `mousePos :: Maybe Gesso.Dimensions.Point` field.
+-- | A useful example interaction that updates the mouse position on every
+-- | `MouseMove` event, which works with all state types that are records
+-- | containing at least a `mousePos :: Maybe Gesso.Dimensions.Point` field.
 mousePosition
-  :: forall moreState i
-   . Interaction MouseEvent { mousePos :: Maybe Dims.Point | moreState } i
+  :: forall moreState
+   . Interaction MouseEvent { mousePos :: Maybe Dims.Point | moreState }
 mousePosition =
   Interaction Events.onMouseMove getMousePos
   where

@@ -2,8 +2,7 @@
 -- | calling requestAnimationFrame, attaching events, and running render and
 -- | update functions.
 module Gesso.Canvas
-  ( Action
-  , Input
+  ( Input
   , Query(..)
   , Slot
   , Output(..)
@@ -81,7 +80,7 @@ type State localState appInput appOutput =
   , app :: App.AppSpec Context2D localState appInput appOutput
   , localState :: localState
   , viewBox :: Dims.ViewBox
-  , interactions :: GI.Interactions localState (Action localState)
+  , interactions :: GI.Interactions localState
   , dom ::
       Maybe
         { clientRect :: Dims.ClientRect
@@ -143,7 +142,7 @@ type Input localState appInput appOutput =
   , app :: App.AppSpec Context2D localState appInput appOutput
   , localState :: localState
   , viewBox :: Dims.ViewBox
-  , interactions :: GI.Interactions localState (Action localState)
+  , interactions :: GI.Interactions localState
   }
 
 -- | Definition of the Canvas component. `render` is memoized so that it only

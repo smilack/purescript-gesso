@@ -45,8 +45,8 @@ input =
   }
 
 mouseDown
-  :: forall r i
-   . GInt.Interaction GEv.MouseEvent { clicked :: Maybe GDim.Point | r } i
+  :: forall r
+   . GInt.Interaction GEv.MouseEvent { clicked :: Maybe GDim.Point | r }
 mouseDown = GInt.Interaction GEv.onMouseDown getMousePos
   where
   getMousePos event _ _ state = pure $ Just state { clicked = Just $ GDim.fromMouseEvent event }
