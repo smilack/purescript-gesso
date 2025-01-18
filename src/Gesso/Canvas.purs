@@ -12,16 +12,12 @@ module Gesso.Canvas
 
 import Prelude
 
-import Control.Alt ((<|>))
-import Control.Monad.Writer (Writer, WriterT, lift, runWriter, writer)
 import Data.Foldable (foldr, traverse_)
 import Data.Function (on)
 import Data.List (List, (:))
 import Data.List as List
-import Data.Maybe (Maybe(..), maybe)
-import Data.Traversable (for, sequence, traverse)
-import Data.Tuple (Tuple(..))
-import Data.Tuple.Nested ((/\))
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Traversable (for, traverse)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as App
@@ -394,49 +390,31 @@ queueAnimationFrame
   rafCallback :: T.Now -> Effect Unit
   rafCallback timestamp = updateAndRender (T.delta timestamp lastTime)
 
-  -- TODO: There's a better way to do this and `applyUpdate`. Writer monad?
   updateAndRender :: T.Delta -> Effect Unit
   updateAndRender delta = do
-    state' /\ changed <-
+    state' <-
       foldr
-        (applyUpdate delta)
-        (pure (localState /\ DidNotChange))
+        (\update state' -> tryUpdate localState (update delta scaler) state')
+        (pure Nothing)
         (app.update : queuedUpdates)
 
-    case changed of
-      Changed -> notify $ StateUpdated delta scaler state'
-      DidNotChange -> pure unit
+    void $ traverse (notify <<< StateUpdated delta scaler) state'
 
     notify UpdatesProcessed
 
-    app.render state' delta scaler context
+    app.render (fromMaybe localState state') delta scaler context
 
-  applyUpdate
-    :: T.Delta
-    -> App.UpdateFunction localState
-    -> Effect (Tuple localState StateChanged)
-    -> Effect (Tuple localState StateChanged)
-  applyUpdate delta update s = do
-    (state /\ _) <- s
-    runWriter <$> runUpdate state (update delta scaler)
-
-  runUpdate
-    :: localState
-    -> (localState -> Effect (Maybe localState))
-    -> Effect (Writer StateChanged localState)
-  runUpdate state func = func state <#> change state
-
-  change :: localState -> Maybe localState -> Writer StateChanged localState
-  change state = writer <<< maybe (state /\ DidNotChange) (_ /\ Changed)
-
--- | A simple type to track whether the local state changed while running
--- | interactions and updates.
-data StateChanged = Changed | DidNotChange
-
-instance Semigroup StateChanged where
-  append Changed DidNotChange = Changed
-  append DidNotChange Changed = Changed
-  append a _ = a
+-- | Run an update function, using a current state if available, or an older one
+-- | if not. When folding over a list of update functions, this makes it easier
+-- | to track whether the state has changed while also continuing to pass on the
+-- | most current state.
+tryUpdate
+  :: forall localState
+   . localState
+  -> (localState -> Effect (Maybe localState))
+  -> Effect (Maybe localState)
+  -> Effect (Maybe localState)
+tryUpdate original update current = current >>= fromMaybe original >>> update
 
 -- | Get a new `clientRect` for the `canvas` element and create a new scaler for
 -- | it, saving both to the component state.
