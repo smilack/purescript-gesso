@@ -12,7 +12,7 @@ module Gesso.Canvas
 
 import Prelude
 
-import Data.Foldable (foldr, traverse_)
+import Data.Foldable (foldr, for_, traverse_)
 import Data.Function (on)
 import Data.List (List, (:))
 import Data.List as List
@@ -67,9 +67,6 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |     Actions from `requestAnimationFrame` callbacks to the component.
 -- | - `queuedUpdates` is a list of interactions and Query inputs waiting to be
 -- |   applied.
--- | - `processingUpdates` is a list of interactions and Query inputs that have
--- |   been passed to the animation frame to be applied, but which may not have
--- |   been applied yet.
 -- | - `timers` contains two timestamps, which are both set to a default value
 -- |   when the component is initialized:
 -- |   - `frame` is the timestamp of the most recently fired animation frame.
@@ -96,13 +93,12 @@ type State localState appInput appOutput =
         { resize :: H.SubscriptionId
         , emitter :: H.SubscriptionId
         }
-  , queuedUpdates :: List (App.UpdateFunction localState)
-  , processingUpdates :: List (App.UpdateFunction localState)
   , timers ::
       Maybe
         { frame :: T.Last
         , fixed :: T.Last
         }
+  , queuedUpdates :: List (T.Stamped (App.TimestampedUpdate localState))
   , rafId :: Maybe T.RequestAnimationFrameId
   }
 
@@ -115,7 +111,6 @@ data Action localState
   | Finalize
   | StateUpdated T.Delta Dims.Scaler localState
   | QueueUpdate (App.UpdateFunction localState)
-  | UpdatesProcessed
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
 
@@ -195,7 +190,6 @@ initialState { name, app, localState, viewBox, interactions } =
   , subscriptions: Nothing
   , timers: Nothing
   , queuedUpdates: List.Nil
-  , processingUpdates: List.Nil
   , rafId: Nothing
   }
 
@@ -225,8 +219,6 @@ render { name, dom, app, interactions } =
 -- | - `Finalize`: Unsubscribe from window resize events and listener/emitter.
 -- | - `QueueUpdate`: An event (interaction or input) fired, add the handler to
 -- |   a queue to be run on the next animation frame.
--- | - `UpdatesProcessed`: The `processingUpdates` queue was successfully
--- |   processed in an animation frame, so those updates can be discarded.
 -- | - `StateUpdated`: The local state is changing. Save it and tell
 -- |   `Application` to handle output.
 -- | - `FrameRequested`: An animation frame has been requested, save its ID.
@@ -262,27 +254,28 @@ handleAction = case _ of
 
       -- otherwise, update and render
       Just dom -> do
-        { localState, app, queuedUpdates, processingUpdates } <- H.get
-        -- Prepend any newly queued updates to the list of updates we've tried to
-        --   process, then empty the main queue and replace the processing queue
-        --   with the sum of both.
+        { localState, app, queuedUpdates } <- H.get
+
+        {- 
+        state' <-
+          foldr
+            (\update state' -> tryUpdate localState (update delta scaler) state')
+            (pure Nothing)
+            (app.update : queuedUpdates)
+
+        traverse_ (notify <<< StateUpdated delta scaler) state' 
+        -}
+
+        -- StateUpdated should maybe only ever be emitted immediately before rendering? discuss
 
         {- TODO: apply queued updates here -}
 
-        let
-          tryUpdates = queuedUpdates <> processingUpdates
-        H.modify_
-          ( _
-              { queuedUpdates = List.Nil
-              , processingUpdates = tryUpdates
-              }
-          )
+        H.modify_ (_ { queuedUpdates = List.Nil })
 
         H.liftEffect $ queueAnimationFrame
           lastFrame
           dom.context
           dom.scaler
-          tryUpdates
           localState
           app
           notify
@@ -291,12 +284,10 @@ handleAction = case _ of
 
   -- Hold on to interactions/inputs until the next tick, then pass them into rAF
   QueueUpdate handlerFn -> do
-    queuedUpdates <- H.gets _.queuedUpdates
-    H.modify_ (_ { queuedUpdates = handlerFn : queuedUpdates })
-
-  -- The interactions passed into an animation frame have been processed and are
-  --   no longer needed.
-  UpdatesProcessed -> H.modify_ (_ { processingUpdates = List.Nil })
+    { queuedUpdates, timers } <- H.get
+    for_ timers \{ frame } -> do
+      stampedUpdate <- H.liftEffect $ T.stamp frame handlerFn
+      H.modify_ (_ { queuedUpdates = stampedUpdate : queuedUpdates })
 
   StateUpdated delta scaler localState' -> saveNewState delta scaler localState'
 
@@ -386,27 +377,17 @@ getFirstFrame = requestAnimationFrame (const $ pure unit)
 -- | function, and tracking whether any of them changes the state. If one does,
 -- | a `StateUpdated` action is emitted, which will persist the change back to
 -- | the component and cause the component to check whether the change needs to
--- | be outputted. Next, an action is emitted to let the component know that the
--- | updates in the `processingUpdates` queue are complete. Finally, it calls
--- | the app's render function.
+-- | be outputted. Finally, it calls the app's render function.
 queueAnimationFrame
   :: forall localState appInput appOutput
    . T.Last
   -> Context2D
   -> Dims.Scaler
-  -> List (App.UpdateFunction localState)
   -> localState
   -> App.AppSpec Context2D localState appInput appOutput
   -> (Action localState -> Effect Unit)
   -> Effect Unit
-queueAnimationFrame
-  lastTime
-  context
-  scaler
-  queuedUpdates
-  localState
-  app
-  notify =
+queueAnimationFrame lastTime context scaler localState app notify =
   requestAnimationFrame rafCallback notify
   where
   rafCallback :: T.Now -> Effect Unit
@@ -414,15 +395,9 @@ queueAnimationFrame
 
   updateAndRender :: T.Delta -> Effect Unit
   updateAndRender delta = do
-    state' <-
-      foldr
-        (\update state' -> tryUpdate localState (update delta scaler) state')
-        (pure Nothing)
-        (app.update : queuedUpdates)
+    state' <- tryUpdate localState (app.update delta scaler) (pure Nothing)
 
-    void $ traverse (notify <<< StateUpdated delta scaler) state'
-
-    notify UpdatesProcessed
+    traverse_ (notify <<< StateUpdated delta scaler) state'
 
     app.render (fromMaybe localState state') delta scaler context
 
