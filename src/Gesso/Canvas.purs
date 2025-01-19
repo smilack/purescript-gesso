@@ -70,6 +70,11 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- | - `processingUpdates` is a list of interactions and Query inputs that have
 -- |   been passed to the animation frame to be applied, but which may not have
 -- |   been applied yet.
+-- | - `timers` contains two timestamps, which are both set to a default value
+-- |   when the component is initialized:
+-- |   - `frame` is the timestamp of the most recently fired animation frame.
+-- |   - `fixed` is used for accurately spacing fixed-rate updates and it's
+-- |     updated after every batch of updates.
 -- | - `rafId` is the ID of the most recently requested animation frame. It's
 -- |   set when `requestAnimationFrame` is called and cleared when the animation
 -- |   frame callback runs.
@@ -93,6 +98,11 @@ type State localState appInput appOutput =
         }
   , queuedUpdates :: List (App.UpdateFunction localState)
   , processingUpdates :: List (App.UpdateFunction localState)
+  , timers ::
+      Maybe
+        { frame :: T.Last
+        , fixed :: T.Last
+        }
   , rafId :: Maybe T.RequestAnimationFrameId
   }
 
@@ -183,6 +193,7 @@ initialState { name, app, localState, viewBox, interactions } =
   , interactions
   , dom: Nothing
   , subscriptions: Nothing
+  , timers: Nothing
   , queuedUpdates: List.Nil
   , processingUpdates: List.Nil
   , rafId: Nothing
@@ -238,36 +249,43 @@ handleAction = case _ of
 
   FirstTick notify -> H.liftEffect $ getFirstFrame notify
 
-  Tick notify lastTime -> H.gets _.dom >>= case _ of
-    -- if we get to this point and the dom stuff isn't available, something's
-    --   wrong, so just close
-    Nothing -> handleAction Finalize
+  Tick notify lastFrame -> do
+    H.gets _.timers >>= H.modify_ <<< case _ of
+      Nothing ->
+        (_ { timers = Just { frame: lastFrame, fixed: lastFrame } })
+      Just timers -> (_ { timers = Just $ timers { frame = lastFrame } })
 
-    -- otherwise, update and render
-    Just dom -> do
-      { localState, app, queuedUpdates, processingUpdates } <- H.get
-      -- Prepend any newly queued updates to the list of updates we've tried to
-      --   process, then empty the main queue and replace the processing queue
-      --   with the sum of both.
+    H.gets _.dom >>= case _ of
+      -- if we get to this point and the dom stuff isn't available, something's
+      --   wrong, so just close
+      Nothing -> handleAction Finalize
 
-      {- TODO: apply queued updates here -}
+      -- otherwise, update and render
+      Just dom -> do
+        { localState, app, queuedUpdates, processingUpdates } <- H.get
+        -- Prepend any newly queued updates to the list of updates we've tried to
+        --   process, then empty the main queue and replace the processing queue
+        --   with the sum of both.
 
-      let
-        tryUpdates = queuedUpdates <> processingUpdates
-      H.modify_
-        ( _
-            { queuedUpdates = List.Nil
-            , processingUpdates = tryUpdates
-            }
-        )
-      H.liftEffect $ queueAnimationFrame
-        lastTime
-        dom.context
-        dom.scaler
-        tryUpdates
-        localState
-        app
-        notify
+        {- TODO: apply queued updates here -}
+
+        let
+          tryUpdates = queuedUpdates <> processingUpdates
+        H.modify_
+          ( _
+              { queuedUpdates = List.Nil
+              , processingUpdates = tryUpdates
+              }
+          )
+
+        H.liftEffect $ queueAnimationFrame
+          lastFrame
+          dom.context
+          dom.scaler
+          tryUpdates
+          localState
+          app
+          notify
 
   Finalize -> unsubscribe
 
@@ -301,17 +319,21 @@ initialize
        (Action localState -> Effect Unit)
 initialize = do
   { notify, subscriptions } <- mkSubs
-  dom <- H.liftEffect <<< mkDom =<< H.get
-  H.modify_ (_ { dom = dom, subscriptions = Just subscriptions })
+  timers <- H.liftEffect mkTimers
+  state <- H.get
+  dom <- H.liftEffect $ mkDom state
+  H.put $ state { dom = dom, subscriptions = subscriptions, timers = timers }
   pure notify
   where
+  mkTimers = T.started <#> \t -> Just { frame: t, fixed: t }
+
   mkSubs = do
     notifications <- H.liftEffect HS.create
     emitter <- H.subscribe notifications.emitter
     resize <- subscribeResize
     pure
       { notify: HS.notify notifications.listener
-      , subscriptions: { resize, emitter }
+      , subscriptions: Just { resize, emitter }
       }
 
   mkDom { name, viewBox } = do
