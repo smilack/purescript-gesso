@@ -5,6 +5,7 @@ module Gesso.Time
   , Last
   , Now
   , RequestAnimationFrameId
+  , Stamped
   , cancelAnimationFrame
   , delta
   , elapse
@@ -12,6 +13,7 @@ module Gesso.Time
   , requestAnimationFrame
   , stamp
   , stampInterval
+  , started
   ) where
 
 import Prelude
@@ -79,6 +81,10 @@ delta (Now now) (Last last) = { now, last, delta: now - last }
 -- |
 -- | See [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp)
 foreign import _now :: Effect Now
+
+-- | Get a single `Last` value at the current time, useful for starting a timer.
+started :: Effect Last
+started = elapse <$> _now
 
 -- | An item and a specific time associated with that item. Used for comparing
 -- | timestamped values produced by [`stamp`](#v:stamp) and
