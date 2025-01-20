@@ -12,6 +12,7 @@ module Gesso.Canvas
 
 import Prelude
 
+import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
 import Data.Foldable (foldr, for_, traverse_)
 import Data.Function (on)
 import Data.List (List, (:))
@@ -242,43 +243,45 @@ handleAction = case _ of
   FirstTick notify -> H.liftEffect $ getFirstFrame notify
 
   Tick notify lastFrame -> do
-    H.gets _.timers >>= H.modify_ <<< case _ of
-      Nothing ->
-        (_ { timers = Just { frame: lastFrame, fixed: lastFrame } })
-      Just timers -> (_ { timers = Just $ timers { frame = lastFrame } })
+    { localState, app, queuedUpdates } <- H.get
 
-    H.gets _.dom >>= case _ of
-      -- if we get to this point and the dom stuff isn't available, something's
-      --   wrong, so just close
-      Nothing -> handleAction Finalize
+    results <- runMaybeT do
+      -- { fixed } <- MaybeT $ H.gets _.timers
+      { context, scaler } <- MaybeT $ H.gets _.dom
 
-      -- otherwise, update and render
-      Just dom -> do
-        { localState, app, queuedUpdates } <- H.get
+      lift $ H.liftEffect do
+        -- schedule fixed updates
+        {- { last, items } <- T.stampInterval fixedUpdateFn interval
+        let timers' = { frame: lastFrame, fixed: last }
+        let updateQueue = T.sort (items : queuedUpdates) -}
 
-        {- 
-        state' <-
-          foldr
-            (\update state' -> tryUpdate localState (update delta scaler) state')
-            (pure Nothing)
-            (app.update : queuedUpdates)
-
-        traverse_ (notify <<< StateUpdated delta scaler) state' 
-        -}
+        -- run pending + queued updates
+        {- state' <- foldr
+        (\up state' -> tryUpdate localState (up dom.scaler) state')
+        (pure Nothing)
+        queuedUpdates -}
 
         -- StateUpdated should maybe only ever be emitted immediately before rendering? discuss
+        -- passing state' to queueAnimationFrame for this purpose
 
-        {- TODO: apply queued updates here -}
-
-        H.modify_ (_ { queuedUpdates = List.Nil })
-
-        H.liftEffect $ queueAnimationFrame
+        queueAnimationFrame
           lastFrame
-          dom.context
-          dom.scaler
+          context
+          scaler
           localState
+          -- state'
           app
           notify
+
+        pure
+          { queue': List.Nil
+          , timers': { frame: lastFrame, fixed: lastFrame }
+          }
+
+    case results of
+      Nothing -> handleAction Finalize
+      Just { queue', timers' } ->
+        H.modify_ (_ { queuedUpdates = queue', timers = Just timers' })
 
   Finalize -> unsubscribe
 
@@ -384,10 +387,11 @@ queueAnimationFrame
   -> Context2D
   -> Dims.Scaler
   -> localState
+  -- -> Effect (Maybe localState)
   -> App.AppSpec Context2D localState appInput appOutput
   -> (Action localState -> Effect Unit)
   -> Effect Unit
-queueAnimationFrame lastTime context scaler localState app notify =
+queueAnimationFrame lastTime context scaler localState {- state' -} app notify =
   requestAnimationFrame rafCallback notify
   where
   rafCallback :: T.Now -> Effect Unit
@@ -400,6 +404,12 @@ queueAnimationFrame lastTime context scaler localState app notify =
     traverse_ (notify <<< StateUpdated delta scaler) state'
 
     app.render (fromMaybe localState state') delta scaler context
+
+{-     state'' <- tryUpdate localState (app.update delta scaler) state'
+
+traverse_ (notify <<< StateUpdated delta scaler) state''
+
+app.render (fromMaybe localState state'') delta scaler context -}
 
 -- | Run an update function, using a current state if available, or an older one
 -- | if not. When folding over a list of update functions, this makes it easier
