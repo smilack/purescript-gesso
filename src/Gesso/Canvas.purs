@@ -12,6 +12,7 @@ module Gesso.Canvas
 
 import Prelude
 
+import Control.Alt ((<|>))
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
 import Data.Foldable (foldr, for_, traverse_)
 import Data.Function (on)
@@ -256,32 +257,37 @@ handleAction = case _ of
         let updateQueue = T.sort (items : pendingUpdates) -}
 
         -- run pending + queued updates
-        {- state' <- foldr
-        (\up state' -> tryUpdate localState (up dom.scaler) state')
-        (pure Nothing)
-        pendingUpdates -}
+        state' <- foldr
+          (tryUpdate scaler localState)
+          (pure Nothing)
+          {- stampedUpdateQueue <#> _.item -}
+          (pendingUpdates <#> _.item)
 
-        -- StateUpdated should maybe only ever be emitted immediately before rendering? discuss
-        -- passing state' to queueAnimationFrame for this purpose
+        -- Should StateUpdated only ever be emitted immediately before
+        -- rendering? It could be emitted here and before rendering. Is twice
+        -- per frame too much?
+        --
+        -- Passing state' to queueAnimationFrame so it can use state' to check
+        -- for changes.
 
         queueAnimationFrame
           lastFrame
           context
           scaler
           localState
-          -- state'
+          state'
           app
           notify
 
         pure
           { queue': List.Nil
-          , timers': { frame: lastFrame, fixed: lastFrame }
+          , timers': Just { frame: lastFrame, fixed: lastFrame }
           }
 
     case results of
       Nothing -> handleAction Finalize
       Just { queue', timers' } ->
-        H.modify_ (_ { pendingUpdates = queue', timers = Just timers' })
+        H.modify_ (_ { pendingUpdates = queue', timers = timers' })
 
   Finalize -> unsubscribe
 
@@ -387,11 +393,11 @@ queueAnimationFrame
   -> Context2D
   -> Dims.Scaler
   -> localState
-  -- -> Effect (Maybe localState)
+  -> Maybe localState
   -> App.AppSpec Context2D localState appInput appOutput
   -> (Action localState -> Effect Unit)
   -> Effect Unit
-queueAnimationFrame lastTime context scaler localState {- state' -} app notify =
+queueAnimationFrame lastTime context scaler localState state' app notify =
   requestAnimationFrame rafCallback notify
   where
   rafCallback :: T.Now -> Effect Unit
@@ -399,17 +405,13 @@ queueAnimationFrame lastTime context scaler localState {- state' -} app notify =
 
   updateAndRender :: T.Delta -> Effect Unit
   updateAndRender delta = do
-    state' <- tryUpdate localState (app.update delta scaler) (pure Nothing)
+    state'' <- tryUpdate scaler localState (app.update delta) (pure state')
 
-    traverse_ (notify <<< StateUpdated delta scaler) state'
+    let newestState = state'' <|> state'
 
-    app.render (fromMaybe localState state') delta scaler context
+    traverse_ (notify <<< StateUpdated delta scaler) newestState
 
-{-     state'' <- tryUpdate localState (app.update delta scaler) state'
-
-traverse_ (notify <<< StateUpdated delta scaler) state''
-
-app.render (fromMaybe localState state'') delta scaler context -}
+    app.render (fromMaybe localState newestState) delta scaler context
 
 -- | Run an update function, using a current state if available, or an older one
 -- | if not. When folding over a list of update functions, this makes it easier
@@ -417,11 +419,13 @@ app.render (fromMaybe localState state'') delta scaler context -}
 -- | most current state.
 tryUpdate
   :: forall localState
-   . localState
-  -> (localState -> Effect (Maybe localState))
+   . Dims.Scaler
+  -> localState
+  -> (Dims.Scaler -> localState -> Effect (Maybe localState))
   -> Effect (Maybe localState)
   -> Effect (Maybe localState)
-tryUpdate original update current = current >>= fromMaybe original >>> update
+tryUpdate scaler original update current =
+  current >>= fromMaybe original >>> update scaler
 
 -- | Get a new `clientRect` for the `canvas` element and create a new scaler for
 -- | it, saving both to the component state.
