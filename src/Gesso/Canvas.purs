@@ -66,7 +66,7 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |     `clientRect` and recreate the `scaler`.
 -- |   - `emitter` is a subscription to a listener/emitter pair used to send
 -- |     Actions from `requestAnimationFrame` callbacks to the component.
--- | - `queuedUpdates` is a list of interactions and Query inputs waiting to be
+-- | - `pendingUpdates` is a list of interactions and Query inputs waiting to be
 -- |   applied.
 -- | - `timers` contains two timestamps, which are both set to a default value
 -- |   when the component is initialized:
@@ -99,7 +99,7 @@ type State localState appInput appOutput =
         { frame :: T.Last
         , fixed :: T.Last
         }
-  , queuedUpdates :: List (T.Stamped (App.TimestampedUpdate localState))
+  , pendingUpdates :: List (T.Stamped (App.TimestampedUpdate localState))
   , rafId :: Maybe T.RequestAnimationFrameId
   }
 
@@ -190,7 +190,7 @@ initialState { name, app, localState, viewBox, interactions } =
   , dom: Nothing
   , subscriptions: Nothing
   , timers: Nothing
-  , queuedUpdates: List.Nil
+  , pendingUpdates: List.Nil
   , rafId: Nothing
   }
 
@@ -243,7 +243,7 @@ handleAction = case _ of
   FirstTick notify -> H.liftEffect $ getFirstFrame notify
 
   Tick notify lastFrame -> do
-    { localState, app, queuedUpdates } <- H.get
+    { localState, app, pendingUpdates } <- H.get
 
     results <- runMaybeT do
       -- { fixed } <- MaybeT $ H.gets _.timers
@@ -253,13 +253,13 @@ handleAction = case _ of
         -- schedule fixed updates
         {- { last, items } <- T.stampInterval fixedUpdateFn interval
         let timers' = { frame: lastFrame, fixed: last }
-        let updateQueue = T.sort (items : queuedUpdates) -}
+        let updateQueue = T.sort (items : pendingUpdates) -}
 
         -- run pending + queued updates
         {- state' <- foldr
         (\up state' -> tryUpdate localState (up dom.scaler) state')
         (pure Nothing)
-        queuedUpdates -}
+        pendingUpdates -}
 
         -- StateUpdated should maybe only ever be emitted immediately before rendering? discuss
         -- passing state' to queueAnimationFrame for this purpose
@@ -281,16 +281,16 @@ handleAction = case _ of
     case results of
       Nothing -> handleAction Finalize
       Just { queue', timers' } ->
-        H.modify_ (_ { queuedUpdates = queue', timers = Just timers' })
+        H.modify_ (_ { pendingUpdates = queue', timers = Just timers' })
 
   Finalize -> unsubscribe
 
   -- Hold on to interactions/inputs until the next tick, then pass them into rAF
   QueueUpdate handlerFn -> do
-    { queuedUpdates, timers } <- H.get
+    { pendingUpdates, timers } <- H.get
     for_ timers \{ frame } -> do
       stampedUpdate <- H.liftEffect $ T.stamp frame handlerFn
-      H.modify_ (_ { queuedUpdates = stampedUpdate : queuedUpdates })
+      H.modify_ (_ { pendingUpdates = stampedUpdate : pendingUpdates })
 
   StateUpdated delta scaler localState' -> saveNewState delta scaler localState'
 
