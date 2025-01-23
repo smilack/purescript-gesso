@@ -6658,9 +6658,7 @@
       output: function(v) {
         return function(v1) {
           return function(v2) {
-            return function(v3) {
-              return pure3(Nothing.value);
-            };
+            return pure3(Nothing.value);
           };
         };
       },
@@ -8933,7 +8931,10 @@
               $113.localState = state$prime;
               return $113;
             }))(function() {
-              return bind13(liftEffect7(v.app.output(delta2)(scaler)(v.localState)(state$prime)))(function(mOutput) {
+              return bind13(liftEffect7(v.app.output(delta2)(scaler)({
+                previous: v.localState,
+                current: state$prime
+              })))(function(mOutput) {
                 return traverse_5(function($187) {
                   return raise(Output($187));
                 })(mOutput);
@@ -8977,13 +8978,17 @@
                   return function __do2() {
                     var state$prime$prime = tryUpdate(scaler)(localState)(app.update(delta2))(pure7(state$prime))();
                     var newestState = alt5(state$prime$prime)(state$prime);
+                    var stateDelta = {
+                      previous: localState,
+                      current: fromMaybe(localState)(newestState)
+                    };
                     traverse_12(function() {
                       var $191 = StateUpdated.create(delta2)(scaler);
                       return function($192) {
                         return notify2($191($192));
                       };
                     }())(newestState)();
-                    return app.render(fromMaybe(localState)(newestState))(delta2)(scaler)(context)();
+                    return app.render(context)(delta2)(scaler)(stateDelta)();
                   };
                 };
                 var rafCallback = function(timestamp) {
@@ -10229,10 +10234,10 @@
   var pure15 = /* @__PURE__ */ pure(applicativeEffect);
   var traverse_9 = /* @__PURE__ */ traverse_(applicativeEffect)(foldableMaybe);
   var component2 = /* @__PURE__ */ component(monadAffAff);
-  var render2 = function(v) {
-    return function(v1) {
+  var render2 = function(context) {
+    return function(v) {
       return function(scale2) {
-        return function(context) {
+        return function(v1) {
           var toRectangle = scale2.toRectangle(dimensionedDimensions);
           var drawGridLine = function(i2) {
             var n = function(v2) {
@@ -10267,19 +10272,19 @@
             };
           };
           var drawMouseClicked = function(mxy) {
-            var y$prime = function($47) {
+            var y$prime = function($48) {
               return function(v2) {
                 return v2 / 1e3;
               }(toNumber(round2(function(v2) {
                 return v2 * 1e3;
-              }(scale2.y.toVb($47)))));
+              }(scale2.y.toVb($48)))));
             };
-            var x$prime = function($48) {
+            var x$prime = function($49) {
               return function(v2) {
                 return v2 / 1e3;
               }(toNumber(round2(function(v2) {
                 return v2 * 1e3;
-              }(scale2.x.toVb($48)))));
+              }(scale2.x.toVb($49)))));
             };
             var text6 = function() {
               if (mxy instanceof Nothing) {
@@ -10339,8 +10344,8 @@
             clearBackground();
             drawAxes();
             drawGridLines();
-            drawMouseClicked(v.clicked)();
-            return traverse_9(drawMouseCursor)(v.mousePos)();
+            drawMouseClicked(v1.current.clicked)();
+            return traverse_9(drawMouseCursor)(v1.current.mousePos)();
           };
         };
       };
@@ -10352,16 +10357,16 @@
         return function(v1) {
           return function(state3) {
             return pure15(new Just(function() {
-              var $44 = {};
-              for (var $45 in state3) {
-                if ({}.hasOwnProperty.call(state3, $45)) {
-                  $44[$45] = state3[$45];
+              var $45 = {};
+              for (var $46 in state3) {
+                if ({}.hasOwnProperty.call(state3, $46)) {
+                  $45[$46] = state3[$46];
                 }
                 ;
               }
               ;
-              $44.clicked = new Just(fromMouseEvent(event));
-              return $44;
+              $45.clicked = new Just(fromMouseEvent(event));
+              return $45;
             }()));
           };
         };

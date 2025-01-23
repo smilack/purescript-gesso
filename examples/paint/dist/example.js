@@ -8450,9 +8450,7 @@
       output: function(v) {
         return function(v1) {
           return function(v2) {
-            return function(v3) {
-              return pure5(Nothing.value);
-            };
+            return pure5(Nothing.value);
           };
         };
       },
@@ -9622,7 +9620,10 @@
               $113.localState = state$prime;
               return $113;
             }))(function() {
-              return bind13(liftEffect7(v.app.output(delta2)(scaler)(v.localState)(state$prime)))(function(mOutput) {
+              return bind13(liftEffect7(v.app.output(delta2)(scaler)({
+                previous: v.localState,
+                current: state$prime
+              })))(function(mOutput) {
                 return traverse_5(function($187) {
                   return raise(Output($187));
                 })(mOutput);
@@ -9666,13 +9667,17 @@
                   return function __do2() {
                     var state$prime$prime = tryUpdate(scaler)(localState2)(app.update(delta2))(pure6(state$prime))();
                     var newestState = alt5(state$prime$prime)(state$prime);
+                    var stateDelta = {
+                      previous: localState2,
+                      current: fromMaybe(localState2)(newestState)
+                    };
                     traverse_12(function() {
                       var $191 = StateUpdated.create(delta2)(scaler);
                       return function($192) {
                         return notify2($191($192));
                       };
                     }())(newestState)();
-                    return app.render(fromMaybe(localState2)(newestState))(delta2)(scaler)(context)();
+                    return app.render(context)(delta2)(scaler)(stateDelta)();
                   };
                 };
                 var rafCallback = function(timestamp) {
@@ -10000,10 +10005,10 @@
       };
     };
   };
-  var renderApp = function(v) {
-    return function(v1) {
+  var renderApp = function(context) {
+    return function(v) {
       return function(scale2) {
-        return function(context) {
+        return function(v1) {
           var toRectangle = scale2.toRectangle(dimensionedDimensions);
           var drawPixel = function(v2) {
             return function __do2() {
@@ -10021,7 +10026,7 @@
             setStrokeStyle(context)("#888")();
             return strokeRect(context)(toRectangle(scale2.screen))();
           };
-          var drawImage2 = sequence_1(map25(drawPixel)(reverse2(v.pixels)));
+          var drawImage2 = sequence_1(map25(drawPixel)(reverse2(v1.current.pixels)));
           var drawGridLine = function(i2) {
             var n = toNumber(i2);
             return strokePath(context)(function __do2() {
@@ -10039,7 +10044,7 @@
             return drawPixel({
               x: v2.x,
               y: v2.y,
-              color: v.color
+              color: v1.current.color
             });
           };
           var clearBackground = function __do2() {
@@ -10049,9 +10054,9 @@
           return function __do2() {
             clearBackground();
             drawOutline();
-            when2(v.showGrid)(drawGrid)();
+            when2(v1.current.showGrid)(drawGrid)();
             drawImage2();
-            return traverse_6(drawCursor)(v.mouseCell)();
+            return traverse_6(drawCursor)(v1.current.mouseCell)();
           };
         };
       };
@@ -10121,22 +10126,20 @@
   }();
   var extractOutput = function(v) {
     return function(v1) {
-      return function(state3) {
-        return function(v2) {
-          return pure7(function() {
-            var $105 = state3.showGrid !== v2.showGrid || (state3.color !== v2.color || (length9(state3.pixels) !== length9(v2.pixels) || length9(state3.redo) !== length9(v2.redo)));
-            if ($105) {
-              return new Just({
-                showGrid: v2.showGrid,
-                color: v2.color,
-                pixels: v2.pixels,
-                redo: v2.redo
-              });
-            }
-            ;
-            return Nothing.value;
-          }());
-        };
+      return function(v2) {
+        return pure7(function() {
+          var $105 = v2.previous.showGrid !== v2.current.showGrid || (v2.previous.color !== v2.current.color || (length9(v2.previous.pixels) !== length9(v2.current.pixels) || length9(v2.previous.redo) !== length9(v2.current.redo)));
+          if ($105) {
+            return new Just({
+              showGrid: v2.current.showGrid,
+              color: v2.current.color,
+              pixels: v2.current.pixels,
+              redo: v2.current.redo
+            });
+          }
+          ;
+          return Nothing.value;
+        }());
       };
     };
   };
@@ -10178,13 +10181,13 @@
                 }
                 ;
                 if (v2 instanceof Just) {
-                  var $115 = eq32(p2)(v2.value0);
-                  if ($115) {
-                    var $116 = eq22(state3.mouseCell)(new Just({
+                  var $117 = eq32(p2)(v2.value0);
+                  if ($117) {
+                    var $118 = eq22(state3.mouseCell)(new Just({
                       x: v1.x,
                       y: v1.y
                     }));
-                    if ($116) {
+                    if ($118) {
                       return Nothing.value;
                     }
                     ;
@@ -10216,14 +10219,14 @@
                   });
                 }
                 ;
-                throw new Error("Failed pattern match at Example.Paint.Grid (line 129, column 31 - line 138, column 80): " + [v2.constructor.name]);
+                throw new Error("Failed pattern match at Example.Paint.Grid (line 131, column 31 - line 140, column 80): " + [v2.constructor.name]);
               }
               ;
-              var $118 = eq22(state3.mouseCell)(new Just({
+              var $120 = eq22(state3.mouseCell)(new Just({
                 x: v1.x,
                 y: v1.y
               }));
-              if ($118) {
+              if ($120) {
                 return Nothing.value;
               }
               ;
@@ -10249,22 +10252,22 @@
   var convertState = function(v) {
     return function(v1) {
       return function(v2) {
-        return function($131) {
+        return function($133) {
           return pure7(Just.create(function(v3) {
-            var $124 = {};
-            for (var $125 in v3) {
-              if ({}.hasOwnProperty.call(v3, $125)) {
-                $124[$125] = v3[$125];
+            var $126 = {};
+            for (var $127 in v3) {
+              if ({}.hasOwnProperty.call(v3, $127)) {
+                $126[$127] = v3[$127];
               }
               ;
             }
             ;
-            $124.showGrid = v.showGrid;
-            $124.color = v.color;
-            $124.pixels = v.pixels;
-            $124.redo = v.redo;
-            return $124;
-          }($131)));
+            $126.showGrid = v.showGrid;
+            $126.color = v.color;
+            $126.pixels = v.pixels;
+            $126.redo = v.redo;
+            return $126;
+          }($133)));
         };
       };
     };

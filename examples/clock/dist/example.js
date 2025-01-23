@@ -7493,9 +7493,7 @@
       output: function(v) {
         return function(v1) {
           return function(v2) {
-            return function(v3) {
-              return pure3(Nothing.value);
-            };
+            return pure3(Nothing.value);
           };
         };
       },
@@ -9765,7 +9763,10 @@
               $113.localState = state$prime;
               return $113;
             }))(function() {
-              return bind13(liftEffect7(v.app.output(delta2)(scaler)(v.localState)(state$prime)))(function(mOutput) {
+              return bind13(liftEffect7(v.app.output(delta2)(scaler)({
+                previous: v.localState,
+                current: state$prime
+              })))(function(mOutput) {
                 return traverse_5(function($187) {
                   return raise(Output($187));
                 })(mOutput);
@@ -9809,13 +9810,17 @@
                   return function __do2() {
                     var state$prime$prime = tryUpdate(scaler)(localState)(app.update(delta2))(pure6(state$prime))();
                     var newestState = alt5(state$prime$prime)(state$prime);
+                    var stateDelta = {
+                      previous: localState,
+                      current: fromMaybe(localState)(newestState)
+                    };
                     traverse_12(function() {
                       var $191 = StateUpdated.create(delta2)(scaler);
                       return function($192) {
                         return notify2($191($192));
                       };
                     }())(newestState)();
-                    return app.render(fromMaybe(localState)(newestState))(delta2)(scaler)(context)();
+                    return app.render(context)(delta2)(scaler)(stateDelta)();
                   };
                 };
                 var rafCallback = function(timestamp) {
@@ -11062,11 +11067,11 @@
   var map31 = /* @__PURE__ */ map(functorArray);
   var show4 = /* @__PURE__ */ show(showInt);
   var component2 = /* @__PURE__ */ component(monadAffAff);
-  var render2 = function(v) {
-    return function(v1) {
-      return function(v2) {
-        return function(context) {
-          var toRectangle1 = v2.toRectangle(dimensionedDimensions);
+  var render2 = function(context) {
+    return function(v) {
+      return function(v1) {
+        return function(v2) {
+          var toRectangle1 = v1.toRectangle(dimensionedDimensions);
           var getTime = function __do2() {
             var t = nowTime();
             var second4 = toNumber(fromEnum3(second(t)));
@@ -11084,9 +11089,9 @@
           };
           var eta = pi / 2;
           var clock = {
-            x: v2.x.toCr(getWidth3(v2.viewBox) / 2),
-            y: v2.y.toCr(getHeight3(v2.viewBox) / 2),
-            r: v2.width.toCr(500)
+            x: v1.x.toCr(getWidth3(v1.viewBox) / 2),
+            y: v1.y.toCr(getHeight3(v1.viewBox) / 2),
+            r: v1.width.toCr(500)
           };
           var drawFrame = function __do2() {
             setFillStyle(context)("#eeeeee")();
@@ -11099,7 +11104,7 @@
               useCounterClockwise: false
             }))();
             setStrokeStyle(context)("#888888")();
-            setLineWidth(context)(v2.width.toCr(25))();
+            setLineWidth(context)(v1.width.toCr(25))();
             return strokePath(context)(arc(context)({
               x: clock.x,
               y: clock.y,
@@ -11128,10 +11133,10 @@
               (function() {
                 var $48 = mod2(i2)(5) === 0;
                 if ($48) {
-                  return setLineWidth(context)(v2.width.toCr(9))();
+                  return setLineWidth(context)(v1.width.toCr(9))();
                 }
                 ;
-                return setLineWidth(context)(v2.width.toCr(3))();
+                return setLineWidth(context)(v1.width.toCr(3))();
               })();
               var angle = function(v3) {
                 return v3 * (tau / 60);
@@ -11156,7 +11161,7 @@
               return function __do2() {
                 setLineCap(context)(Round.value)();
                 setStrokeStyle(context)("black")();
-                setLineWidth(context)(v2.width.toCr(16))();
+                setLineWidth(context)(v1.width.toCr(16))();
                 return drawLineSegment(angle)(-0.1)(0.5)();
               };
             };
@@ -11173,7 +11178,7 @@
               return function __do2() {
                 setLineCap(context)(Round.value)();
                 setStrokeStyle(context)("black")();
-                setLineWidth(context)(v2.width.toCr(16))();
+                setLineWidth(context)(v1.width.toCr(16))();
                 return drawLineSegment(angle)(-0.1)(0.7)();
               };
             };
@@ -11187,9 +11192,9 @@
             return function __do2() {
               setLineCap(context)(Square.value)();
               setStrokeStyle(context)("#DD0000")();
-              setLineWidth(context)(v2.width.toCr(7))();
+              setLineWidth(context)(v1.width.toCr(7))();
               drawLineSegment(angle)(-0.2)(0.7)();
-              setLineWidth(context)(v2.width.toCr(16))();
+              setLineWidth(context)(v1.width.toCr(16))();
               setLineCap(context)(Round.value)();
               return drawLineSegment(angle)(-0.2)(-0.1)();
             };
@@ -11201,11 +11206,11 @@
               return v3 * (tau / 12);
             }(toNumber(mod2(i2)(12))));
             var x = clock.x + 0.775 * clock.r * cos(angle);
-            var y = clock.y + (0.775 * clock.r * sin(angle) + v2.height.toCr(30));
+            var y = clock.y + (0.775 * clock.r * sin(angle) + v1.height.toCr(30));
             return fillText(context)(show4(i2))(x)(y);
           };
           var drawNumbers = function() {
-            var size4 = floor2(v2.width.toCr(78));
+            var size4 = floor2(v1.width.toCr(78));
             return function __do2() {
               setFillStyle(context)("black")();
               setFont(context)(show4(size4) + "pt Georgia")();
@@ -11215,7 +11220,7 @@
           }();
           return function __do2() {
             setFillStyle(context)("white")();
-            fillRect(context)(toRectangle1(v2.screen))();
+            fillRect(context)(toRectangle1(v1.screen))();
             drawFrame();
             drawNumbers();
             drawHashes();
@@ -11229,7 +11234,7 @@
               y: clock.y,
               start: 0,
               end: tau,
-              radius: v2.width.toCr(15),
+              radius: v1.width.toCr(15),
               useCounterClockwise: false
             }))();
           };

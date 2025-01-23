@@ -59,8 +59,8 @@ updateV position radius min max velocity
   | otherwise = velocity
 
 render
-  :: State -> GTime.Delta -> GDims.Scaler -> Canvas.Context2D -> Effect Unit
-render { x, y, radius } _ scale context = do
+  :: Canvas.Context2D -> GTime.Delta -> GDims.Scaler -> GApp.StateDelta State -> Effect Unit
+render context _ scale { current: { x, y, radius } } = do
   Canvas.clearRect context (scale.toRectangle scale.screen)
   Canvas.setFillStyle context "red"
   Canvas.fillPath context do

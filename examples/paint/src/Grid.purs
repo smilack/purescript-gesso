@@ -8,6 +8,7 @@ module Example.Paint.Grid
   ) where
 
 import Prelude
+
 import Data.Array (range)
 import Data.Foldable (sequence_, traverse_, length)
 import Data.Int (floor, toNumber)
@@ -106,16 +107,17 @@ convertState { showGrid, color, pixels, redo } _ _ = pure
   <<< Just
   <<< _ { showGrid = showGrid, color = color, pixels = pixels, redo = redo }
 
-extractOutput :: GTime.Delta -> GDim.Scaler -> CanvasState -> CanvasState -> Effect (Maybe CanvasIO)
-extractOutput _ _ state { showGrid, color, pixels, redo } = pure $
-  if
-    (state.showGrid /= showGrid)
-      || (state.color /= color)
-      || (length state.pixels /= (length pixels :: Int))
-      || (length state.redo /= (length redo :: Int)) then
-    Just { showGrid, color, pixels, redo }
-  else
-    Nothing
+extractOutput :: GTime.Delta -> GDim.Scaler -> GApp.StateDelta CanvasState -> Effect (Maybe CanvasIO)
+extractOutput _ _ { previous, current: { showGrid, color, pixels, redo } } =
+  pure $
+    if
+      (previous.showGrid /= showGrid)
+        || (previous.color /= color)
+        || (length previous.pixels /= (length pixels :: Int))
+        || (length previous.redo /= (length redo :: Int)) then
+      Just { showGrid, color, pixels, redo }
+    else
+      Nothing
 
 highlightCell :: GInt.Interaction GEv.MouseEvent CanvasState
 highlightCell = GInt.Interaction GEv.onMouseMove getMousePos
@@ -169,8 +171,8 @@ mouseDown = GInt.Interaction GEv.onMouseDown startDrawing
 mouseUp :: GInt.Interaction GEv.MouseEvent CanvasState
 mouseUp = GInt.Interaction GEv.onMouseUp (\_ _ _ s -> pure $ Just s { mouseDown = false })
 
-renderApp :: CanvasState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
-renderApp { mouseCell, showGrid, color, pixels } _ scale context = do
+renderApp :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GApp.StateDelta CanvasState -> Effect Unit
+renderApp context _ scale { current: { mouseCell, showGrid, color, pixels } } = do
   clearBackground
   drawOutline
   when showGrid drawGrid

@@ -6608,9 +6608,7 @@
       output: function(v) {
         return function(v1) {
           return function(v2) {
-            return function(v3) {
-              return pure3(Nothing.value);
-            };
+            return pure3(Nothing.value);
           };
         };
       },
@@ -8670,7 +8668,10 @@
               $113.localState = state$prime;
               return $113;
             }))(function() {
-              return bind13(liftEffect7(v.app.output(delta2)(scaler)(v.localState)(state$prime)))(function(mOutput) {
+              return bind13(liftEffect7(v.app.output(delta2)(scaler)({
+                previous: v.localState,
+                current: state$prime
+              })))(function(mOutput) {
                 return traverse_5(function($187) {
                   return raise(Output($187));
                 })(mOutput);
@@ -8714,13 +8715,17 @@
                   return function __do2() {
                     var state$prime$prime = tryUpdate(scaler)(localState)(app.update(delta2))(pure6(state$prime))();
                     var newestState = alt5(state$prime$prime)(state$prime);
+                    var stateDelta = {
+                      previous: localState,
+                      current: fromMaybe(localState)(newestState)
+                    };
                     traverse_12(function() {
                       var $191 = StateUpdated.create(delta2)(scaler);
                       return function($192) {
                         return notify2($191($192));
                       };
                     }())(newestState)();
-                    return app.render(fromMaybe(localState)(newestState))(delta2)(scaler)(context)();
+                    return app.render(context)(delta2)(scaler)(stateDelta)();
                   };
                 };
                 var rafCallback = function(timestamp) {
@@ -9961,10 +9966,10 @@
 
   // output/Example.Hello.Main/index.js
   var canvas3 = /* @__PURE__ */ canvas2(monadAffAff);
-  var render2 = function(v) {
-    return function(v1) {
-      return function(v2) {
-        return function(context) {
+  var render2 = function(context) {
+    return function(v) {
+      return function(v1) {
+        return function(v2) {
           return fillText(context)("hello world")(500)(500);
         };
       };

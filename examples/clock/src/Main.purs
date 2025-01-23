@@ -40,8 +40,8 @@ input =
   , interactions: GInt.default
   }
 
-render :: Unit -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
-render _ _ scale@{ toRectangle, screen, viewBox } context = do
+render :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GApp.StateDelta Unit -> Effect Unit
+render context _ scale@{ toRectangle, screen, viewBox } _ = do
   -- Clear background
   Canvas.setFillStyle context "white"
   Canvas.fillRect context (toRectangle screen)

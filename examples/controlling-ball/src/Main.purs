@@ -106,8 +106,8 @@ updateP p r min max v
   | p - r + v < min = min + r
   | otherwise = p + v
 
-render :: State -> GTime.Delta -> GDims.Scaler -> Canvas.Context2D -> Effect Unit
-render { x, y, radius } _ scale context = do
+render :: Canvas.Context2D -> GTime.Delta -> GDims.Scaler -> GApp.StateDelta State -> Effect Unit
+render context _ scale { current: { x, y, radius } } = do
   Canvas.clearRect context (scale.toRectangle scale.screen)
   Canvas.setFillStyle context "red"
   Canvas.fillPath context do

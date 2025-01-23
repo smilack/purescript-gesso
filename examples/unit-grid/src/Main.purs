@@ -51,8 +51,8 @@ mouseDown = GInt.Interaction GEv.onMouseDown getMousePos
   where
   getMousePos event _ _ state = pure $ Just state { clicked = Just $ GDim.fromMouseEvent event }
 
-render :: LocalState -> GTime.Delta -> GDim.Scaler -> Canvas.Context2D -> Effect Unit
-render { clicked, mousePos } _ scale context = do
+render :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GApp.StateDelta LocalState -> Effect Unit
+render context _ scale { current: { clicked, mousePos } } = do
   clearBackground
   drawAxes
   drawGridLines

@@ -33,6 +33,6 @@ canvasInput =
   , interactions: Gesso.Interactions.default
   }
 
-render :: Unit -> Gesso.Time.Delta -> Gesso.Dimensions.Scaler -> Graphics.Canvas.Context2D -> Effect Unit
-render _ _ _ context = do
+render :: Graphics.Canvas.Context2D -> Gesso.Time.Delta -> Gesso.Dimensions.Scaler -> Gesso.Application.StateDelta Unit -> Effect Unit
+render context _ _ _ = do
   Graphics.Canvas.fillText context "hello world" 500.0 500.0
