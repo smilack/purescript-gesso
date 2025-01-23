@@ -407,11 +407,14 @@ queueAnimationFrame lastTime context scaler localState state' app notify =
   updateAndRender delta = do
     state'' <- tryUpdate scaler localState (app.update delta) (pure state')
 
-    let newestState = state'' <|> state'
+    let
+      newestState = state'' <|> state'
+      stateDelta =
+        { previous: localState, current: fromMaybe localState newestState }
 
     traverse_ (notify <<< StateUpdated delta scaler) newestState
 
-    app.render (fromMaybe localState newestState) delta scaler context
+    app.render context delta scaler stateDelta
 
 -- | Run an update function, using a current state if available, or an older one
 -- | if not. When folding over a list of update functions, this makes it easier
@@ -493,7 +496,8 @@ saveNewState
 saveNewState delta scaler state' = do
   { app: { output }, localState } <- H.get
   H.modify_ (_ { localState = state' })
-  mOutput <- liftEffect $ output delta scaler localState state'
+  mOutput <- liftEffect
+    $ output delta scaler { previous: localState, current: state' }
   traverse_ (H.raise <<< Output) mOutput
 
 -- | Receiving input from the host application. Convert it into an `Update` and

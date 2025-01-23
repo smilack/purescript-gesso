@@ -5,6 +5,7 @@ module Gesso.Application
   , InputReceiver
   , OutputProducer
   , RenderFunction
+  , StateDelta
   , TimestampedUpdate
   , UpdateFunction
   , WindowMode(..)
@@ -44,7 +45,7 @@ defaultApp =
   { window: Fixed D.sizeless
   , render: \_ _ _ _ -> pure unit
   , update: \_ _ _ -> pure Nothing
-  , output: \_ _ _ _ -> pure Nothing
+  , output: \_ _ _ -> pure Nothing
   , input: \_ _ _ _ -> pure Nothing
   }
 
@@ -60,19 +61,26 @@ data WindowMode
   | Stretch
   | Fullscreen
 
+-- | Copies of the current and previous states, for situations where it makes
+-- | sense to compare them.
+type StateDelta local =
+  { previous :: local
+  , current :: local
+  }
+
 -- | A function that draws on the component. It knows the following:
 -- |
--- | - `local` is the local state of the application
+-- | - `context` is the drawing context of canvas element, like `Context2D`
 -- | - `Delta` is a record containing current and previous timestamps and the
 -- |   time elapsed since the previous frame.
 -- | - `Scaler` is a record containg scaling functions for converting canvas
 -- |   coordinates to screen coordinates.
--- | - `context` is the drawing context of canvas element, like `Context2D`
+-- | - `local` is the local state of the application
 -- |
 -- | The render function may run any operations in `Effect`, not just functions
 -- | related to drawing on the canvas.
 type RenderFunction context local =
-  local -> T.Delta -> D.Scaler -> context -> Effect Unit
+  context -> T.Delta -> D.Scaler -> StateDelta local -> Effect Unit
 
 -- | An function that may update the application state. It runs on every frame,
 -- | before the render function. It knows the following:
@@ -102,7 +110,6 @@ type InputReceiver local input = input -> UpdateFunction local
 
 -- | When the local state of an application changes, an output producer compares
 -- | the old and new local states and may send output to the component's parent
--- | based on the difference. The old state is first and the new state is
--- | second.
+-- | based on the difference.
 type OutputProducer local output =
-  T.Delta -> D.Scaler -> local -> local -> Effect (Maybe output)
+  T.Delta -> D.Scaler -> StateDelta local -> Effect (Maybe output)
