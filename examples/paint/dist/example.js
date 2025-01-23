@@ -110,10 +110,10 @@
     return dict.map;
   };
   var mapFlipped = function(dictFunctor) {
-    var map112 = map(dictFunctor);
+    var map113 = map(dictFunctor);
     return function(fa) {
       return function(f) {
-        return map112(f)(fa);
+        return map113(f)(fa);
       };
     };
   };
@@ -121,10 +121,10 @@
     return map(dictFunctor)($$const(unit));
   };
   var voidLeft = function(dictFunctor) {
-    var map112 = map(dictFunctor);
+    var map113 = map(dictFunctor);
     return function(f) {
       return function(x) {
-        return map112($$const(x))(f);
+        return map113($$const(x))(f);
       };
     };
   };
@@ -1235,6 +1235,7 @@
     };
   };
   var ordIntImpl = unsafeCompareImpl;
+  var ordNumberImpl = unsafeCompareImpl;
   var ordStringImpl = unsafeCompareImpl;
   var ordArrayImpl = function(f) {
     return function(xs) {
@@ -1268,7 +1269,9 @@
       return r1 === r2;
     };
   };
+  var eqBooleanImpl = refEq;
   var eqIntImpl = refEq;
+  var eqNumberImpl = refEq;
   var eqStringImpl = refEq;
   var eqArrayImpl = function(f) {
     return function(xs) {
@@ -1312,12 +1315,19 @@
       };
     };
   };
+  var eqNumber = {
+    eq: eqNumberImpl
+  };
   var eqInt = {
     eq: eqIntImpl
+  };
+  var eqBoolean = {
+    eq: eqBooleanImpl
   };
   var eq = function(dict) {
     return dict.eq;
   };
+  var eq2 = /* @__PURE__ */ eq(eqBoolean);
   var eqArray = function(dictEq) {
     return {
       eq: eqArrayImpl(eq(dictEq))
@@ -1329,7 +1339,7 @@
       return function(dictIsSymbol) {
         var reflectSymbol2 = reflectSymbol(dictIsSymbol);
         return function(dictEq) {
-          var eq33 = eq(dictEq);
+          var eq34 = eq(dictEq);
           return {
             eqRecord: function(v) {
               return function(ra) {
@@ -1337,12 +1347,20 @@
                   var tail3 = eqRecord1($$Proxy.value)(ra)(rb);
                   var key3 = reflectSymbol2($$Proxy.value);
                   var get4 = unsafeGet(key3);
-                  return eq33(get4(ra))(get4(rb)) && tail3;
+                  return eq34(get4(ra))(get4(rb)) && tail3;
                 };
               };
             }
           };
         };
+      };
+    };
+  };
+  var notEq = function(dictEq) {
+    var eq34 = eq(dictEq);
+    return function(x) {
+      return function(y) {
+        return eq2(eq34(x)(y))(false);
       };
     };
   };
@@ -1369,6 +1387,25 @@
     EQ2.value = new EQ2();
     return EQ2;
   }();
+  var eqOrdering = {
+    eq: function(v) {
+      return function(v1) {
+        if (v instanceof LT && v1 instanceof LT) {
+          return true;
+        }
+        ;
+        if (v instanceof GT && v1 instanceof GT) {
+          return true;
+        }
+        ;
+        if (v instanceof EQ && v1 instanceof EQ) {
+          return true;
+        }
+        ;
+        return false;
+      };
+    }
+  };
 
   // output/Data.Semiring/foreign.js
   var intAdd = function(x) {
@@ -1415,6 +1452,14 @@
       compare: ordStringImpl(LT.value)(EQ.value)(GT.value),
       Eq0: function() {
         return eqString;
+      }
+    };
+  }();
+  var ordNumber = /* @__PURE__ */ function() {
+    return {
+      compare: ordNumberImpl(LT.value)(EQ.value)(GT.value),
+      Eq0: function() {
+        return eqNumber;
       }
     };
   }();
@@ -1520,7 +1565,7 @@
     return Just2;
   }();
   var semigroupMaybe = function(dictSemigroup) {
-    var append15 = append(dictSemigroup);
+    var append16 = append(dictSemigroup);
     return {
       append: function(v) {
         return function(v1) {
@@ -1533,7 +1578,7 @@
           }
           ;
           if (v instanceof Just && v1 instanceof Just) {
-            return new Just(append15(v.value0)(v1.value0));
+            return new Just(append16(v.value0)(v1.value0));
           }
           ;
           throw new Error("Failed pattern match at Data.Maybe (line 182, column 1 - line 185, column 43): " + [v.constructor.name, v1.constructor.name]);
@@ -2218,11 +2263,11 @@
     }
   };
   var functorMaybeT = function(dictFunctor) {
-    var map112 = map(dictFunctor);
+    var map113 = map(dictFunctor);
     return {
       map: function(f) {
         return function(v) {
-          return map112(map4(f))(v);
+          return map113(map4(f))(v);
         };
       }
     };
@@ -2330,7 +2375,7 @@
     };
   };
   var applyWriterT = function(dictSemigroup) {
-    var append15 = append(dictSemigroup);
+    var append16 = append(dictSemigroup);
     return function(dictApply) {
       var apply5 = apply(dictApply);
       var Functor0 = dictApply.Functor0();
@@ -2341,7 +2386,7 @@
           return function(v1) {
             var k = function(v3) {
               return function(v4) {
-                return new Tuple(v3.value0(v4.value0), append15(v3.value1)(v4.value1));
+                return new Tuple(v3.value0(v4.value0), append16(v3.value1)(v4.value1));
               };
             };
             return apply5(map33(k)(v))(v1);
@@ -2354,7 +2399,7 @@
     };
   };
   var bindWriterT = function(dictSemigroup) {
-    var append15 = append(dictSemigroup);
+    var append16 = append(dictSemigroup);
     var applyWriterT1 = applyWriterT(dictSemigroup);
     return function(dictBind) {
       var bind10 = bind(dictBind);
@@ -2367,7 +2412,7 @@
             return bind10(v)(function(v1) {
               var v2 = k(v1.value0);
               return map33(function(v3) {
-                return new Tuple(v3.value0, append15(v1.value1)(v3.value1));
+                return new Tuple(v3.value0, append16(v1.value1)(v3.value1));
               })(v2);
             });
           };
@@ -2542,7 +2587,7 @@
   var intercalate = function(dictFoldable) {
     var foldl2 = foldl(dictFoldable);
     return function(dictMonoid) {
-      var append15 = append(dictMonoid.Semigroup0());
+      var append16 = append(dictMonoid.Semigroup0());
       var mempty3 = mempty(dictMonoid);
       return function(sep) {
         return function(xs) {
@@ -2557,7 +2602,7 @@
               ;
               return {
                 init: false,
-                acc: append15(v.acc)(append15(sep)(v1))
+                acc: append16(v.acc)(append16(sep)(v1))
               };
             };
           };
@@ -2632,12 +2677,12 @@
   var foldMapDefaultR = function(dictFoldable) {
     var foldr22 = foldr(dictFoldable);
     return function(dictMonoid) {
-      var append15 = append(dictMonoid.Semigroup0());
+      var append16 = append(dictMonoid.Semigroup0());
       var mempty3 = mempty(dictMonoid);
       return function(f) {
         return foldr22(function(x) {
           return function(acc) {
-            return append15(f(x))(acc);
+            return append16(f(x))(acc);
           };
         })(mempty3);
       };
@@ -2656,10 +2701,10 @@
   var lookup = function(dictFoldable) {
     var foldMap23 = foldMap(dictFoldable)(monoidFirst);
     return function(dictEq) {
-      var eq23 = eq(dictEq);
+      var eq24 = eq(dictEq);
       return function(a2) {
         var $460 = foldMap23(function(v) {
-          var $444 = eq23(a2)(v.value0);
+          var $444 = eq24(a2)(v.value0);
           if ($444) {
             return new Just(v.value1);
           }
@@ -3572,11 +3617,11 @@
     var foldr5 = foldr(dictFoldable);
     return {
       foldMap: function(dictMonoid) {
-        var append15 = append(dictMonoid.Semigroup0());
+        var append16 = append(dictMonoid.Semigroup0());
         var foldMap13 = foldMap3(dictMonoid);
         return function(f) {
           return function(v) {
-            return append15(f(v.value0))(foldMap13(f)(v.value1));
+            return append16(f(v.value0))(foldMap13(f)(v.value1));
           };
         };
       },
@@ -3602,12 +3647,12 @@
     var foldableNonEmpty1 = foldableNonEmpty(dictFoldable);
     return {
       foldMap1: function(dictSemigroup) {
-        var append15 = append(dictSemigroup);
+        var append16 = append(dictSemigroup);
         return function(f) {
           return function(v) {
             return foldl2(function(s) {
               return function(a1) {
-                return append15(s)(f(a1));
+                return append16(s)(f(a1));
               };
             })(f(v.value0))(v.value1);
           };
@@ -3828,6 +3873,8 @@
   }();
 
   // output/Data.List/index.js
+  var eq3 = /* @__PURE__ */ eq(eqOrdering);
+  var notEq2 = /* @__PURE__ */ notEq(eqOrdering);
   var tail = function(v) {
     if (v instanceof Nil) {
       return Nothing.value;
@@ -3838,6 +3885,136 @@
     }
     ;
     throw new Error("Failed pattern match at Data.List (line 245, column 1 - line 245, column 43): " + [v.constructor.name]);
+  };
+  var singleton4 = function(a2) {
+    return new Cons(a2, Nil.value);
+  };
+  var sortBy2 = function(cmp) {
+    var merge2 = function(v) {
+      return function(v1) {
+        if (v instanceof Cons && v1 instanceof Cons) {
+          if (eq3(cmp(v.value0)(v1.value0))(GT.value)) {
+            return new Cons(v1.value0, merge2(v)(v1.value1));
+          }
+          ;
+          if (otherwise) {
+            return new Cons(v.value0, merge2(v.value1)(v1));
+          }
+          ;
+        }
+        ;
+        if (v instanceof Nil) {
+          return v1;
+        }
+        ;
+        if (v1 instanceof Nil) {
+          return v;
+        }
+        ;
+        throw new Error("Failed pattern match at Data.List (line 466, column 3 - line 466, column 38): " + [v.constructor.name, v1.constructor.name]);
+      };
+    };
+    var mergePairs = function(v) {
+      if (v instanceof Cons && v.value1 instanceof Cons) {
+        return new Cons(merge2(v.value0)(v.value1.value0), mergePairs(v.value1.value1));
+      }
+      ;
+      return v;
+    };
+    var mergeAll = function($copy_v) {
+      var $tco_done = false;
+      var $tco_result;
+      function $tco_loop(v) {
+        if (v instanceof Cons && v.value1 instanceof Nil) {
+          $tco_done = true;
+          return v.value0;
+        }
+        ;
+        $copy_v = mergePairs(v);
+        return;
+      }
+      ;
+      while (!$tco_done) {
+        $tco_result = $tco_loop($copy_v);
+      }
+      ;
+      return $tco_result;
+    };
+    var sequences = function(v) {
+      if (v instanceof Cons && v.value1 instanceof Cons) {
+        if (eq3(cmp(v.value0)(v.value1.value0))(GT.value)) {
+          return descending(v.value1.value0)(singleton4(v.value0))(v.value1.value1);
+        }
+        ;
+        if (otherwise) {
+          return ascending(v.value1.value0)(function(v1) {
+            return new Cons(v.value0, v1);
+          })(v.value1.value1);
+        }
+        ;
+      }
+      ;
+      return singleton4(v);
+    };
+    var descending = function($copy_v) {
+      return function($copy_v1) {
+        return function($copy_v2) {
+          var $tco_var_v = $copy_v;
+          var $tco_var_v1 = $copy_v1;
+          var $tco_done1 = false;
+          var $tco_result;
+          function $tco_loop(v, v1, v2) {
+            if (v2 instanceof Cons && eq3(cmp(v)(v2.value0))(GT.value)) {
+              $tco_var_v = v2.value0;
+              $tco_var_v1 = new Cons(v, v1);
+              $copy_v2 = v2.value1;
+              return;
+            }
+            ;
+            $tco_done1 = true;
+            return new Cons(new Cons(v, v1), sequences(v2));
+          }
+          ;
+          while (!$tco_done1) {
+            $tco_result = $tco_loop($tco_var_v, $tco_var_v1, $copy_v2);
+          }
+          ;
+          return $tco_result;
+        };
+      };
+    };
+    var ascending = function($copy_v) {
+      return function($copy_v1) {
+        return function($copy_v2) {
+          var $tco_var_v = $copy_v;
+          var $tco_var_v1 = $copy_v1;
+          var $tco_done2 = false;
+          var $tco_result;
+          function $tco_loop(v, v1, v2) {
+            if (v2 instanceof Cons && notEq2(cmp(v)(v2.value0))(GT.value)) {
+              $tco_var_v = v2.value0;
+              $tco_var_v1 = function(ys) {
+                return v1(new Cons(v, ys));
+              };
+              $copy_v2 = v2.value1;
+              return;
+            }
+            ;
+            $tco_done2 = true;
+            return new Cons(v1(singleton4(v)), sequences(v2));
+          }
+          ;
+          while (!$tco_done2) {
+            $tco_result = $tco_loop($tco_var_v, $tco_var_v1, $copy_v2);
+          }
+          ;
+          return $tco_result;
+        };
+      };
+    };
+    return function($444) {
+      return mergeAll(sequences($444));
+    };
   };
   var reverse2 = /* @__PURE__ */ function() {
     var go2 = function($copy_v) {
@@ -4043,7 +4220,7 @@
     ;
     throw new Error("Failed pattern match at Data.Map.Internal (line 700, column 32 - line 712, column 68): " + [l.constructor.name]);
   };
-  var singleton4 = function(k) {
+  var singleton5 = function(k) {
     return function(v) {
       return new Node(1, 1, k, v, Leaf.value, Leaf.value);
     };
@@ -4077,7 +4254,7 @@
     return function(k, v, l, r) {
       if (l instanceof Leaf) {
         if (r instanceof Leaf) {
-          return singleton4(k)(v);
+          return singleton5(k)(v);
         }
         ;
         if (r instanceof Node && r.value0 > 1) {
@@ -4226,7 +4403,7 @@
       return function(v) {
         var go2 = function(v1) {
           if (v1 instanceof Leaf) {
-            return singleton4(k)(v);
+            return singleton5(k)(v);
           }
           ;
           if (v1 instanceof Node) {
@@ -4297,7 +4474,7 @@
     },
     foldMap: function(dictMonoid) {
       var mempty3 = mempty(dictMonoid);
-      var append15 = append(dictMonoid.Semigroup0());
+      var append16 = append(dictMonoid.Semigroup0());
       return function(f) {
         var go2 = function(v) {
           if (v instanceof Leaf) {
@@ -4305,7 +4482,7 @@
           }
           ;
           if (v instanceof Node) {
-            return append15(go2(v.value4))(append15(f(v.value3))(go2(v.value5)));
+            return append16(go2(v.value4))(append16(f(v.value3))(go2(v.value5)));
           }
           ;
           throw new Error("Failed pattern match at Data.Map.Internal (line 181, column 10 - line 184, column 28): " + [v.constructor.name]);
@@ -5238,7 +5415,7 @@
   };
 
   // output/Data.List.NonEmpty/index.js
-  var singleton5 = /* @__PURE__ */ function() {
+  var singleton6 = /* @__PURE__ */ function() {
     var $200 = singleton3(plusList);
     return function($201) {
       return NonEmptyList($200($201));
@@ -5820,7 +5997,7 @@
           ;
           return $tco_result;
         };
-        return go2(new Tuple(Nil.value, singleton5(z)));
+        return go2(new Tuple(Nil.value, singleton6(z)));
       };
     };
   };
@@ -6199,18 +6376,18 @@
   };
   var foldFree = function(dictMonadRec) {
     var Monad0 = dictMonadRec.Monad0();
-    var map112 = map(Monad0.Bind1().Apply0().Functor0());
+    var map113 = map(Monad0.Bind1().Apply0().Functor0());
     var pure15 = pure(Monad0.Applicative0());
     var tailRecM4 = tailRecM(dictMonadRec);
     return function(k) {
       var go2 = function(f) {
         var v = toView(f);
         if (v instanceof Return) {
-          return map112(Done.create)(pure15(v.value0));
+          return map113(Done.create)(pure15(v.value0));
         }
         ;
         if (v instanceof Bind) {
-          return map112(function($199) {
+          return map113(function($199) {
             return Loop.create(v.value1($199));
           })(k(v.value0));
         }
@@ -8187,7 +8364,7 @@
       };
     }
   };
-  var eq2 = /* @__PURE__ */ eq(eqSize);
+  var eq22 = /* @__PURE__ */ eq(eqSize);
   var eqPoint = {
     eq: function(x) {
       return function(y) {
@@ -8195,11 +8372,11 @@
       };
     }
   };
-  var eq3 = /* @__PURE__ */ eq(eqPoint);
+  var eq32 = /* @__PURE__ */ eq(eqPoint);
   var eqDimensions = {
     eq: function(x) {
       return function(y) {
-        return eq3(x.value0)(y.value0) && eq2(x.value1)(y.value1);
+        return eq32(x.value0)(y.value0) && eq22(x.value1)(y.value1);
       };
     }
   };
@@ -8402,6 +8579,153 @@
     };
   };
 
+  // output/Gesso.Time/foreign.js
+  function _requestAnimationFrame(fn) {
+    return function(window2) {
+      return function() {
+        return window2.requestAnimationFrame(fn);
+      };
+    };
+  }
+  function _now() {
+    return performance.now();
+  }
+
+  // output/Effect.Uncurried/foreign.js
+  var mkEffectFn1 = function mkEffectFn12(fn) {
+    return function(x) {
+      return fn(x)();
+    };
+  };
+
+  // output/Gesso.Time/index.js
+  var map11 = /* @__PURE__ */ map(functorEffect);
+  var map14 = /* @__PURE__ */ map(functorFn);
+  var Last2 = function(x) {
+    return x;
+  };
+  var Interval = /* @__PURE__ */ function() {
+    function Interval2(value0) {
+      this.value0 = value0;
+    }
+    ;
+    Interval2.create = function(value0) {
+      return new Interval2(value0);
+    };
+    return Interval2;
+  }();
+  var Never = /* @__PURE__ */ function() {
+    function Never2() {
+    }
+    ;
+    Never2.value = new Never2();
+    return Never2;
+  }();
+  var sort2 = /* @__PURE__ */ sortBy2(/* @__PURE__ */ on(/* @__PURE__ */ compare(ordNumber))(function(v) {
+    return v.time;
+  }));
+  var requestAnimationFrame = function($34) {
+    return _requestAnimationFrame(mkEffectFn1($34));
+  };
+  var never = /* @__PURE__ */ function() {
+    return Never.value;
+  }();
+  var elapse = function(v) {
+    return v;
+  };
+  var emptyBatch = /* @__PURE__ */ map11(/* @__PURE__ */ map14(function(v) {
+    return {
+      last: v,
+      items: Nil.value
+    };
+  })(elapse))(_now);
+  var started = /* @__PURE__ */ map11(elapse)(_now);
+  var delta = function(v) {
+    return function(v1) {
+      return {
+        now: v,
+        last: v1,
+        delta: v - v1
+      };
+    };
+  };
+  var stamp = function(last3) {
+    return function(f) {
+      return function __do2() {
+        var v = _now();
+        var d = delta(v)(last3);
+        return {
+          time: v,
+          item: f(d)
+        };
+      };
+    };
+  };
+  var stampInterval = function(last3) {
+    return function(fn) {
+      return function(v) {
+        if (v instanceof Never) {
+          return emptyBatch;
+        }
+        ;
+        if (v instanceof Interval) {
+          var schedule = function($copy_items) {
+            return function($copy_v1) {
+              return function($copy_v2) {
+                var $tco_var_items = $copy_items;
+                var $tco_var_v1 = $copy_v1;
+                var $tco_done = false;
+                var $tco_result;
+                function $tco_loop(items2, v1, v2) {
+                  if (v1 + v.value0 >= v2) {
+                    $tco_done = true;
+                    return items2;
+                  }
+                  ;
+                  if (otherwise) {
+                    var v3 = v1 + v.value0;
+                    var items$prime = new Cons({
+                      time: v3,
+                      item: fn(delta(v3)(v1))
+                    }, items2);
+                    $tco_var_items = items$prime;
+                    $tco_var_v1 = elapse(v3);
+                    $copy_v2 = v2;
+                    return;
+                  }
+                  ;
+                  throw new Error("Failed pattern match at Gesso.Time (line 166, column 5 - line 166, column 68): " + [items2.constructor.name, v1.constructor.name, v2.constructor.name]);
+                }
+                ;
+                while (!$tco_done) {
+                  $tco_result = $tco_loop($tco_var_items, $tco_var_v1, $copy_v2);
+                }
+                ;
+                return $tco_result;
+              };
+            };
+          };
+          var lastTime = function(l) {
+            return maybe(last3)(function($35) {
+              return Last2(function(v1) {
+                return v1.time;
+              }($35));
+            })(head(l));
+          };
+          var batch = function(items2) {
+            return {
+              last: lastTime(items2),
+              items: items2
+            };
+          };
+          return map11(map14(batch)(schedule(Nil.value)(last3)))(_now);
+        }
+        ;
+        throw new Error("Failed pattern match at Gesso.Time (line 156, column 25 - line 172, column 66): " + [v.constructor.name]);
+      };
+    };
+  };
+
   // output/Gesso.Application/index.js
   var pure5 = /* @__PURE__ */ pure(applicativeEffect);
   var Fixed = /* @__PURE__ */ function() {
@@ -8439,6 +8763,16 @@
             };
           };
         };
+      },
+      fixed: {
+        interval: never,
+        "function": function(v) {
+          return function(v1) {
+            return function(v2) {
+              return pure5(Nothing.value);
+            };
+          };
+        }
       },
       update: function(v) {
         return function(v1) {
@@ -8534,14 +8868,14 @@
     return Nothing.value;
   };
   var semigroupThese = function(dictSemigroup) {
-    var append15 = append(dictSemigroup);
+    var append16 = append(dictSemigroup);
     return function(dictSemigroup1) {
       var append25 = append(dictSemigroup1);
       return {
         append: function(v) {
           return function(v1) {
             if (v instanceof This && v1 instanceof This) {
-              return new This(append15(v.value0)(v1.value0));
+              return new This(append16(v.value0)(v1.value0));
             }
             ;
             if (v instanceof This && v1 instanceof That) {
@@ -8549,7 +8883,7 @@
             }
             ;
             if (v instanceof This && v1 instanceof Both) {
-              return new Both(append15(v.value0)(v1.value0), v1.value1);
+              return new Both(append16(v.value0)(v1.value0), v1.value1);
             }
             ;
             if (v instanceof That && v1 instanceof This) {
@@ -8565,7 +8899,7 @@
             }
             ;
             if (v instanceof Both && v1 instanceof This) {
-              return new Both(append15(v.value0)(v1.value0), v.value1);
+              return new Both(append16(v.value0)(v1.value0), v.value1);
             }
             ;
             if (v instanceof Both && v1 instanceof That) {
@@ -8573,7 +8907,7 @@
             }
             ;
             if (v instanceof Both && v1 instanceof Both) {
-              return new Both(append15(v.value0)(v1.value0), append25(v.value1)(v1.value1));
+              return new Both(append16(v.value0)(v1.value0), append25(v.value1)(v1.value1));
             }
             ;
             throw new Error("Failed pattern match at Data.These (line 23, column 1 - line 32, column 56): " + [v.constructor.name, v1.constructor.name]);
@@ -8596,13 +8930,13 @@
   var fold2 = /* @__PURE__ */ fold(foldableArray);
   var fold12 = /* @__PURE__ */ fold2(monoidString);
   var intercalate4 = /* @__PURE__ */ intercalate(foldableArray)(monoidString);
-  var map11 = /* @__PURE__ */ map(functorArray);
+  var map15 = /* @__PURE__ */ map(functorArray);
   var apply3 = /* @__PURE__ */ apply(applyArray);
   var append13 = /* @__PURE__ */ append(semigroupArray);
   var foldMap2 = /* @__PURE__ */ foldMap(foldableArray);
   var foldMap12 = /* @__PURE__ */ foldMap2(monoidString);
-  var sort2 = /* @__PURE__ */ sort(ordPredicate);
-  var map14 = /* @__PURE__ */ map(functorMaybe);
+  var sort3 = /* @__PURE__ */ sort(ordPredicate);
+  var map16 = /* @__PURE__ */ map(functorMaybe);
   var fromString6 = /* @__PURE__ */ fromString(isStringString);
   var bind4 = /* @__PURE__ */ bind(bindMaybe);
   var foldl12 = /* @__PURE__ */ foldl1(/* @__PURE__ */ foldable1NonEmpty(foldableArray));
@@ -8651,7 +8985,7 @@
     })(function(v) {
       return fold12([v.value0, ": ", v.value1]);
     });
-    return intercalate4("; ")(map11(sheetRules)(xs));
+    return intercalate4("; ")(map15(sheetRules)(xs));
   };
   var predicate = function(v) {
     if (v instanceof Id) {
@@ -8715,15 +9049,15 @@
       }
       ;
       if (v1 instanceof PathChild) {
-        return apply3(map11(sepWith(" > "))(selector$prime(v1.value0)))(selector$prime(v1.value1));
+        return apply3(map15(sepWith(" > "))(selector$prime(v1.value0)))(selector$prime(v1.value1));
       }
       ;
       if (v1 instanceof Deep) {
-        return apply3(map11(sepWith(" "))(selector$prime(v1.value0)))(selector$prime(v1.value1));
+        return apply3(map15(sepWith(" "))(selector$prime(v1.value0)))(selector$prime(v1.value1));
       }
       ;
       if (v1 instanceof Adjacent) {
-        return apply3(map11(sepWith(" + "))(selector$prime(v1.value0)))(selector$prime(v1.value1));
+        return apply3(map15(sepWith(" + "))(selector$prime(v1.value0)))(selector$prime(v1.value1));
       }
       ;
       if (v1 instanceof Combined) {
@@ -8734,8 +9068,8 @@
     };
   };
   var selector$prime = function(v) {
-    return map11(function(v1) {
-      return v1 + foldMap12(predicate)(sort2(v.value0));
+    return map15(function(v1) {
+      return v1 + foldMap12(predicate)(sort3(v.value0));
     })(selector$prime$prime(v.value0)(v.value1));
   };
   var selector = /* @__PURE__ */ function() {
@@ -8749,7 +9083,7 @@
       return Nothing.value;
     }
     ;
-    return map14(function(v1) {
+    return map16(function(v1) {
       return new NonEmpty(v1.head, v1.tail);
     })(uncons(v));
   };
@@ -8795,7 +9129,7 @@
   };
   var renderedSheet = function(v) {
     return bind4(v)(function() {
-      var $208 = map14(getSheet);
+      var $208 = map16(getSheet);
       return function($209) {
         return $208(theseRight($209));
       };
@@ -8806,7 +9140,7 @@
   };
   var renderedInline = function(v) {
     return bind4(v)(function() {
-      var $210 = map14(getInline);
+      var $210 = map16(getInline);
       return function($211) {
         return $210(theseLeft($211));
       };
@@ -8831,19 +9165,19 @@
       }
       ;
       if (v instanceof Prefixed && v1 instanceof Plain) {
-        return map11(function(v3) {
+        return map15(function(v3) {
           return new Right(new Tuple(v3.value0 + v3.value1, v1.value0));
         })(v.value0);
       }
       ;
       if (v instanceof Plain && v1 instanceof Prefixed) {
-        return map11(function(v2) {
+        return map15(function(v2) {
           return new Right(new Tuple(v.value0, v2.value0 + v2.value1));
         })(v1.value0);
       }
       ;
       if (v instanceof Prefixed && v1 instanceof Prefixed) {
-        return map11(function(v2) {
+        return map15(function(v2) {
           return maybe(new Left(v2.value0 + v2.value1))(function() {
             var $213 = Tuple.create(v2.value0 + v2.value1);
             return function($214) {
@@ -8864,7 +9198,7 @@
   var rule$prime = function(sel) {
     return function(props) {
       var p2 = bind12(props)(collect2);
-      var q2 = map14(function($215) {
+      var q2 = map16(function($215) {
         return This.create(Inline(properties(oneOf3($215))));
       })(nel(p2));
       var o = function(sel$prime) {
@@ -8909,7 +9243,7 @@
         ;
         return Nothing.value;
       };
-      var nestedSheets = fold22(map11(uncurry(nestedRules))(mapMaybe(nested)(rs)));
+      var nestedSheets = fold22(map15(uncurry(nestedRules))(mapMaybe(nested)(rs)));
       var kframes = function(v) {
         if (v instanceof Keyframe) {
           return new Just(v.value0);
@@ -8947,7 +9281,7 @@
   var kframe = function(v) {
     var renderContent = " " + (v.value0 + (" { " + (intercalate1(" ")(map22(uncurry(frame))(v.value1)) + " }\n")));
     var keywords = ["@keyframes", "@-webkit-keyframes", "@-moz-keyframes", "@-o-keyframes"];
-    var allKeywordsWithContent = fold12(map11(function(v1) {
+    var allKeywordsWithContent = fold12(map15(function(v1) {
       return v1 + renderContent;
     })(keywords));
     return new Just(new That(allKeywordsWithContent));
@@ -9085,9 +9419,9 @@
   }
 
   // output/Web.DOM.NonElementParentNode/index.js
-  var map15 = /* @__PURE__ */ map(functorEffect);
+  var map17 = /* @__PURE__ */ map(functorEffect);
   var getElementById = function(eid) {
-    var $2 = map15(toMaybe);
+    var $2 = map17(toMaybe);
     var $3 = _getElementById(eid);
     return function($4) {
       return $2($3($4));
@@ -9143,12 +9477,12 @@
   };
 
   // output/Web.HTML.HTMLDocument/index.js
-  var map16 = /* @__PURE__ */ map(functorEffect);
+  var map18 = /* @__PURE__ */ map(functorEffect);
   var toParentNode = unsafeCoerce2;
   var toNonElementParentNode = unsafeCoerce2;
   var toDocument = unsafeCoerce2;
   var readyState = function(doc) {
-    return map16(function() {
+    return map18(function() {
       var $4 = fromMaybe(Loading.value);
       return function($5) {
         return $4(parse($5));
@@ -9174,13 +9508,6 @@
     return _read(Nothing.value, Just.create, x);
   };
 
-  // output/Effect.Uncurried/foreign.js
-  var mkEffectFn1 = function mkEffectFn12(fn) {
-    return function(x) {
-      return fn(x)();
-    };
-  };
-
   // output/Web.HTML.Window/foreign.js
   function document2(window2) {
     return function() {
@@ -9196,8 +9523,8 @@
   var toSizeCss2 = /* @__PURE__ */ toSizeCss(sizedSize);
   var bind5 = /* @__PURE__ */ bind(bindEffect);
   var traverse2 = /* @__PURE__ */ traverse(traversableMaybe)(applicativeEffect);
-  var map17 = /* @__PURE__ */ map(functorEffect);
-  var map18 = /* @__PURE__ */ map(functorMaybe);
+  var map19 = /* @__PURE__ */ map(functorEffect);
+  var map110 = /* @__PURE__ */ map(functorMaybe);
   var Canvas = function(x) {
     return x;
   };
@@ -9254,16 +9581,16 @@
     return bind5(getCanvasElementById(name15))(traverse2(getContext2D));
   };
   var getCanvasClientRect = function(v) {
-    return map17(fromDOMRect)(getBoundingClientRect(v));
+    return map19(fromDOMRect)(getBoundingClientRect(v));
   };
   var getCanvasByAppName = function(name15) {
     return bind5(bind5(windowImpl)(function() {
-      var $22 = map17(toNonElementParentNode);
+      var $22 = map19(toNonElementParentNode);
       return function($23) {
         return $22(document2($23));
       };
     }()))(function() {
-      var $24 = map17(map18(Canvas));
+      var $24 = map19(map110(Canvas));
       var $25 = getElementById(name15);
       return function($26) {
         return $24($25($26));
@@ -9273,7 +9600,7 @@
 
   // output/Gesso.Interactions/index.js
   var append10 = /* @__PURE__ */ append(semigroupArray);
-  var map19 = /* @__PURE__ */ map(functorArray);
+  var map20 = /* @__PURE__ */ map(functorArray);
   var Interaction = /* @__PURE__ */ function() {
     function Interaction2(value0, value15) {
       this.value0 = value0;
@@ -9294,7 +9621,7 @@
           return toCallback(v1.value1($25));
         });
       };
-      return append10(map19(toProp)(v.base))(append10(map19(toProp)(v.clipboard))(append10(map19(toProp)(v.focus))(append10(map19(toProp)(v.keyboard))(append10(map19(toProp)(v.touch))(append10(map19(toProp)(v.drag))(append10(map19(toProp)(v.mouse))(map19(toProp)(v.wheel))))))));
+      return append10(map20(toProp)(v.base))(append10(map20(toProp)(v.clipboard))(append10(map20(toProp)(v.focus))(append10(map20(toProp)(v.keyboard))(append10(map20(toProp)(v.touch))(append10(map20(toProp)(v.drag))(append10(map20(toProp)(v.mouse))(map20(toProp)(v.wheel))))))));
     };
   };
   var $$default = {
@@ -9306,49 +9633,6 @@
     drag: [],
     mouse: [],
     wheel: []
-  };
-
-  // output/Gesso.Time/foreign.js
-  function _requestAnimationFrame(fn) {
-    return function(window2) {
-      return function() {
-        return window2.requestAnimationFrame(fn);
-      };
-    };
-  }
-  function _now() {
-    return performance.now();
-  }
-
-  // output/Gesso.Time/index.js
-  var map20 = /* @__PURE__ */ map(functorEffect);
-  var requestAnimationFrame2 = function($32) {
-    return _requestAnimationFrame(mkEffectFn1($32));
-  };
-  var elapse = function(v) {
-    return v;
-  };
-  var started = /* @__PURE__ */ map20(elapse)(_now);
-  var delta = function(v) {
-    return function(v1) {
-      return {
-        now: v,
-        last: v1,
-        delta: v - v1
-      };
-    };
-  };
-  var stamp = function(last3) {
-    return function(f) {
-      return function __do2() {
-        var v = _now();
-        var d = delta(v)(last3);
-        return {
-          time: v,
-          item: f(d)
-        };
-      };
-    };
   };
 
   // output/Halogen.HTML/index.js
@@ -9427,6 +9711,7 @@
   var put3 = /* @__PURE__ */ put(monadStateHalogenM);
   var bind22 = /* @__PURE__ */ bind(/* @__PURE__ */ bindMaybeT(monadHalogenM));
   var lift3 = /* @__PURE__ */ lift(monadTransMaybeT)(monadHalogenM);
+  var append14 = /* @__PURE__ */ append(semigroupList);
   var foldr4 = /* @__PURE__ */ foldr(foldableList);
   var mapFlipped22 = /* @__PURE__ */ mapFlipped(functorList);
   var for_2 = /* @__PURE__ */ for_(applicativeHalogenM)(foldableMaybe);
@@ -9539,37 +9824,37 @@
       return $$for2(v.dom)(function(d) {
         return function __do2() {
           var clientRect = getCanvasClientRect(d.canvas)();
-          var $104 = {};
-          for (var $105 in d) {
-            if ({}.hasOwnProperty.call(d, $105)) {
-              $104[$105] = d[$105];
+          var $108 = {};
+          for (var $109 in d) {
+            if ({}.hasOwnProperty.call(d, $109)) {
+              $108[$109] = d[$109];
             }
             ;
           }
           ;
-          $104.clientRect = clientRect;
-          $104.scaler = mkScaler(v.viewBox)(clientRect);
-          return $104;
+          $108.clientRect = clientRect;
+          $108.scaler = mkScaler(v.viewBox)(clientRect);
+          return $108;
         };
       });
     };
     return bind13(bindFlipped4(function() {
-      var $182 = liftEffect(monadEffectHalogenM(dictMonadAff.MonadEffect0()));
-      return function($183) {
-        return $182(updateDom($183));
+      var $194 = liftEffect(monadEffectHalogenM(dictMonadAff.MonadEffect0()));
+      return function($195) {
+        return $194(updateDom($195));
       };
     }())(get2))(function(dom$prime) {
       return modify_3(function(v) {
-        var $109 = {};
-        for (var $110 in v) {
-          if ({}.hasOwnProperty.call(v, $110)) {
-            $109[$110] = v[$110];
+        var $113 = {};
+        for (var $114 in v) {
+          if ({}.hasOwnProperty.call(v, $114)) {
+            $113[$114] = v[$114];
           }
           ;
         }
         ;
-        $109.dom = dom$prime;
-        return $109;
+        $113.dom = dom$prime;
+        return $113;
       });
     });
   };
@@ -9587,10 +9872,10 @@
       return function(update) {
         return function(current) {
           return bind6(current)(function() {
-            var $184 = update(scaler);
-            var $185 = fromMaybe(original);
-            return function($186) {
-              return $184($185($186));
+            var $196 = update(scaler);
+            var $197 = fromMaybe(original);
+            return function($198) {
+              return $196($197($198));
             };
           }());
         };
@@ -9609,23 +9894,23 @@
         return function(state$prime) {
           return bind13(get2)(function(v) {
             return discard1(modify_3(function(v1) {
-              var $113 = {};
-              for (var $114 in v1) {
-                if ({}.hasOwnProperty.call(v1, $114)) {
-                  $113[$114] = v1[$114];
+              var $117 = {};
+              for (var $118 in v1) {
+                if ({}.hasOwnProperty.call(v1, $118)) {
+                  $117[$118] = v1[$118];
                 }
                 ;
               }
               ;
-              $113.localState = state$prime;
-              return $113;
+              $117.localState = state$prime;
+              return $117;
             }))(function() {
               return bind13(liftEffect7(v.app.output(delta2)(scaler)({
                 previous: v.localState,
                 current: state$prime
               })))(function(mOutput) {
-                return traverse_5(function($187) {
-                  return raise(Output($187));
+                return traverse_5(function($199) {
+                  return raise(Output($199));
                 })(mOutput);
               });
             });
@@ -9637,17 +9922,17 @@
   var requestAnimationFrame3 = function(callback) {
     return function(notify2) {
       var tick = function() {
-        var $188 = Tick.create(notify2);
-        return function($189) {
-          return notify2($188(elapse($189)));
+        var $200 = Tick.create(notify2);
+        return function($201) {
+          return notify2($200(elapse($201)));
         };
       }();
       var callbackWrapper = function(timestamp) {
         return applySecond2(applySecond2(notify2(FrameFired.value))(callback(timestamp)))(tick(timestamp));
       };
       return function __do2() {
-        var $190 = bind6(windowImpl)(requestAnimationFrame2(callbackWrapper))();
-        return notify2(FrameRequested.create($190))();
+        var $202 = bind6(windowImpl)(requestAnimationFrame(callbackWrapper))();
+        return notify2(FrameRequested.create($202))();
       };
     };
   };
@@ -9672,9 +9957,9 @@
                       current: fromMaybe(localState2)(newestState)
                     };
                     traverse_12(function() {
-                      var $191 = StateUpdated.create(delta2)(scaler);
-                      return function($192) {
-                        return notify2($191($192));
+                      var $203 = StateUpdated.create(delta2)(scaler);
+                      return function($204) {
+                        return notify2($203($204));
                       };
                     }())(newestState)();
                     return app.render(context)(delta2)(scaler)(stateDelta)();
@@ -9740,18 +10025,18 @@
         return bind13(get2)(function(state3) {
           return bind13(liftEffect7(mkDom(state3)))(function(dom) {
             return discard1(put3(function() {
-              var $128 = {};
-              for (var $129 in state3) {
-                if ({}.hasOwnProperty.call(state3, $129)) {
-                  $128[$129] = state3[$129];
+              var $132 = {};
+              for (var $133 in state3) {
+                if ({}.hasOwnProperty.call(state3, $133)) {
+                  $132[$133] = state3[$133];
                 }
                 ;
               }
               ;
-              $128.dom = dom;
-              $128.subscriptions = v.subscriptions;
-              $128.timers = timers;
-              return $128;
+              $132.dom = dom;
+              $132.subscriptions = v.subscriptions;
+              $132.timers = timers;
+              return $132;
             }()))(function() {
               return pure1(v.notify);
             });
@@ -9784,9 +10069,9 @@
     return function(v) {
       if (v instanceof Initialize2) {
         return bind13(initialize1)(function() {
-          var $193 = handleAction2(dictMonadAff);
-          return function($194) {
-            return $193(FirstTick.create($194));
+          var $205 = handleAction2(dictMonadAff);
+          return function($206) {
+            return $205(FirstTick.create($206));
           };
         }());
       }
@@ -9802,21 +10087,27 @@
       if (v instanceof Tick) {
         return bind13(get2)(function(v1) {
           return bind13(runMaybeT(bind22(gets2(function(v2) {
-            return v2.dom;
+            return v2.timers;
           }))(function(v2) {
-            return lift3(liftEffect7(function __do2() {
-              var state$prime = foldr4(tryUpdate(v2.scaler)(v1.localState))(pure6(Nothing.value))(mapFlipped22(v1.pendingUpdates)(function(v3) {
-                return v3.item;
-              }))();
-              queueAnimationFrame(v.value1)(v2.context)(v2.scaler)(v1.localState)(state$prime)(v1.app)(v.value0)();
-              return {
-                "queue'": Nil.value,
-                "timers'": new Just({
-                  frame: v.value1,
-                  fixed: v.value1
-                })
-              };
-            }));
+            return bind22(gets2(function(v3) {
+              return v3.dom;
+            }))(function(v3) {
+              return lift3(liftEffect7(function __do2() {
+                var v4 = stampInterval(v2.fixed)(v1["app"]["fixed"]["function"])(v1.app.fixed.interval)();
+                var updateQueue = sort2(append14(v4.items)(v1.pendingUpdates));
+                var state$prime = foldr4(tryUpdate(v3.scaler)(v1.localState))(pure6(Nothing.value))(mapFlipped22(updateQueue)(function(v5) {
+                  return v5.item;
+                }))();
+                queueAnimationFrame(v.value1)(v3.context)(v3.scaler)(v1.localState)(state$prime)(v1.app)(v.value0)();
+                return {
+                  "queue'": Nil.value,
+                  "timers'": new Just({
+                    frame: v.value1,
+                    fixed: v4.last
+                  })
+                };
+              }));
+            });
           })))(function(results) {
             if (results instanceof Nothing) {
               return handleAction2(dictMonadAff)(Finalize2.value);
@@ -9824,21 +10115,21 @@
             ;
             if (results instanceof Just) {
               return modify_3(function(v2) {
-                var $146 = {};
-                for (var $147 in v2) {
-                  if ({}.hasOwnProperty.call(v2, $147)) {
-                    $146[$147] = v2[$147];
+                var $158 = {};
+                for (var $159 in v2) {
+                  if ({}.hasOwnProperty.call(v2, $159)) {
+                    $158[$159] = v2[$159];
                   }
                   ;
                 }
                 ;
-                $146.pendingUpdates = results["value0"]["queue'"];
-                $146.timers = results["value0"]["timers'"];
-                return $146;
+                $158.pendingUpdates = results["value0"]["queue'"];
+                $158.timers = results["value0"]["timers'"];
+                return $158;
               });
             }
             ;
-            throw new Error("Failed pattern match at Gesso.Canvas (line 287, column 5 - line 290, column 68): " + [results.constructor.name]);
+            throw new Error("Failed pattern match at Gesso.Canvas (line 280, column 5 - line 283, column 68): " + [results.constructor.name]);
           });
         });
       }
@@ -9852,16 +10143,16 @@
           return for_2(v1.timers)(function(v2) {
             return bind13(liftEffect7(stamp(v2.frame)(v.value0)))(function(stampedUpdate) {
               return modify_3(function(v3) {
-                var $159 = {};
-                for (var $160 in v3) {
-                  if ({}.hasOwnProperty.call(v3, $160)) {
-                    $159[$160] = v3[$160];
+                var $171 = {};
+                for (var $172 in v3) {
+                  if ({}.hasOwnProperty.call(v3, $172)) {
+                    $171[$172] = v3[$172];
                   }
                   ;
                 }
                 ;
-                $159.pendingUpdates = new Cons(stampedUpdate, v1.pendingUpdates);
-                return $159;
+                $171.pendingUpdates = new Cons(stampedUpdate, v1.pendingUpdates);
+                return $171;
               });
             });
           });
@@ -9874,35 +10165,35 @@
       ;
       if (v instanceof FrameRequested) {
         return modify_3(function(v1) {
-          var $169 = {};
-          for (var $170 in v1) {
-            if ({}.hasOwnProperty.call(v1, $170)) {
-              $169[$170] = v1[$170];
+          var $181 = {};
+          for (var $182 in v1) {
+            if ({}.hasOwnProperty.call(v1, $182)) {
+              $181[$182] = v1[$182];
             }
             ;
           }
           ;
-          $169.rafId = new Just(v.value0);
-          return $169;
+          $181.rafId = new Just(v.value0);
+          return $181;
         });
       }
       ;
       if (v instanceof FrameFired) {
         return modify_3(function(v1) {
-          var $173 = {};
-          for (var $174 in v1) {
-            if ({}.hasOwnProperty.call(v1, $174)) {
-              $173[$174] = v1[$174];
+          var $185 = {};
+          for (var $186 in v1) {
+            if ({}.hasOwnProperty.call(v1, $186)) {
+              $185[$186] = v1[$186];
             }
             ;
           }
           ;
-          $173.rafId = Nothing.value;
-          return $173;
+          $185.rafId = Nothing.value;
+          return $185;
         });
       }
       ;
-      throw new Error("Failed pattern match at Gesso.Canvas (line 239, column 16 - line 305, column 50): " + [v.constructor.name]);
+      throw new Error("Failed pattern match at Gesso.Canvas (line 239, column 16 - line 298, column 50): " + [v.constructor.name]);
     };
   };
   var handleQuery = function(dictMonadAff) {
@@ -9919,13 +10210,13 @@
     return mkComponent({
       initialState,
       render: memoized(on(eq4)(function() {
-        var $195 = map24(function(v) {
+        var $207 = map24(function(v) {
           return v.clientRect;
         });
-        return function($196) {
-          return $195(function(v) {
+        return function($208) {
+          return $207(function(v) {
             return v.dom;
-          }($196));
+          }($208));
         };
       }()))(render2),
       "eval": mkEval({
@@ -9975,12 +10266,12 @@
   var sequence_1 = /* @__PURE__ */ sequence_2(foldableList);
   var map25 = /* @__PURE__ */ map(functorList);
   var sequence_22 = /* @__PURE__ */ sequence_2(foldableArray);
-  var map110 = /* @__PURE__ */ map(functorArray);
+  var map111 = /* @__PURE__ */ map(functorArray);
   var when2 = /* @__PURE__ */ when(applicativeEffect);
   var traverse_6 = /* @__PURE__ */ traverse_(applicativeEffect)(foldableMaybe);
   var pure7 = /* @__PURE__ */ pure(applicativeEffect);
   var length9 = /* @__PURE__ */ length(foldableList)(semiringInt);
-  var eq22 = /* @__PURE__ */ eq(/* @__PURE__ */ eqMaybe(/* @__PURE__ */ eqRec()(/* @__PURE__ */ eqRowCons(/* @__PURE__ */ eqRowCons(eqRowNil)()({
+  var eq23 = /* @__PURE__ */ eq(/* @__PURE__ */ eqMaybe(/* @__PURE__ */ eqRec()(/* @__PURE__ */ eqRowCons(/* @__PURE__ */ eqRowCons(eqRowNil)()({
     reflectSymbol: function() {
       return "y";
     }
@@ -10038,7 +10329,7 @@
           };
           var drawGrid = function __do2() {
             setStrokeStyle(context)("#ccc")();
-            return sequence_22(map110(drawGridLine)(range2(1)(31)))();
+            return sequence_22(map111(drawGridLine)(range2(1)(31)))();
           };
           var drawCursor = function(v2) {
             return drawPixel({
@@ -10150,7 +10441,7 @@
       };
     }
   };
-  var eq32 = /* @__PURE__ */ eq(eqPixel);
+  var eq33 = /* @__PURE__ */ eq(eqPixel);
   var highlightCell = /* @__PURE__ */ function() {
     var getMousePos = function(event) {
       return function(v) {
@@ -10181,9 +10472,9 @@
                 }
                 ;
                 if (v2 instanceof Just) {
-                  var $117 = eq32(p2)(v2.value0);
+                  var $117 = eq33(p2)(v2.value0);
                   if ($117) {
-                    var $118 = eq22(state3.mouseCell)(new Just({
+                    var $118 = eq23(state3.mouseCell)(new Just({
                       x: v1.x,
                       y: v1.y
                     }));
@@ -10222,7 +10513,7 @@
                 throw new Error("Failed pattern match at Example.Paint.Grid (line 131, column 31 - line 140, column 80): " + [v2.constructor.name]);
               }
               ;
-              var $120 = eq22(state3.mouseCell)(new Just({
+              var $120 = eq23(state3.mouseCell)(new Just({
                 x: v1.x,
                 y: v1.y
               }));
@@ -10296,6 +10587,7 @@
       name: "canvas",
       localState,
       app: {
+        fixed: defaultApp.fixed,
         update: defaultApp.update,
         window: new Fixed(fromWidthAndHeight({
           width: 600,
@@ -10358,7 +10650,7 @@
   var show4 = /* @__PURE__ */ show(showInt);
   var fromFoldable3 = /* @__PURE__ */ fromFoldable(foldableList);
   var map26 = /* @__PURE__ */ map(functorList);
-  var append14 = /* @__PURE__ */ append(semigroupArray);
+  var append15 = /* @__PURE__ */ append(semigroupArray);
   var type_19 = /* @__PURE__ */ type_3(isPropInputType);
   var slot3 = /* @__PURE__ */ slot()({
     reflectSymbol: function() {
@@ -10457,7 +10749,7 @@
           return fromFoldable3(map26(listItem)(pixels));
         };
       };
-      var undoRedoHistory = div2([style3(styles.history)])([button([onClick($$const(Undo.value)), style3(styles.control)])([text("\u27F2 Undo")]), button([onClick($$const(Redo.value)), style3(styles.control)])([text("\u27F3 Redo")]), ul([style3("list-style-type: none;")])(append14(history2(styles.redo)(reverse2(state3.redo)))(append14([li([style3(styles.place)])([span2([style3(styles.line)])([])])])(history2("")(state3.pixels))))]);
+      var undoRedoHistory = div2([style3(styles.history)])([button([onClick($$const(Undo.value)), style3(styles.control)])([text("\u27F2 Undo")]), button([onClick($$const(Redo.value)), style3(styles.control)])([text("\u27F3 Redo")]), ul([style3("list-style-type: none;")])(append15(history2(styles.redo)(reverse2(state3.redo)))(append15([li([style3(styles.place)])([span2([style3(styles.line)])([])])])(history2("")(state3.pixels))))]);
       var drawing = div2([style3(styles.canvas)])([component1(GotOutput.create), label([style3(styles.label)])([input([type_19(InputCheckbox.value), onClick($$const(ToggleGrid.value)), checked2(state3.showGrid)]), span_([text("Show Grid")])])]);
       var colorPicker = div2([style3(styles.colorPicker)])([slot3(_colorButton)(0)(component)(picker("black"))(ButtonClicked.create), slot3(_colorButton)(1)(component)(picker("#888"))(ButtonClicked.create), slot3(_colorButton)(2)(component)(picker("#ccc"))(ButtonClicked.create), slot3(_colorButton)(3)(component)(picker("white"))(ButtonClicked.create)]);
       return div2([style3(styles.root)])([colorPicker, drawing, undoRedoHistory]);
@@ -10699,7 +10991,7 @@
   var pure10 = /* @__PURE__ */ pure(applicativeAff);
   var map28 = /* @__PURE__ */ map(functorCoyoneda);
   var parallel3 = /* @__PURE__ */ parallel(parallelAff);
-  var map111 = /* @__PURE__ */ map(functorAff);
+  var map112 = /* @__PURE__ */ map(functorAff);
   var sequential2 = /* @__PURE__ */ sequential(parallelAff);
   var map29 = /* @__PURE__ */ map(functorMaybe);
   var insert5 = /* @__PURE__ */ insert(ordSubscriptionId);
@@ -10790,7 +11082,7 @@
                     })(dsx);
                   }));
                 };
-                return map111(v2.value2)(sequential2(v2.value0(applicativeParAff)(evalChild)(v1.children)));
+                return map112(v2.value2)(sequential2(v2.value0(applicativeParAff)(evalChild)(v1.children)));
               })(cqb);
             });
           };
