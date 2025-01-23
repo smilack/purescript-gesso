@@ -2,6 +2,7 @@
 -- | all Gesso applications, regardless of the rendering component.
 module Gesso.Application
   ( AppSpec
+  , FixedUpdate
   , InputReceiver
   , OutputProducer
   , RenderFunction
@@ -13,6 +14,7 @@ module Gesso.Application
   ) where
 
 import Prelude
+
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Gesso.Dimensions as D
@@ -31,6 +33,7 @@ import Gesso.Time as T
 type AppSpec context local input output =
   { window :: WindowMode
   , render :: RenderFunction context local
+  , fixed :: FixedUpdate local
   , update :: UpdateFunction local
   , output :: OutputProducer local output
   , input :: InputReceiver local input
@@ -44,6 +47,10 @@ defaultApp
 defaultApp =
   { window: Fixed D.sizeless
   , render: \_ _ _ _ -> pure unit
+  , fixed:
+      { interval: T.never
+      , function: \_ _ _ -> pure Nothing
+      }
   , update: \_ _ _ -> pure Nothing
   , output: \_ _ _ -> pure Nothing
   , input: \_ _ _ _ -> pure Nothing
@@ -102,6 +109,13 @@ type UpdateFunction local =
 -- | A partially applied `UpdateFunction` that already has the `Delta` record.
 type TimestampedUpdate local =
   D.Scaler -> local -> Effect (Maybe local)
+
+-- | An update function that occurs at a fixed, regular interval, rather than on
+-- | every animation frame, which may vary.
+type FixedUpdate local =
+  { interval :: T.Interval
+  , function :: UpdateFunction local
+  }
 
 -- | An input receiver is a variant of an update function that can receive
 -- | information from the component's parent and produce an update function

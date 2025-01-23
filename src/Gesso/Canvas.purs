@@ -247,28 +247,21 @@ handleAction = case _ of
     { localState, app, pendingUpdates } <- H.get
 
     results <- runMaybeT do
-      -- { fixed } <- MaybeT $ H.gets _.timers
+      { fixed } <- MaybeT $ H.gets _.timers
       { context, scaler } <- MaybeT $ H.gets _.dom
 
       lift $ H.liftEffect do
         -- schedule fixed updates
-        {- { last, items } <- T.stampInterval fixedUpdateFn interval
-        let timers' = { frame: lastFrame, fixed: last }
-        let updateQueue = T.sort (items : pendingUpdates) -}
+        let { function, interval } = app.fixed
+        { last, items } <- T.stampInterval fixed function interval
+        let updateQueue = T.sort (items <> pendingUpdates)
 
         -- run pending + queued updates
-        state' <- foldr
-          (tryUpdate scaler localState)
-          (pure Nothing)
-          {- stampedUpdateQueue <#> _.item -}
-          (pendingUpdates <#> _.item)
-
-        -- Should StateUpdated only ever be emitted immediately before
-        -- rendering? It could be emitted here and before rendering. Is twice
-        -- per frame too much?
-        --
-        -- Passing state' to queueAnimationFrame so it can use state' to check
-        -- for changes.
+        state' <-
+          foldr
+            (tryUpdate scaler localState)
+            (pure Nothing)
+            (updateQueue <#> _.item)
 
         queueAnimationFrame
           lastFrame
@@ -281,7 +274,7 @@ handleAction = case _ of
 
         pure
           { queue': List.Nil
-          , timers': Just { frame: lastFrame, fixed: lastFrame }
+          , timers': Just { frame: lastFrame, fixed: last }
           }
 
     case results of

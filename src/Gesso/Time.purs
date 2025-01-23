@@ -10,7 +10,9 @@ module Gesso.Time
   , delta
   , elapse
   , hz
+  , never
   , requestAnimationFrame
+  , sort
   , stamp
   , stampInterval
   , started
@@ -18,7 +20,8 @@ module Gesso.Time
 
 import Prelude
 
-import Data.List (List(..), head, (:))
+import Data.Function (on)
+import Data.List (List(..), head, (:), sortBy)
 import Data.Maybe (maybe)
 import Data.Number (isFinite)
 import Effect (Effect)
@@ -91,6 +94,9 @@ started = elapse <$> _now
 -- | [`stampInterval`](#v:stampInterval).
 type Stamped a = { time :: Number, item :: a }
 
+sort :: forall a. List (Stamped a) -> List (Stamped a)
+sort = sortBy (compare `on` _.time)
+
 -- | For a `last` timestamp and a function `f :: Delta -> a` (such as
 -- | `UpdateFunction s :: Delta -> TimestampedUpdate s` in
 -- | [`Application`](Gesso.Application.html#t:UpdateFunction)), create a
@@ -115,6 +121,10 @@ hz fps
   | not (isFinite fps) = Never
   | fps <= 0.0 = Never
   | otherwise = Interval $ 1.0 / fps
+
+-- | An interval that never occurs.
+never :: Interval
+never = Never
 
 -- | Results of repeatedly timestamping a function at certain interval:
 -- |
