@@ -135,8 +135,7 @@ data Query appInput a = Input appInput a
 -- | same arguments as a regular update function.
 -- |
 -- | - `name` is the name of the application, which doubles as the HTML `id` for
--- |   the canvas element. (Related:
--- |   https://github.com/smilack/purescript-gesso/issues/4)
+-- |   the canvas element.
 -- | - `app` is the Application Spec.
 -- | - `localState` is the initial local state for the application.
 -- | - `viewBox` is the desired dimensions for the drawing surface.
