@@ -1,0 +1,29 @@
+package:
+  dependencies:
+    - gesso
+    - aff
+    - canvas
+    - console
+    - css
+    - dom-indexed
+    - effect
+    - foldable-traversable
+    - halogen
+    - halogen-subscriptions
+    - integers
+    - lists
+    - maybe
+    - numbers
+    - prelude
+    - safe-coerce
+    - tuples
+    - web-clipboard
+    - web-dom
+    - web-events
+    - web-html
+    - web-touchevents
+    - web-uievents
+  name: gesso-example-interpolation
+  bundle:
+    module: Example.Interpolation.Main
+    outfile: "dist/example.js"
