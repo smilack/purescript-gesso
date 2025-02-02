@@ -6,7 +6,6 @@ module Gesso.Application
   , InputReceiver
   , OutputProducer
   , RenderFunction
-  , StateDelta
   , TimestampedUpdate
   , UpdateFunction
   , WindowMode(..)
@@ -18,6 +17,7 @@ import Prelude
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Gesso.Dimensions as D
+import Gesso.Util.Lerp (Versions, Lerp)
 import Gesso.Time as T
 
 -- | `AppSpec` holds information about the setup and behavior of a Gesso
@@ -68,13 +68,6 @@ data WindowMode
   | Stretch
   | Fullscreen
 
--- | Copies of the current and previous states, for situations where it makes
--- | sense to compare them.
-type StateDelta local =
-  { previous :: local
-  , current :: local
-  }
-
 -- | A function that draws on the component. It knows the following:
 -- |
 -- | - `context` is the drawing context of canvas element, like `Context2D`
@@ -82,12 +75,13 @@ type StateDelta local =
 -- |   time elapsed since the previous frame.
 -- | - `Scaler` is a record containg scaling functions for converting canvas
 -- |   coordinates to screen coordinates.
--- | - `local` is the local state of the application
+-- | - `local` is the local state of the application, with `Lerp` being the two
+-- |   most recent states and the time progress between them.
 -- |
 -- | The render function may run any operations in `Effect`, not just functions
 -- | related to drawing on the canvas.
 type RenderFunction context local =
-  context -> T.Delta -> D.Scaler -> StateDelta local -> Effect Unit
+  context -> T.Delta -> D.Scaler -> Lerp local -> Effect Unit
 
 -- | An function that may update the application state. It runs on every frame,
 -- | before the render function. It knows the following:
@@ -126,4 +120,4 @@ type InputReceiver local input = input -> UpdateFunction local
 -- | the old and new local states and may send output to the component's parent
 -- | based on the difference.
 type OutputProducer local output =
-  T.Delta -> D.Scaler -> StateDelta local -> Effect (Maybe output)
+  T.Delta -> D.Scaler -> Versions local -> Effect (Maybe output)

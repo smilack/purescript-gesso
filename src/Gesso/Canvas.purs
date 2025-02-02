@@ -12,13 +12,12 @@ module Gesso.Canvas
 
 import Prelude
 
-import Control.Alt ((<|>))
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
 import Data.Foldable (foldr, for_, traverse_)
 import Data.Function (on)
 import Data.List (List, (:))
 import Data.List as List
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), maybe)
 import Data.Traversable (for, traverse)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
@@ -26,6 +25,7 @@ import Gesso.Application as App
 import Gesso.Canvas.Element as GEl
 import Gesso.Dimensions as Dims
 import Gesso.Interactions as GI
+import Gesso.Util.Lerp (Versions, History)
 import Gesso.Time as T
 import Graphics.Canvas (Context2D)
 import Halogen (liftEffect)
@@ -111,7 +111,7 @@ data Action localState
   | FirstTick (Action localState -> Effect Unit)
   | Tick (Action localState -> Effect Unit) T.Last
   | Finalize
-  | StateUpdated T.Delta Dims.Scaler localState
+  | StateUpdated T.Delta Dims.Scaler (Versions localState)
   | QueueUpdate (App.UpdateFunction localState)
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
@@ -256,18 +256,25 @@ handleAction = case _ of
         let updateQueue = T.sort (items <> pendingUpdates)
 
         -- run pending + queued updates
-        state' <-
+        let
+          initialHistory =
+            { original: localState
+            , old: localState
+            , new: localState
+            , changed: false
+            }
+        stateHistory <-
           foldr
-            (tryUpdate scaler localState)
-            (pure Nothing)
+            (tryUpdate scaler)
+            (pure initialHistory)
             (updateQueue <#> _.item)
 
         queueAnimationFrame
           lastFrame
+          (T.toRatio last interval)
           context
           scaler
-          localState
-          state'
+          stateHistory
           app
           notify
 
@@ -290,7 +297,8 @@ handleAction = case _ of
       stampedUpdate <- H.liftEffect $ T.stamp frame handlerFn
       H.modify_ (_ { pendingUpdates = stampedUpdate : pendingUpdates })
 
-  StateUpdated delta scaler localState' -> saveNewState delta scaler localState'
+  StateUpdated delta scaler stateVersions ->
+    saveNewState delta scaler stateVersions
 
   FrameRequested rafId -> H.modify_ (_ { rafId = Just rafId })
 
@@ -371,42 +379,36 @@ getFirstFrame
   -> Effect Unit
 getFirstFrame = requestAnimationFrame (const $ pure unit)
 
--- | Runs update and render functions:
--- |
--- | `updateAndRender` takes the list of queued update handlers and prepends the
--- | component's update function. It folds over the list, calling each update
--- | function, and tracking whether any of them changes the state. If one does,
--- | a `StateUpdated` action is emitted, which will persist the change back to
--- | the component and cause the component to check whether the change needs to
--- | be outputted. Finally, it calls the app's render function.
+-- | Run per-frame update function and render function. Give `render` the newest
+-- | state and the state prior to the most recent update, as well as the time
+-- | difference between the two. Send the most recent state and the state as of
+-- | the beginning of this tick to the app's output function to determine
+-- | whether to send I/O.
 queueAnimationFrame
   :: forall localState appInput appOutput
    . T.Last
+  -> (T.Now -> Number)
   -> Context2D
   -> Dims.Scaler
-  -> localState
-  -> Maybe localState
+  -> History localState
   -> App.AppSpec Context2D localState appInput appOutput
   -> (Action localState -> Effect Unit)
   -> Effect Unit
-queueAnimationFrame lastTime context scaler localState state' app notify =
+queueAnimationFrame lastTime toIntRatio context scaler stateHistory app notify =
   requestAnimationFrame rafCallback notify
   where
   rafCallback :: T.Now -> Effect Unit
-  rafCallback timestamp = updateAndRender (T.delta timestamp lastTime)
+  rafCallback timestamp = do
+    let delta = T.delta timestamp lastTime
 
-  updateAndRender :: T.Delta -> Effect Unit
-  updateAndRender delta = do
-    state'' <- tryUpdate scaler localState (app.update delta) (pure state')
+    history <- tryUpdate scaler (app.update delta) (pure stateHistory)
 
-    let
-      newestState = state'' <|> state'
-      stateDelta =
-        { previous: localState, current: fromMaybe localState newestState }
+    when stateHistory.changed
+      $ notify
+      $ StateUpdated delta scaler { old: history.original, new: history.new }
 
-    traverse_ (notify <<< StateUpdated delta scaler) newestState
-
-    app.render context delta scaler stateDelta
+    app.render context delta scaler
+      { old: history.old, new: history.new, t: toIntRatio timestamp }
 
 -- | Run an update function, using a current state if available, or an older one
 -- | if not. When folding over a list of update functions, this makes it easier
@@ -415,12 +417,14 @@ queueAnimationFrame lastTime context scaler localState state' app notify =
 tryUpdate
   :: forall localState
    . Dims.Scaler
-  -> localState
   -> (Dims.Scaler -> localState -> Effect (Maybe localState))
-  -> Effect (Maybe localState)
-  -> Effect (Maybe localState)
-tryUpdate scaler original update current =
-  current >>= fromMaybe original >>> update scaler
+  -> Effect (History localState)
+  -> Effect (History localState)
+tryUpdate scaler update state = do
+  { original, new } <- state
+  update scaler new >>= case _ of
+    Nothing -> state
+    Just new' -> pure { original, old: new, new: new', changed: true }
 
 -- | Get a new `clientRect` for the `canvas` element and create a new scaler for
 -- | it, saving both to the component state.
@@ -477,7 +481,7 @@ saveNewState
    . MonadAff m
   => T.Delta
   -> Dims.Scaler
-  -> localState
+  -> Versions localState
   -> H.HalogenM
        (State localState appInput appOutput)
        (Action localState)
@@ -485,11 +489,10 @@ saveNewState
        (Output appOutput)
        m
        Unit
-saveNewState delta scaler state' = do
-  { app: { output }, localState } <- H.get
-  H.modify_ (_ { localState = state' })
-  mOutput <- liftEffect
-    $ output delta scaler { previous: localState, current: state' }
+saveNewState delta scaler stateVersions = do
+  { app: { output } } <- H.get
+  H.modify_ (_ { localState = stateVersions.new })
+  mOutput <- liftEffect $ output delta scaler stateVersions
   traverse_ (H.raise <<< Output) mOutput
 
 -- | Receiving input from the host application. Convert it into an `Update` and

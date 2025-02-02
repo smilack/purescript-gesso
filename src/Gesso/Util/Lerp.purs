@@ -13,7 +13,7 @@ type Versions' a r = { old :: a, new :: a | r }
 
 type Versions a = Versions' a ()
 
-type History a = Versions' a (original :: a)
+type History a = Versions' a (original :: a, changed :: Boolean)
 
 type LinearInterpolation a n = Versions' a (t :: n)
 
