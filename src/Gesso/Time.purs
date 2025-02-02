@@ -16,6 +16,7 @@ module Gesso.Time
   , stamp
   , stampInterval
   , started
+  , toRatio
   ) where
 
 import Prelude
@@ -113,6 +114,17 @@ stamp last f = do
 data Interval
   = Interval Number
   | Never
+
+-- | Convert the span between two periods of time to a unitless number of
+-- | intervals, typically between `0.0` and `1.0`. The result is used with
+-- | linear interpolation to find a weighted average between two values.
+-- |
+-- | For a `Never` interval, returns `1`, signalling to use the newer value and
+-- | ignore the older.
+toRatio :: Last -> Interval -> Now -> Number
+toRatio (Last l) interval (Now n) = case interval of
+  Never -> 1.0
+  Interval i -> (n - l) / i
 
 -- | Construct an `Interval` from Hz or frames per second. Invalid frequencies
 -- | (`±Infinity`, `NaN`, zero, or negative) result in a `Never` interval.
