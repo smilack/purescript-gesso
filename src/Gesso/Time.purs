@@ -120,7 +120,7 @@ hz :: Number -> Interval
 hz fps
   | not (isFinite fps) = Never
   | fps <= 0.0 = Never
-  | otherwise = Interval $ 1.0 / fps
+  | otherwise = Interval $ 1000.0 / fps
 
 -- | An interval that never occurs.
 never :: Interval
