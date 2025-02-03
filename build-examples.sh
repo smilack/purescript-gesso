@@ -5,3 +5,4 @@ spago bundle --source-maps -p gesso-example-controlling-ball
 spago bundle --source-maps -p gesso-example-hello
 spago bundle --source-maps -p gesso-example-paint
 spago bundle --source-maps -p gesso-example-unit-grid
+spago bundle --source-maps -p gesso-example-interpolation
