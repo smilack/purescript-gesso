@@ -786,20 +786,6 @@
       return applyMaybe;
     }
   };
-  var altMaybe = {
-    alt: function(v) {
-      return function(v1) {
-        if (v instanceof Nothing) {
-          return v1;
-        }
-        ;
-        return v;
-      };
-    },
-    Functor0: function() {
-      return functorMaybe;
-    }
-  };
 
   // output/Data.Either/index.js
   var Left = /* @__PURE__ */ function() {
@@ -1297,15 +1283,15 @@
     };
   };
   var for_ = function(dictApplicative) {
-    var traverse_15 = traverse_(dictApplicative);
+    var traverse_14 = traverse_(dictApplicative);
     return function(dictFoldable) {
-      return flip(traverse_15(dictFoldable));
+      return flip(traverse_14(dictFoldable));
     };
   };
   var sequence_ = function(dictApplicative) {
-    var traverse_15 = traverse_(dictApplicative);
+    var traverse_14 = traverse_(dictApplicative);
     return function(dictFoldable) {
-      return traverse_15(dictFoldable)(identity4);
+      return traverse_14(dictFoldable)(identity4);
     };
   };
   var foldl = function(dict) {
@@ -2888,9 +2874,9 @@
     return function(dictApplicative) {
       var traverse_10 = traverse_(dictApplicative);
       return function(dictFoldable) {
-        var traverse_15 = traverse_10(dictFoldable);
+        var traverse_14 = traverse_10(dictFoldable);
         return function(f) {
-          var $51 = traverse_15(function($53) {
+          var $51 = traverse_14(function($53) {
             return parallel4(f($53));
           });
           return function($52) {
@@ -3202,10 +3188,10 @@
     };
   };
   var oneOf2 = function(dictAlternative) {
-    var alt6 = alt(dictAlternative.Plus1().Alt0());
+    var alt5 = alt(dictAlternative.Plus1().Alt0());
     var pure16 = pure(dictAlternative.Applicative0());
     return function(v) {
-      return alt6(pure16(v.value0))(v.value1);
+      return alt5(pure16(v.value0))(v.value1);
     };
   };
   var functorNonEmpty = function(dictFunctor) {
@@ -6840,11 +6826,26 @@
     Never2.value = new Never2();
     return Never2;
   }();
+  var toRatio = function(v) {
+    return function(interval) {
+      return function(v1) {
+        if (interval instanceof Never) {
+          return 1;
+        }
+        ;
+        if (interval instanceof Interval) {
+          return (v1 - v) / interval.value0;
+        }
+        ;
+        throw new Error("Failed pattern match at Gesso.Time (line 125, column 37 - line 127, column 28): " + [interval.constructor.name]);
+      };
+    };
+  };
   var sort3 = /* @__PURE__ */ sortBy2(/* @__PURE__ */ on(/* @__PURE__ */ compare(ordNumber))(function(v) {
     return v.time;
   }));
-  var requestAnimationFrame = function($34) {
-    return _requestAnimationFrame(mkEffectFn1($34));
+  var requestAnimationFrame = function($41) {
+    return _requestAnimationFrame(mkEffectFn1($41));
   };
   var never = /* @__PURE__ */ function() {
     return Never.value;
@@ -6913,7 +6914,7 @@
                     return;
                   }
                   ;
-                  throw new Error("Failed pattern match at Gesso.Time (line 166, column 5 - line 166, column 68): " + [items2.constructor.name, v1.constructor.name, v2.constructor.name]);
+                  throw new Error("Failed pattern match at Gesso.Time (line 178, column 5 - line 178, column 68): " + [items2.constructor.name, v1.constructor.name, v2.constructor.name]);
                 }
                 ;
                 while (!$tco_done) {
@@ -6925,10 +6926,10 @@
             };
           };
           var lastTime = function(l) {
-            return maybe(last3)(function($35) {
+            return maybe(last3)(function($42) {
               return Last2(function(v1) {
                 return v1.time;
-              }($35));
+              }($42));
             })(head2(l));
           };
           var batch = function(items2) {
@@ -6940,7 +6941,7 @@
           return map10(map15(batch)(schedule(Nil.value)(last3)))(_now);
         }
         ;
-        throw new Error("Failed pattern match at Gesso.Time (line 156, column 25 - line 172, column 66): " + [v.constructor.name]);
+        throw new Error("Failed pattern match at Gesso.Time (line 168, column 25 - line 184, column 66): " + [v.constructor.name]);
       };
     };
   };
@@ -9036,8 +9037,7 @@
   var append11 = /* @__PURE__ */ append(semigroupArray);
   var toSizeProps2 = /* @__PURE__ */ toSizeProps(sizedDimensions);
   var mapFlipped2 = /* @__PURE__ */ mapFlipped(functorMaybe);
-  var alt5 = /* @__PURE__ */ alt(altMaybe);
-  var traverse_12 = /* @__PURE__ */ traverse_(applicativeEffect)(foldableMaybe);
+  var when2 = /* @__PURE__ */ when(applicativeEffect);
   var mapFlipped1 = /* @__PURE__ */ mapFlipped(functorEffect);
   var pure1 = /* @__PURE__ */ pure(applicativeHalogenM);
   var traverse3 = /* @__PURE__ */ traverse(traversableMaybe)(applicativeEffect);
@@ -9161,9 +9161,9 @@
       });
     };
     return bind13(bindFlipped4(function() {
-      var $194 = liftEffect(monadEffectHalogenM(dictMonadAff.MonadEffect0()));
-      return function($195) {
-        return $194(updateDom($195));
+      var $198 = liftEffect(monadEffectHalogenM(dictMonadAff.MonadEffect0()));
+      return function($199) {
+        return $198(updateDom($199));
       };
     }())(get2))(function(dom$prime) {
       return modify_3(function(v) {
@@ -9190,16 +9190,25 @@
     }));
   };
   var tryUpdate = function(scaler) {
-    return function(original) {
-      return function(update) {
-        return function(current) {
-          return bind6(current)(function() {
-            var $196 = update(scaler);
-            var $197 = fromMaybe(original);
-            return function($198) {
-              return $196($197($198));
+    return function(update) {
+      return function(state3) {
+        return function __do2() {
+          var v = state3();
+          var v1 = update(scaler)(v["new"])();
+          if (v1 instanceof Nothing) {
+            return state3();
+          }
+          ;
+          if (v1 instanceof Just) {
+            return {
+              original: v.original,
+              old: v["new"],
+              "new": v1.value0,
+              changed: true
             };
-          }());
+          }
+          ;
+          throw new Error("Failed pattern match at Gesso.Canvas (line 425, column 25 - line 427, column 71): " + [v1.constructor.name]);
         };
       };
     };
@@ -9213,26 +9222,23 @@
     var liftEffect7 = liftEffect(monadEffectHalogenM(dictMonadAff.MonadEffect0()));
     return function(delta2) {
       return function(scaler) {
-        return function(state$prime) {
+        return function(stateVersions) {
           return bind13(get2)(function(v) {
             return discard1(modify_3(function(v1) {
-              var $117 = {};
-              for (var $118 in v1) {
-                if ({}.hasOwnProperty.call(v1, $118)) {
-                  $117[$118] = v1[$118];
+              var $122 = {};
+              for (var $123 in v1) {
+                if ({}.hasOwnProperty.call(v1, $123)) {
+                  $122[$123] = v1[$123];
                 }
                 ;
               }
               ;
-              $117.localState = state$prime;
-              return $117;
+              $122.localState = stateVersions["new"];
+              return $122;
             }))(function() {
-              return bind13(liftEffect7(v.app.output(delta2)(scaler)({
-                previous: v.localState,
-                current: state$prime
-              })))(function(mOutput) {
-                return traverse_5(function($199) {
-                  return raise(Output($199));
+              return bind13(liftEffect7(v.app.output(delta2)(scaler)(stateVersions)))(function(mOutput) {
+                return traverse_5(function($200) {
+                  return raise(Output($200));
                 })(mOutput);
               });
             });
@@ -9244,17 +9250,17 @@
   var requestAnimationFrame3 = function(callback) {
     return function(notify2) {
       var tick = function() {
-        var $200 = Tick.create(notify2);
-        return function($201) {
-          return notify2($200(elapse($201)));
+        var $201 = Tick.create(notify2);
+        return function($202) {
+          return notify2($201(elapse($202)));
         };
       }();
       var callbackWrapper = function(timestamp) {
         return applySecond2(applySecond2(notify2(FrameFired.value))(callback(timestamp)))(tick(timestamp));
       };
       return function __do2() {
-        var $202 = bind6(windowImpl)(requestAnimationFrame(callbackWrapper))();
-        return notify2(FrameRequested.create($202))();
+        var $203 = bind6(windowImpl)(requestAnimationFrame(callbackWrapper))();
+        return notify2(FrameRequested.create($203))();
       };
     };
   };
@@ -9264,31 +9270,26 @@
     })))));
   };
   var queueAnimationFrame = function(lastTime) {
-    return function(context) {
-      return function(scaler) {
-        return function(localState) {
-          return function(state$prime) {
+    return function(toIntRatio) {
+      return function(context) {
+        return function(scaler) {
+          return function(stateHistory) {
             return function(app) {
               return function(notify2) {
-                var updateAndRender = function(delta2) {
-                  return function __do2() {
-                    var state$prime$prime = tryUpdate(scaler)(localState)(app.update(delta2))(pure7(state$prime))();
-                    var newestState = alt5(state$prime$prime)(state$prime);
-                    var stateDelta = {
-                      previous: localState,
-                      current: fromMaybe(localState)(newestState)
-                    };
-                    traverse_12(function() {
-                      var $203 = StateUpdated.create(delta2)(scaler);
-                      return function($204) {
-                        return notify2($203($204));
-                      };
-                    }())(newestState)();
-                    return app.render(context)(delta2)(scaler)(stateDelta)();
-                  };
-                };
                 var rafCallback = function(timestamp) {
-                  return updateAndRender(delta(timestamp)(lastTime));
+                  var delta2 = delta(timestamp)(lastTime);
+                  return function __do2() {
+                    var history2 = tryUpdate(scaler)(app.update(delta2))(pure7(stateHistory))();
+                    when2(stateHistory.changed)(notify2(new StateUpdated(delta2, scaler, {
+                      old: history2.original,
+                      "new": history2["new"]
+                    })))();
+                    return app.render(context)(delta2)(scaler)({
+                      old: history2.old,
+                      "new": history2["new"],
+                      t: toIntRatio(timestamp)
+                    })();
+                  };
                 };
                 return requestAnimationFrame3(rafCallback)(notify2);
               };
@@ -9347,18 +9348,18 @@
         return bind13(get2)(function(state3) {
           return bind13(liftEffect7(mkDom(state3)))(function(dom) {
             return discard1(put2(function() {
-              var $132 = {};
-              for (var $133 in state3) {
-                if ({}.hasOwnProperty.call(state3, $133)) {
-                  $132[$133] = state3[$133];
+              var $136 = {};
+              for (var $137 in state3) {
+                if ({}.hasOwnProperty.call(state3, $137)) {
+                  $136[$137] = state3[$137];
                 }
                 ;
               }
               ;
-              $132.dom = dom;
-              $132.subscriptions = v.subscriptions;
-              $132.timers = timers;
-              return $132;
+              $136.dom = dom;
+              $136.subscriptions = v.subscriptions;
+              $136.timers = timers;
+              return $136;
             }()))(function() {
               return pure1(v.notify);
             });
@@ -9391,9 +9392,9 @@
     return function(v) {
       if (v instanceof Initialize2) {
         return bind13(initialize1)(function() {
-          var $205 = handleAction(dictMonadAff);
-          return function($206) {
-            return $205(FirstTick.create($206));
+          var $204 = handleAction(dictMonadAff);
+          return function($205) {
+            return $204(FirstTick.create($205));
           };
         }());
       }
@@ -9417,10 +9418,16 @@
               return lift3(liftEffect7(function __do2() {
                 var v4 = stampInterval(v2.fixed)(v1["app"]["fixed"]["function"])(v1.app.fixed.interval)();
                 var updateQueue = sort3(append14(v4.items)(v1.pendingUpdates));
-                var state$prime = foldr4(tryUpdate(v3.scaler)(v1.localState))(pure7(Nothing.value))(mapFlipped22(updateQueue)(function(v5) {
+                var initialHistory = {
+                  original: v1.localState,
+                  old: v1.localState,
+                  "new": v1.localState,
+                  changed: false
+                };
+                var stateHistory = foldr4(tryUpdate(v3.scaler))(pure7(initialHistory))(mapFlipped22(updateQueue)(function(v5) {
                   return v5.item;
                 }))();
-                queueAnimationFrame(v.value1)(v3.context)(v3.scaler)(v1.localState)(state$prime)(v1.app)(v.value0)();
+                queueAnimationFrame(v.value1)(toRatio(v4.last)(v1.app.fixed.interval))(v3.context)(v3.scaler)(stateHistory)(v1.app)(v.value0)();
                 return {
                   "queue'": Nil.value,
                   "timers'": new Just({
@@ -9437,21 +9444,21 @@
             ;
             if (results instanceof Just) {
               return modify_3(function(v2) {
-                var $158 = {};
-                for (var $159 in v2) {
-                  if ({}.hasOwnProperty.call(v2, $159)) {
-                    $158[$159] = v2[$159];
+                var $162 = {};
+                for (var $163 in v2) {
+                  if ({}.hasOwnProperty.call(v2, $163)) {
+                    $162[$163] = v2[$163];
                   }
                   ;
                 }
                 ;
-                $158.pendingUpdates = results["value0"]["queue'"];
-                $158.timers = results["value0"]["timers'"];
-                return $158;
+                $162.pendingUpdates = results["value0"]["queue'"];
+                $162.timers = results["value0"]["timers'"];
+                return $162;
               });
             }
             ;
-            throw new Error("Failed pattern match at Gesso.Canvas (line 280, column 5 - line 283, column 68): " + [results.constructor.name]);
+            throw new Error("Failed pattern match at Gesso.Canvas (line 286, column 5 - line 289, column 68): " + [results.constructor.name]);
           });
         });
       }
@@ -9465,16 +9472,16 @@
           return for_2(v1.timers)(function(v2) {
             return bind13(liftEffect7(stamp(v2.frame)(v.value0)))(function(stampedUpdate) {
               return modify_3(function(v3) {
-                var $171 = {};
-                for (var $172 in v3) {
-                  if ({}.hasOwnProperty.call(v3, $172)) {
-                    $171[$172] = v3[$172];
+                var $175 = {};
+                for (var $176 in v3) {
+                  if ({}.hasOwnProperty.call(v3, $176)) {
+                    $175[$176] = v3[$176];
                   }
                   ;
                 }
                 ;
-                $171.pendingUpdates = new Cons(stampedUpdate, v1.pendingUpdates);
-                return $171;
+                $175.pendingUpdates = new Cons(stampedUpdate, v1.pendingUpdates);
+                return $175;
               });
             });
           });
@@ -9487,21 +9494,6 @@
       ;
       if (v instanceof FrameRequested) {
         return modify_3(function(v1) {
-          var $181 = {};
-          for (var $182 in v1) {
-            if ({}.hasOwnProperty.call(v1, $182)) {
-              $181[$182] = v1[$182];
-            }
-            ;
-          }
-          ;
-          $181.rafId = new Just(v.value0);
-          return $181;
-        });
-      }
-      ;
-      if (v instanceof FrameFired) {
-        return modify_3(function(v1) {
           var $185 = {};
           for (var $186 in v1) {
             if ({}.hasOwnProperty.call(v1, $186)) {
@@ -9510,12 +9502,27 @@
             ;
           }
           ;
-          $185.rafId = Nothing.value;
+          $185.rafId = new Just(v.value0);
           return $185;
         });
       }
       ;
-      throw new Error("Failed pattern match at Gesso.Canvas (line 239, column 16 - line 298, column 50): " + [v.constructor.name]);
+      if (v instanceof FrameFired) {
+        return modify_3(function(v1) {
+          var $189 = {};
+          for (var $190 in v1) {
+            if ({}.hasOwnProperty.call(v1, $190)) {
+              $189[$190] = v1[$190];
+            }
+            ;
+          }
+          ;
+          $189.rafId = Nothing.value;
+          return $189;
+        });
+      }
+      ;
+      throw new Error("Failed pattern match at Gesso.Canvas (line 238, column 16 - line 305, column 50): " + [v.constructor.name]);
     };
   };
   var handleQuery = function(dictMonadAff) {
@@ -9532,13 +9539,13 @@
     return mkComponent({
       initialState,
       render: memoized(on(eq4)(function() {
-        var $207 = map24(function(v) {
+        var $206 = map24(function(v) {
           return v.clientRect;
         });
-        return function($208) {
-          return $207(function(v) {
+        return function($207) {
+          return $206(function(v) {
             return v.dom;
-          }($208));
+          }($207));
         };
       }()))(render),
       "eval": mkEval({
@@ -9641,8 +9648,8 @@
   var liftEffect3 = /* @__PURE__ */ liftEffect(monadEffectAff);
   var discard5 = /* @__PURE__ */ discard(discardUnit);
   var discard12 = /* @__PURE__ */ discard5(bindAff);
-  var traverse_13 = /* @__PURE__ */ traverse_(applicativeAff);
-  var traverse_22 = /* @__PURE__ */ traverse_13(foldableList);
+  var traverse_12 = /* @__PURE__ */ traverse_(applicativeAff);
+  var traverse_22 = /* @__PURE__ */ traverse_12(foldableList);
   var fork3 = /* @__PURE__ */ fork(monadForkAff);
   var parSequence_2 = /* @__PURE__ */ parSequence_(parallelAff)(applicativeParAff)(foldableList);
   var pure8 = /* @__PURE__ */ pure(applicativeAff);
@@ -9656,7 +9663,7 @@
   var $$delete3 = /* @__PURE__ */ $$delete2(ordForkId);
   var unlessM2 = /* @__PURE__ */ unlessM(monadEffect);
   var insert1 = /* @__PURE__ */ insert2(ordForkId);
-  var traverse_32 = /* @__PURE__ */ traverse_13(foldableMaybe);
+  var traverse_32 = /* @__PURE__ */ traverse_12(foldableMaybe);
   var lookup1 = /* @__PURE__ */ lookup5(ordForkId);
   var lookup22 = /* @__PURE__ */ lookup5(ordString);
   var foldFree2 = /* @__PURE__ */ foldFree(monadRecAff);
@@ -9923,16 +9930,16 @@
   var traverse_7 = /* @__PURE__ */ traverse_(applicativeAff)(foldableList);
   var fork4 = /* @__PURE__ */ fork(monadForkAff);
   var bindFlipped6 = /* @__PURE__ */ bindFlipped(bindEffect);
-  var traverse_14 = /* @__PURE__ */ traverse_(applicativeEffect);
-  var traverse_23 = /* @__PURE__ */ traverse_14(foldableMaybe);
-  var traverse_33 = /* @__PURE__ */ traverse_14(foldableMap);
+  var traverse_13 = /* @__PURE__ */ traverse_(applicativeEffect);
+  var traverse_23 = /* @__PURE__ */ traverse_13(foldableMaybe);
+  var traverse_33 = /* @__PURE__ */ traverse_13(foldableMap);
   var discard22 = /* @__PURE__ */ discard6(bindAff);
   var parSequence_3 = /* @__PURE__ */ parSequence_(parallelAff)(applicativeParAff)(foldableList);
   var liftEffect4 = /* @__PURE__ */ liftEffect(monadEffectAff);
   var pure9 = /* @__PURE__ */ pure(applicativeEffect);
   var map27 = /* @__PURE__ */ map(functorEffect);
   var pure12 = /* @__PURE__ */ pure(applicativeAff);
-  var when2 = /* @__PURE__ */ when(applicativeEffect);
+  var when3 = /* @__PURE__ */ when(applicativeEffect);
   var renderStateX2 = /* @__PURE__ */ renderStateX(functorEffect);
   var $$void5 = /* @__PURE__ */ $$void(functorAff);
   var foreachSlot2 = /* @__PURE__ */ foreachSlot(applicativeEffect);
@@ -10061,7 +10068,7 @@
                     var isDuplicate = map27(function($69) {
                       return isJust(slot.get($69));
                     })(read(childrenOutRef))();
-                    when2(isDuplicate)(warn("Halogen: Duplicate slot address was detected during rendering, unexpected results may occur"))();
+                    when3(isDuplicate)(warn("Halogen: Duplicate slot address was detected during rendering, unexpected results may occur"))();
                     modify_(slot.set($$var2))(childrenOutRef)();
                     return bind7(read($$var2))(renderStateX2(function(v) {
                       if (v instanceof Nothing) {
@@ -10085,7 +10092,7 @@
             return function __do2() {
               var v = read($$var2)();
               var shouldProcessHandlers = map27(isNothing)(read(v.pendingHandlers))();
-              when2(shouldProcessHandlers)(write(new Just(Nil.value))(v.pendingHandlers))();
+              when3(shouldProcessHandlers)(write(new Just(Nil.value))(v.pendingHandlers))();
               write(empty4)(v.childrenOut)();
               write(v.children)(v.childrenIn)();
               var handler3 = function() {
@@ -10133,7 +10140,7 @@
                   children: children2
                 };
               }))();
-              return when2(shouldProcessHandlers)(flip(tailRecM3)(unit)(function(v1) {
+              return when3(shouldProcessHandlers)(flip(tailRecM3)(unit)(function(v1) {
                 return function __do3() {
                   var handlers = read(v.pendingHandlers)();
                   write(new Just(Nil.value))(v.pendingHandlers)();
@@ -10352,7 +10359,7 @@
   var pure11 = /* @__PURE__ */ pure(applicativeEffect);
   var traverse_8 = /* @__PURE__ */ traverse_(applicativeEffect)(foldableMaybe);
   var unwrap4 = /* @__PURE__ */ unwrap();
-  var when3 = /* @__PURE__ */ when(applicativeEffect);
+  var when4 = /* @__PURE__ */ when(applicativeEffect);
   var not3 = /* @__PURE__ */ not(/* @__PURE__ */ heytingAlgebraFunction(/* @__PURE__ */ heytingAlgebraFunction(heytingAlgebraBoolean)));
   var identity8 = /* @__PURE__ */ identity(categoryFn);
   var bind16 = /* @__PURE__ */ bind(bindAff);
@@ -10480,7 +10487,7 @@
                   var nextSib = nextSibling(v1.value0.node)();
                   var machine$prime = step(v1.value0.machine, v);
                   var newNode = extract2(machine$prime);
-                  when3(not3(unsafeRefEq)(v1.value0.node)(newNode))(substInParent(newNode)(nextSib)(parent2))();
+                  when4(not3(unsafeRefEq)(v1.value0.node)(newNode))(substInParent(newNode)(nextSib)(parent2))();
                   return {
                     machine: machine$prime,
                     node: newNode,
@@ -10597,7 +10604,7 @@
                 return show4(x$prime(getX3(mxy.value0))) + (", " + (show4(y$prime(getY3(mxy.value0))) + ")"));
               }
               ;
-              throw new Error("Failed pattern match at Example.UnitGrid.Main (line 114, column 12 - line 116, column 82): " + [mxy.constructor.name]);
+              throw new Error("Failed pattern match at Example.UnitGrid.Main (line 115, column 12 - line 117, column 82): " + [mxy.constructor.name]);
             }();
             var size4 = show1(floor2(scale2.width.toCr(0.2)));
             return function __do2() {
@@ -10623,7 +10630,7 @@
                 return drawCross(getX3(mxy.value0))(getY3(mxy.value0))(0.05)();
               }
               ;
-              throw new Error("Failed pattern match at Example.UnitGrid.Main (line 99, column 5 - line 106, column 51): " + [mxy.constructor.name]);
+              throw new Error("Failed pattern match at Example.UnitGrid.Main (line 100, column 5 - line 107, column 51): " + [mxy.constructor.name]);
             };
           };
           var drawMouseCursor = function(point) {
@@ -10646,8 +10653,8 @@
             clearBackground();
             drawAxes();
             drawGridLines();
-            drawMouseClicked(v1.current.clicked)();
-            return traverse_9(drawMouseCursor)(v1.current.mousePos)();
+            drawMouseClicked(v1["new"].clicked)();
+            return traverse_9(drawMouseCursor)(v1["new"].mousePos)();
           };
         };
       };

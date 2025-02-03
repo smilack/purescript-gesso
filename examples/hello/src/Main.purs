@@ -7,6 +7,7 @@ import Gesso.Canvas as Gesso.Canvas
 import Gesso.Dimensions as Gesso.Dimensions
 import Gesso.Interactions as Gesso.Interactions
 import Gesso.Time as Gesso.Time
+import Gesso.Util.Lerp as Gesso.Util.Lerp
 import Graphics.Canvas as Graphics.Canvas
 import Prelude (Unit, unit, bind)
 
@@ -33,6 +34,6 @@ canvasInput =
   , interactions: Gesso.Interactions.default
   }
 
-render :: Graphics.Canvas.Context2D -> Gesso.Time.Delta -> Gesso.Dimensions.Scaler -> Gesso.Application.StateDelta Unit -> Effect Unit
+render :: Graphics.Canvas.Context2D -> Gesso.Time.Delta -> Gesso.Dimensions.Scaler -> Gesso.Util.Lerp.Lerp Unit -> Effect Unit
 render context _ _ _ = do
   Graphics.Canvas.fillText context "hello world" 500.0 500.0

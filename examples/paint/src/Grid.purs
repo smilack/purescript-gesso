@@ -23,6 +23,7 @@ import Gesso.Dimensions as GDim
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
 import Gesso.Time as GTime
+import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
 import Halogen.HTML as HH
 import Record (merge) as Record
@@ -107,14 +108,14 @@ convertState { showGrid, color, pixels, redo } _ _ = pure
   <<< Just
   <<< _ { showGrid = showGrid, color = color, pixels = pixels, redo = redo }
 
-extractOutput :: GTime.Delta -> GDim.Scaler -> GApp.StateDelta CanvasState -> Effect (Maybe CanvasIO)
-extractOutput _ _ { previous, current: { showGrid, color, pixels, redo } } =
+extractOutput :: GTime.Delta -> GDim.Scaler -> GLerp.Versions CanvasState -> Effect (Maybe CanvasIO)
+extractOutput _ _ { old, new: { showGrid, color, pixels, redo } } =
   pure $
     if
-      (previous.showGrid /= showGrid)
-        || (previous.color /= color)
-        || (length previous.pixels /= (length pixels :: Int))
-        || (length previous.redo /= (length redo :: Int)) then
+      (old.showGrid /= showGrid)
+        || (old.color /= color)
+        || (length old.pixels /= (length pixels :: Int))
+        || (length old.redo /= (length redo :: Int)) then
       Just { showGrid, color, pixels, redo }
     else
       Nothing
@@ -171,8 +172,8 @@ mouseDown = GInt.Interaction GEv.onMouseDown startDrawing
 mouseUp :: GInt.Interaction GEv.MouseEvent CanvasState
 mouseUp = GInt.Interaction GEv.onMouseUp (\_ _ _ s -> pure $ Just s { mouseDown = false })
 
-renderApp :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GApp.StateDelta CanvasState -> Effect Unit
-renderApp context _ scale { current: { mouseCell, showGrid, color, pixels } } = do
+renderApp :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GLerp.Lerp CanvasState -> Effect Unit
+renderApp context _ scale { new: { mouseCell, showGrid, color, pixels } } = do
   clearBackground
   drawOutline
   when showGrid drawGrid

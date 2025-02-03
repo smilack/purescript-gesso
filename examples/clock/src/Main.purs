@@ -16,6 +16,7 @@ import Gesso.Canvas (component, Input) as GC
 import Gesso.Dimensions as GDim
 import Gesso.Interactions as GInt
 import Gesso.Time as GTime
+import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
@@ -40,7 +41,7 @@ input =
   , interactions: GInt.default
   }
 
-render :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GApp.StateDelta Unit -> Effect Unit
+render :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GLerp.Lerp Unit -> Effect Unit
 render context _ scale@{ toRectangle, screen, viewBox } _ = do
   -- Clear background
   Canvas.setFillStyle context "white"
