@@ -25,8 +25,8 @@ import Gesso.Application as App
 import Gesso.Canvas.Element as GEl
 import Gesso.Dimensions as Dims
 import Gesso.Interactions as GI
-import Gesso.Util.Lerp (Versions, History)
 import Gesso.Time as T
+import Gesso.Util.Lerp (Versions, History)
 import Graphics.Canvas (Context2D)
 import Halogen (liftEffect)
 import Halogen as H
@@ -37,7 +37,10 @@ import Halogen.Subscription as HS
 import Type.Proxy (Proxy(..))
 import Web.Event.Event (EventType(..))
 import Web.HTML (window)
-import Web.HTML.Window (toEventTarget)
+import Web.HTML.HTMLDocument (toEventTarget, visibilityState) as Document
+import Web.HTML.HTMLDocument.VisibilityState (VisibilityState(..)) as Document
+import Web.HTML.Window (document)
+import Web.HTML.Window (toEventTarget) as Window
 
 -- | The Halogen slot type for Canvas, which is used to include it inside
 -- | another Halogen component.
@@ -65,6 +68,8 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |   kept until the application is destroyed.
 -- |   - `resize` is a subscription to window resize events, to re-check the
 -- |     `clientRect` and recreate the `scaler`.
+-- |   - `visibility` is a subscription to document `visibilitychange` events,
+-- |     to pause or resume running timers.
 -- |   - `emitter` is a subscription to a listener/emitter pair used to send
 -- |     Actions from `requestAnimationFrame` callbacks to the component.
 -- | - `pendingUpdates` is a list of interactions and Query inputs waiting to be
@@ -93,6 +98,7 @@ type State localState appInput appOutput =
   , subscriptions ::
       Maybe
         { resize :: H.SubscriptionId
+        , visibility :: H.SubscriptionId
         , emitter :: H.SubscriptionId
         }
   , timers ::
@@ -108,6 +114,7 @@ type State localState appInput appOutput =
 data Action localState
   = Initialize
   | HandleResize
+  | HandleVisibilityChange
   | FirstTick (Action localState -> Effect Unit)
   | Tick (Action localState -> Effect Unit) T.Last
   | Finalize
@@ -211,6 +218,8 @@ render { name, dom, app, interactions } =
 -- |   `FirstTick` to request the first animation frame.
 -- | - `HandleResize`: Window resized, get new client rect and recalculate
 -- |   `scaler` functions.
+-- | - `HandleVisibilityChange`: Window visibility has changed; pause or resume
+-- |   running timers.
 -- | - `FirstTick`: Request an animation frame that only checks the time and
 -- |   then starts the `Tick` loop, so that `Tick` can start out knowing the
 -- |   frame timing.
@@ -239,6 +248,13 @@ handleAction = case _ of
   Initialize -> initialize >>= (FirstTick >>> handleAction)
 
   HandleResize -> updateClientRect
+
+  HandleVisibilityChange -> {- TODO -} 
+    H.liftEffect do
+      window >>= document >>= Document.visibilityState
+        >>= case _ of
+          Document.Visible -> pure unit
+          Document.Hidden -> pure unit
 
   FirstTick notify -> H.liftEffect $ getFirstFrame notify
 
@@ -331,9 +347,10 @@ initialize = do
     notifications <- H.liftEffect HS.create
     emitter <- H.subscribe notifications.emitter
     resize <- subscribeResize
+    visibility <- subscribeVisibility
     pure
       { notify: HS.notify notifications.listener
-      , subscriptions: Just { resize, emitter }
+      , subscriptions: Just { resize, visibility, emitter }
       }
 
   mkDom { name, viewBox } = do
@@ -471,8 +488,28 @@ subscribeResize = do
   H.subscribe
     $ HE.eventListener
         (EventType "resize")
-        (toEventTarget wnd)
+        (Window.toEventTarget wnd)
         (const $ Just HandleResize)
+
+-- | Subscribe to document visibility events and fire the
+-- | `HandleVisibilityChange` `Action` when they occur.
+subscribeVisibility
+  :: forall localState appInput appOutput slots output m
+   . MonadAff m
+  => H.HalogenM
+       (State localState appInput appOutput)
+       (Action localState)
+       slots
+       output
+       m
+       H.SubscriptionId
+subscribeVisibility = do
+  doc <- H.liftEffect $ document =<< window
+  H.subscribe
+    $ HE.eventListener
+        (EventType "visibilitychange")
+        (Document.toEventTarget doc)
+        (const $ Just HandleVisibilityChange)
 
 -- | Save the updated local state of the application. Compare the old and new
 -- | states in the `OutputProducer` function and send output, if necessary.
