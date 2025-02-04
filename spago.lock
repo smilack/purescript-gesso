@@ -20,6 +20,7 @@
             "prelude",
             "safe-coerce",
             "tuples",
+            "typelevel-prelude",
             "web-clipboard",
             "web-dom",
             "web-events",
