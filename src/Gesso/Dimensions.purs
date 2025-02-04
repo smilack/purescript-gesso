@@ -39,6 +39,7 @@ import CSS as CSS
 import Data.Int (round, toNumber)
 import Gesso.AspectRatio (AspectRatio)
 import Gesso.AspectRatio as AR
+import Gesso.Scale as Gesso.Scale
 import Graphics.Canvas (Rectangle)
 import Halogen.HTML.Properties as HP
 import Web.DOM.Element (DOMRect)
@@ -368,6 +369,10 @@ type Scaler =
       , toCr :: Rectangle -> Rectangle
       }
   , toRectangle :: forall d. Dimensioned d => d -> Rectangle
+  , scaler ::
+      { page :: forall r. Gesso.Scale.Scaler Gesso.Scale.Page (Gesso.Scale.Rectangular' Number r)
+      , drawing :: forall r. Gesso.Scale.Scaler Gesso.Scale.Drawing (Gesso.Scale.Rectangular' Number r)
+      }
   }
 
 -- | Creates a [`Scaler`](#t:Scaler) from a [`ViewBox`](#t:ViewBox) and
@@ -410,6 +415,20 @@ mkScaler viewBox clientRect@(Dimensions _ crSize) =
       , toCr: transformR x' y' w' h'
       }
   , toRectangle
+  , scaler:
+      { page: Gesso.Scale.mkScalers @Gesso.Scale.Page
+          { x: x'
+          , y: y'
+          , width: w'
+          , height: h'
+          }
+      , drawing: Gesso.Scale.mkScalers @Gesso.Scale.Drawing
+          { x: toVb.x'
+          , y: toVb.y'
+          , width: toVb.w'
+          , height: toVb.h'
+          }
+      }
   }
   where
   actualVB = largestContainedArea (getRatio viewBox) clientRect
