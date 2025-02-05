@@ -4,10 +4,10 @@ module Gesso.Dimensions3 where
 import Prelude
 
 import Record (get, set, modify, insert, delete) as R
-import Record.Builder (modify, insert, delete, build, buildFromScratch, Builder)
+import Record.Builder (modify, insert, delete, build, buildFromScratch, Builder, flip, merge)
 import Type.Prelude (class IsSymbol)
 import Type.Proxy (Proxy(..))
-import Type.Row (class Lacks, type (+), RowApply, class Cons)
+import Type.Row (class Lacks, type (+), RowApply, class Cons, class Union, class Nub)
 import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow)
 
 {- Current idea:
@@ -38,12 +38,100 @@ import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow)
 -- │ Defaults │
 -- └──────────┘
 
-defaults :: { | X ++ Y ++ Width ++ Height + () }
+type ConvertibleFields = X ++ Y ++ Width ++ Height + ()
+
+defaults :: { | ConvertibleFields }
 defaults = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
 
--- ┌──────────────────────────┐
--- │ Record Builer Converters │
--- └──────────────────────────┘
+addDefaults
+  :: forall given all nub
+   . Union given ConvertibleFields all
+  => Nub all nub
+  => Builder { | given } { | nub }
+addDefaults = flip merge defaults
+
+-- removeDefaults
+--   :: forall given all nub keys from into gotten
+--    . Union given ConvertibleFields all
+--   => Nub all nub
+--   => Pick given keys nub from gotten into
+--   => { | given }
+--   -> { | nub }
+--   -> { | gotten }
+-- removeDefaults = pick @given @keys @nub @from @gotten @into
+
+class Pick :: Row Type -> RowList Type -> Row Type -> RowList Type -> Row Type -> RowList Type -> Constraint
+class
+  ( RowToList k keys
+  , RowToList f from
+  , RowToList i into
+  ) <=
+  Pick k keys f from i into
+  | keys from -> into k f i {- where
+  pick :: { | k } -> { | f } -> { | i } -}
+
+instance pickNil :: Pick () Nil () Nil () Nil {- where
+  pick :: Record () -> Record () -> Record ()
+  pick _ _ = {} -}
+
+else instance pickNoKeys ::
+  ( RowToList f (Cons key a tail)
+  ) =>
+  Pick () Nil f (Cons key a tail) () Nil {- where
+  pick :: Record () -> Record f -> Record ()
+  pick _ _ = {} -}
+
+else instance pickNoFrom ::
+  ( RowToList k (Cons key a tail)
+  ) =>
+  Pick k (Cons key a tail) () Nil () Nil {- where
+  pick :: Record k -> Record () -> Record ()
+  pick _ _ = {} -}
+
+else instance pickMiss ::
+  ( RowToList f (Cons key' b fromTail)
+  , Pick k (Cons key a keyTail) ft fromTail i into
+  ) =>
+  Pick k (Cons key a keyTail) f (Cons key' b fromTail) i into {- where
+  pick :: Record k -> Record f -> Record i
+  pick = pick @k @(Cons key a keyTail) @ft @fromTail @i @into -}
+
+else instance pickKeyFound ::
+  ( Pick kt keyTail ft fromTail it intoTail
+  , RowToList k (Cons key a keyTail)
+  , RowToList f (Cons key a fromTail)
+  , RowToList i (Cons key a intoTail)
+  ) =>
+  Pick k (Cons key a keyTail) f (Cons key a fromTail) i (Cons key a intoTail) {- where
+  pick :: Record k -> Record f -> Record i
+  pick keys from =
+    let
+      p = Proxy @key
+      val = R.get p from
+      keysT = R.delete p keys
+      fromT = R.delete p from
+      tail = pick @kt @keyTail @ft @fromTail @it @intoTail keysT fromT
+    in
+      R.insert p val tail -}
+
+-- pick
+--   :: forall given all nub keys from into gotten
+--    . Union given ConvertibleFields all
+--   => Nub all nub
+--   => Pick given keys nub from gotten into
+--   => { | given }
+--   -> { | nub }
+--   -> Proxy gotten
+-- pick _ _ = Proxy
+
+-- xpd = build addDefaults { x: 100.0 }
+
+-- px :: Proxy
+-- px = pick { x: 100.0 } xpd
+
+-- ┌───────────────────────────┐
+-- │ Record Builder Converters │
+-- └───────────────────────────┘
 
 mkConverter
   :: forall @sym @a tail row
