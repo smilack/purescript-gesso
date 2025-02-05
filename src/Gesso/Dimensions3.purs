@@ -34,7 +34,23 @@ import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow)
     Also need to think about how the toDrawing/toPage indications will work. Explicit? Implicit?
 -}
 
-mkConverter :: forall @sym @a tail row. IsSymbol sym => Cons sym a tail row => (a -> a) -> Builder { | row } { | row }
+-- ┌──────────┐
+-- │ Defaults │
+-- └──────────┘
+
+defaults :: { | X ++ Y ++ Width ++ Height + () }
+defaults = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
+
+-- ┌──────────────────────────┐
+-- │ Record Builer Converters │
+-- └──────────────────────────┘
+
+mkConverter
+  :: forall @sym @a tail row
+   . IsSymbol sym
+  => Cons sym a tail row
+  => (a -> a)
+  -> Builder { | row } { | row }
 mkConverter = modify (Proxy @sym)
 
 type X r = (x :: Number | r)
@@ -46,29 +62,49 @@ type Converter :: (Row Type -> Row Type) -> Type
 type Converter f = forall r. Builder { | f r } { | f r }
 
 x :: Converter X
-x = mkConverter @"x" @Number (_ + 10.0)
+x = mkConverter @"x" (_ + 10.0)
 
 y :: Converter Y
-y = mkConverter @"y" @Number (_ + 10.0)
+y = mkConverter @"y" (_ + 10.0)
 
 width :: Converter Width
-width = mkConverter @"width" @Number (_ + 10.0)
+width = mkConverter @"width" (_ + 10.0)
 
 height :: Converter Height
-height = mkConverter @"height" @Number (_ + 10.0)
+height = mkConverter @"height" (_ + 10.0)
 
+converters :: Converter (X ++ Y ++ Width ++ Height)
+converters = x <<< y <<< width <<< height
+
+type And2
+  :: (Row Type -> Row Type) -> (Row Type -> Row Type) -> (Row Type -> Row Type)
+type And2 a b r = a + b + r
+
+infixl 1 type And2 as ++
+
+-- ┌───────┐
+-- │ Tests │
+-- └───────┘
+
+rx :: { h :: Number, w :: Number, x :: Number, y :: Number }
 rx = build x { x: 1.0, y: 1.0, w: 1.0, h: 1.0 }
+
 -- > rx
 -- { h: 1.0, w: 1.0, x: 11.0, y: 1.0 }
 
+ry :: { x :: Number, y :: Number }
 ry = build y { y: 1.0, x: 1.0 }
+
 -- > ry
 -- { x: 1.0, y: 11.0 }
 
+rxy :: { width :: Number, x :: Number, y :: Number }
 rxy = build (y <<< x) { y: 1.0, x: 1.0, width: 1.0 }
+
 -- > rxy
 -- { width: 1.0, x: 11.0, y: 11.0 }
 
+rxyw :: { width :: Number, x :: Number, y :: Number }
 rxyw = build (y <<< x <<< width) { y: 1.0, x: 1.0, width: 1.0 }
 -- > rxyw
 -- { width: 11.0, x: 11.0, y: 11.0 }
