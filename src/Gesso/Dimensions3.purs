@@ -52,9 +52,9 @@ type Height r = (height :: Number | r)
 
 type ConvertibleFields = X ++ Y ++ Width ++ Height + ()
 
--- ┌────────────────┐
--- │ Default Fields │
--- └────────────────┘
+-- ┌─────────────────────────────┐
+-- │ Default Fields + Operations │
+-- └─────────────────────────────┘
 
 defaults :: { | ConvertibleFields }
 defaults = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
@@ -67,15 +67,6 @@ addDefaults
 addDefaults = flip merge defaults
 
 -- removeDefaults
---   :: forall given all nub
---    . Union given ConvertibleFields all
---   => Nub all nub
---   => { | given }
---   -> { | nub }
---   -> { | given }
--- removeDefaults = const
-
--- removeDefaults
 --   :: forall given all nub keys from into gotten
 --    . Union given ConvertibleFields all
 --   => Nub all nub
@@ -85,85 +76,31 @@ addDefaults = flip merge defaults
 --   -> { | gotten }
 -- removeDefaults = pick @given @keys @nub @from @gotten @into
 
-class Pick :: Row Type -> RowList Type -> Row Type -> RowList Type -> Row Type -> RowList Type -> Constraint
-class
-  ( RowToList k keys
-  , RowToList f from
-  , RowToList i into
-  ) <=
-  Pick k keys f from i into
-  | keys from -> into k f i {- where
-  pick :: { | k } -> { | f } -> { | i } -}
+class Pick :: RowList Type -> RowList Type -> RowList Type -> Constraint
+class Pick keys from into | keys from -> into
 
-instance pickNil :: Pick () Nil () Nil () Nil {- where
-  pick :: Record () -> Record () -> Record ()
-  pick _ _ = {} -}
+instance pickNil :: Pick Nil Nil Nil
 
-else instance pickNoKeys ::
-  ( RowToList f (Cons key a tail)
-  ) =>
-  Pick () Nil f (Cons key a tail) () Nil {- where
-  pick :: Record () -> Record f -> Record ()
-  pick _ _ = {} -}
+else instance pickNoKeys :: Pick Nil (Cons key a tail) Nil
 
-else instance pickNoFrom ::
-  ( RowToList k (Cons key a tail)
-  ) =>
-  Pick k (Cons key a tail) () Nil () Nil {- where
-  pick :: Record k -> Record () -> Record ()
-  pick _ _ = {} -}
-
-else instance pickMiss ::
-  ( RowToList f (Cons key' b fromTail)
-  , Pick k (Cons key a keyTail) ft fromTail i into
-  ) =>
-  Pick k (Cons key a keyTail) f (Cons key' b fromTail) i into {- where
-  pick :: Record k -> Record f -> Record i
-  pick = pick @k @(Cons key a keyTail) @ft @fromTail @i @into -}
+else instance pickNoFrom :: Pick (Cons key a tail) Nil Nil
 
 else instance pickKeyFound ::
-  ( Pick kt keyTail ft fromTail it intoTail
-  , RowToList k (Cons key a keyTail)
-  , RowToList f (Cons key a fromTail)
-  , RowToList i (Cons key a intoTail)
+  ( Pick keyTail fromTail intoTail
   ) =>
-  Pick k (Cons key a keyTail) f (Cons key a fromTail) i (Cons key a intoTail) {- where
-  pick :: Record k -> Record f -> Record i
-  pick keys from =
-    let
-      p = Proxy @key
-      val = R.get p from
-      keysT = R.delete p keys
-      fromT = R.delete p from
-      tail = pick @kt @keyTail @ft @fromTail @it @intoTail keysT fromT
-    in
-      R.insert p val tail -}
+  Pick (Cons key a keyTail) (Cons key a fromTail) (Cons key a intoTail)
 
-class Pick2 :: RowList Type -> RowList Type -> RowList Type -> Constraint
-class Pick2 keys from into | keys from -> into
-
-instance pick2Nil :: Pick2 Nil Nil Nil
-
-else instance pick2NoKeys :: Pick2 Nil (Cons key a tail) Nil
-
-else instance pick2NoFrom :: Pick2 (Cons key a tail) Nil Nil
-
-else instance pick2KeyFound ::
-  ( Pick2 keyTail fromTail intoTail
+else instance pickMiss ::
+  ( Pick (Cons key a keyTail) fromTail into
   ) =>
-  Pick2 (Cons key a keyTail) (Cons key a fromTail) (Cons key a intoTail)
-
-else instance pick2Miss ::
-  ( Pick2 (Cons key a keyTail) fromTail into
-  ) =>
-  Pick2 (Cons key a keyTail) (Cons key' b fromTail) into
+  Pick (Cons key a keyTail) (Cons key' b fromTail) into
 
 pickprox
   :: forall given keys all from into
    . RowToList given keys
   => RowToList all from
   => RowToList given into
-  => Pick2 keys from into
+  => Pick keys from into
   => { | given }
   -> { | all }
   -> Proxy given
@@ -174,7 +111,7 @@ pickprox _ _ = Proxy
 --    . RowToList given keys
 --   => RowToList all from
 --   => RowToList given into
---   => Pick2 keys from into
+--   => Pick keys from into
 --   => { | given }
 --   -> { | all }
 --   -> { | given }
