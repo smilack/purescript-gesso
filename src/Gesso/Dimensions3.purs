@@ -3,6 +3,7 @@ module Gesso.Dimensions3 where
 
 import Prelude
 
+import Partial (crash)
 import Record (get, set, modify, insert, delete) as R
 import Record.Builder (modify, insert, delete, build, buildFromScratch, Builder, flip, merge)
 import Type.Prelude (class IsSymbol)
@@ -122,6 +123,20 @@ delproxy
   -> { | all }
   -> Proxy filler
 delproxy _ _ = Proxy
+
+-- Does the return need to be different from `required`? Something determined
+-- by a typeclass instead?
+del
+  :: forall keys required from all diff filler
+   . RowToList required keys
+  => RowToList all from
+  => RowToList filler diff
+  => Delete keys from diff
+  => Partial
+  => { | required }
+  -> { | all }
+  -> { | required }
+del partial complete = crash
 
 -- ┌──────────────┬───────┐
 -- │ Delete Tests │ Proxy │
