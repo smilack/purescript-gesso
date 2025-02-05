@@ -81,72 +81,6 @@ addDefaults = flip merge defaults
 --   -> { | gotten }
 -- removeDefaults = pick @given @keys @nub @from @gotten @into
 
--- | Make sure all keys in `keys` exist in `from`
-class Pick :: RowList Type -> RowList Type -> Constraint
-class Pick keys from
-
-instance pickEmpty :: Pick Nil Nil
-
-else instance pickNoMoreKeys :: Pick Nil (Cons key' b fromTail)
-
-else instance pickKeyMatch ::
-  ( Pick keyTail fromTail
-  ) =>
-  Pick (Cons key a keyTail) (Cons key a fromTail)
-
-else instance pickTryNext ::
-  ( Pick (Cons key a keyTail) fromTail
-  ) =>
-  Pick (Cons key a keyTail) (Cons key' b fromTail)
-
--- | Given two records, ensure that all fields appearing in `given` also appear
--- | in `all`. Proof of concept for a function that extracts the values in `all`
--- | associated with keys of `given`.
-pickprox
-  :: forall given all keys from
-   . RowToList given keys
-  => RowToList all from
-  => Pick keys from
-  => { | given }
-  -> { | all }
-  -> Proxy given
-pickprox _ _ = Proxy
-
--- pick
---   :: forall keys k from f
---    . RowToList k keys
---   => RowToList f from
---   => Pick keys from
---   => { | k }
---   -> { | f }
---   -> { | k }
--- pick = ?e
-
--- ┌────────────┐
--- │ Pick Tests │
--- └────────────┘
-
-xPlusDefaults :: { | ConvertibleFields }
-xPlusDefaults = build addDefaults { x: 100.0 }
-
-pickX :: Proxy (x :: Number)
-pickX = pickprox { x: 100.0 } xPlusDefaults
-
--- pickHeightX :: Proxy (height :: Number)
--- pickHeightX :: Proxy (x :: Number)
--- pickHeightX :: Proxy (x :: Number, height :: Number, width :: Number)
--- pickHeightX :: Proxy (x :: Number, height :: Number, width :: Number, b :: Number)
-pickHeightX :: Proxy (x :: Number, height :: Number)
-pickHeightX = pickprox { x: 100.0, height: 100.0 } xPlusDefaults
-
-othersPlusDefaults
-  :: { a :: String, b :: Boolean, c :: Int | ConvertibleFields }
-othersPlusDefaults = build addDefaults { a: "hello", b: true, c: (-9) }
-
-pickOthers :: Proxy (a :: String, b :: Boolean, c :: Int)
--- pickOthers = pickprox { a: "", b: false } othersPlusDefaults
-pickOthers = pickprox { a: "", b: false, c: 0 } othersPlusDefaults
-
 -- ┌──────────────┐
 -- │ Delete class │
 -- └──────────────┘
@@ -158,7 +92,6 @@ pickOthers = pickprox { a: "", b: false, c: 0 } othersPlusDefaults
 -- |
 -- |  - When the heads of `keys` and `from` are different, we only need to
 -- |    advance `from`, because the key will be in there later.
--- |
 class Delete :: RowList Type -> RowList Type -> RowList Type -> Constraint
 class Delete keys from diff
 
@@ -177,7 +110,8 @@ else instance deleteKeepKey ::
   Delete (Cons key a keyTail) (Cons key' b fromTail) (Cons key' b diffTail)
 
 -- | Given two records, find the set of fields in the second that do not appear
--- | in the first.
+-- | in the first. The fields should be usable to delete those keys from the
+-- | second record
 delproxy
   :: forall given all deleted keys from diff
    . RowToList given keys
@@ -193,14 +127,11 @@ delproxy _ _ = Proxy
 -- │ Delete Tests │
 -- └──────────────┘
 
--- from above:
-{-
 xPlusDefaults :: { | ConvertibleFields }
 xPlusDefaults = build addDefaults { x: 100.0 }
 
 othersPlusDefaults :: { a :: String, b :: Boolean, c :: Int | ConvertibleFields }
 othersPlusDefaults = build addDefaults { a: "hello", b: true, c: (-9) }
--}
 
 delX :: Proxy (height :: Number, width :: Number, y :: Number)
 delX = delproxy { x: 100.0 } xPlusDefaults
