@@ -114,20 +114,46 @@ else instance pickKeyFound ::
     in
       R.insert p val tail -}
 
--- pick
---   :: forall given all nub keys from into gotten
---    . Union given ConvertibleFields all
---   => Nub all nub
---   => Pick given keys nub from gotten into
---   => { | given }
---   -> { | nub }
---   -> Proxy gotten
--- pick _ _ = Proxy
+pick
+  :: forall given keys all from gotten into
+   . RowToList given keys
+  => RowToList all from
+  => RowToList gotten into
+  => Pick2 keys from into
+  => { | given }
+  -> { | all }
+  -> Proxy gotten
+pick _ _ = Proxy
 
--- xpd = build addDefaults { x: 100.0 }
+xpd :: { height :: Number, width :: Number, x :: Number, y :: Number }
+xpd = build addDefaults { x: 100.0 }
 
--- px :: Proxy
--- px = pick { x: 100.0 } xpd
+-- px :: ?p
+px :: Proxy (x :: Number)
+px = pick { x: 100.0 } xpd
+
+-- wrong:
+pxh :: Proxy (x :: Number, height :: Number, width :: Number, b :: Number)
+pxh = pick { x: 100.0, height: 100.0 } xpd
+
+class Pick2 :: RowList Type -> RowList Type -> RowList Type -> Constraint
+class Pick2 keys from into | keys from -> into
+
+instance pick2Nil :: Pick2 Nil Nil into
+
+else instance pick2NoKeys :: Pick2 Nil (Cons key a tail) into
+
+else instance pick2NoFrom :: Pick2 (Cons key a tail) Nil into
+
+else instance pick2Miss ::
+  ( Pick2 (Cons key a keyTail) fromTail into
+  ) =>
+  Pick2 (Cons key a keyTail) (Cons key' b fromTail) into
+
+else instance pick2KeyFound ::
+  ( Pick2 keyTail fromTail intoTail
+  ) =>
+  Pick2 (Cons key a keyTail) (Cons key a fromTail) (Cons key a intoTail)
 
 -- ┌───────────────────────────┐
 -- │ Record Builder Converters │
