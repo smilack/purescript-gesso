@@ -3,7 +3,6 @@ module Gesso.Dimensions3 where
 
 import Prelude
 
-import Partial (crash)
 import Record (get, set, modify, insert, delete) as R
 import Record.Builder (modify, insert, delete, build, buildFromScratch, Builder, flip, merge)
 import Type.Prelude (class IsSymbol)
@@ -138,6 +137,68 @@ extproxy
   -> { | all }
   -> Proxy extracted
 extproxy _ _ = Proxy
+
+-- extract
+--   :: forall keys required from all diff keys' extracted
+--    . RowToList required keys
+--   => RowToList all from
+--   => Delete keys from diff
+--   => Delete diff from keys'
+--   => RowToList extracted keys'
+--   => { | required }
+--   -> Builder { | all } { | extracted }
+-- extract = merge
+
+ext
+  :: forall
+       (@get :: Row Type)
+       (getTail :: Row Type)
+       (key :: Symbol)
+       (a :: Type)
+       (from :: Row Type)
+       (fromTail :: Row Type)
+   . IsSymbol key
+  => Cons key a getTail get
+  => Cons key a fromTail from
+  => Lacks key getTail
+  => { | from }
+  -> Builder { | getTail } { | get }
+ext from =
+  let
+    key = Proxy @key
+    val = R.get key from
+  in
+    insert key val {-  <<< ext @getTail from -}
+
+class Extract :: RowList Type -> Row Type -> Constraint
+class (RowToList row list) <= Extract list row | list -> row where
+  extract :: { | row }
+
+instance Extract Nil () where
+  extract = {}
+
+-- class Extract :: RowList Type -> RowList Type -> Constraint
+-- class Extract fields source where
+--   ext
+--     :: forall from into key a tail
+--      . RowToList from source
+--     => Cons key a tail into
+--     => { | from }
+--     -> Builder { | tail } { | into }
+
+-- instance Extract (Cons key a Nil) source where
+--   ext
+--     :: forall from into key a tail
+--      . RowToList from source
+--     => Cons key a tail into
+--     => { | from }
+--     -> Builder { | tail } { | into } 
+
+-- instance  ( Cons key a () r  ) => Extract (Cons key a Nil) r () where
+--   ext 
+--   ext = insert (Proxy @key)
+
+-- instance (Extract tail) => Extract (Cons key a tail)
 
 -- ┌──────────────┬───────┐
 -- │ Delete Tests │ Proxy │
