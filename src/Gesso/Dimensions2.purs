@@ -22,7 +22,7 @@ import Web.UIEvent.MouseEvent (pageX, pageY, MouseEvent)
 -- └───────┘
 --}
 
-data Field :: Symbol -> Type
+{- data Field :: Symbol -> Type
 data Field key
 
 class Convertible :: Symbol -> (RowList Type -> RowList Type) -> Constraint
@@ -40,7 +40,7 @@ class Convertible key list where
     => Cons key val tailr row
     => (Number -> Number)
     -> { | other row }
-    -> { | other row }
+    -> { | other row } -}
 
 {- instance Convertible "x" (Cons "x" Number) where
 convert
@@ -82,6 +82,32 @@ convmap =
 -- newtype F :: Row Type -> Type
 -- newtype F row = F (Record row)
 
+data X
+data Y
+
+class Scalable :: Type -> Row Type -> Constraint
+class Scalable f row | f -> row where
+  scale :: { | row } -> { | row }
+
+instance Scalable X (x :: Number | r) where
+  scale :: { x :: Number | r } -> { x :: Number | r }
+  scale rec = rec { x = rec.x + 0.0 }
+
+instance Scalable Y (y :: Number | r) where
+  scale :: { y :: Number | r } -> { y :: Number | r }
+  scale rec = rec { y = rec.y + 0.0 }
+
+rx2 = scale @X { x: 0.0 }
+rxy2 = scale @X { x: 0.0, y: 0.0 }
+-- ry2 = scale @X { y: 0.0 }
+rxyz2 = scale @X { x: 0.0, y: 0.0, z: 0.0 }
+
+-- ryz2 = scale @X { y: 0.0, z: 0.0 }
+
+---
+---
+---
+
 newtype F :: Type -> Type
 newtype F rec = F rec
 
@@ -104,8 +130,14 @@ else instance Convible F (y :: Number | r) where
 else instance Convible F r where
   conv = identity
 
-aaa :: forall r. Convible F r => { | r } -> { | r }
-aaa = F >>> conv >>> \(F rec) -> rec
+convert :: forall r. Convible F r => { | r } -> { | r }
+convert = F >>> conv >>> \(F rec) -> rec
+
+rx = { x: 0.0 }
+rxy = { x: 0.0, y: 0.0 }
+rxyz = { x: 0.0, y: 0.0, z: 0.0 }
+ryz = { y: 0.0, z: 0.0 }
+rz = { z: 0.0 }
 
 {- Is it possible to write a function that:
 - takes an arbitrary record with fields known at compile time
@@ -162,90 +194,90 @@ conv𝒉 a = a { h = 1.0 } -}
 -- └───────┘
 --}
 
-type Width r = (width :: Number | r)
+-- type Width r = (width :: Number | r)
 
-type Height r = (height :: Number | r)
+-- type Height r = (height :: Number | r)
 
-type Ratio r = (ratio :: AspectRatio | r)
+-- type Ratio r = (ratio :: AspectRatio | r)
 
-type X r = (x :: Number | r)
+-- type X r = (x :: Number | r)
 
-type Y r = (y :: Number | r)
+-- type Y r = (y :: Number | r)
 
-type Point = X & Y
-type Point2 = X (Y ())
-type Point3 = X <> Y $ ()
+-- type Point = X & Y
+-- type Point2 = X (Y ())
+-- type Point3 = X <> Y $ ()
 
-type Size = Width & Height
+-- type Size = Width & Height
 
-type Rect r = X + Y + Width + Height + r
+-- type Rect r = X + Y + Width + Height + r
 
-{- toP :: forall r. Point r -> Point ()
-toP { x, y } = { x, y } -}
+-- {- toP :: forall r. Point r -> Point ()
+-- toP { x, y } = { x, y } -}
 
-type RecordOf :: (Row Type -> Row Type) -> (Row Type -> Row Type) -> Type
-type RecordOf a b = { | a + b + () }
+-- type RecordOf :: (Row Type -> Row Type) -> (Row Type -> Row Type) -> Type
+-- type RecordOf a b = { | a + b + () }
 
-infixl 0 type RecordOf as &
+-- infixl 0 type RecordOf as &
 
--- type RecordWith :: (Row Type -> Row Type) -> (Row Type -> Type) -> Type
--- type RecordWith a b = { | }
+-- -- type RecordWith :: (Row Type -> Row Type) -> (Row Type -> Type) -> Type
+-- -- type RecordWith a b = { | }
 
--- type HasRect r = X + Y + Width + Height ++ r
--- type HasRect r = { | X + Y + Width + Height + r }
+-- -- type HasRect r = X + Y + Width + Height ++ r
+-- -- type HasRect r = { | X + Y + Width + Height + r }
 
--- type And2 :: forall k r. (Row k -> Row k) -> (Row k -> Row k) -> Row k
--- type And2 a b = forall (r :: Row k). a + b + r
+-- -- type And2 :: forall k r. (Row k -> Row k) -> (Row k -> Row k) -> Row k
+-- -- type And2 a b = forall (r :: Row k). a + b + r
 
-type And0 :: (Row Type -> Row Type) -> (Row Type -> Row Type) -> Row Type -> Row Type
-type And0 a b r = a + b + r
+-- type And0 :: (Row Type -> Row Type) -> (Row Type -> Row Type) -> Row Type -> Row Type
+-- type And0 a b r = a + b + r
 
-type And :: (Row Type -> Row Type) -> (Row Type -> Row Type) -> Type
-type And a b = forall (r :: Row Type). { | a + b + r }
+-- type And :: (Row Type -> Row Type) -> (Row Type -> Row Type) -> Type
+-- type And a b = forall (r :: Row Type). { | a + b + r }
 
--- type AndK :: forall k. (Row k -> Row k) -> (Row k -> Row k) -> Row k
--- type AndK a b = forall (r :: Row k). a + b + r
+-- -- type AndK :: forall k. (Row k -> Row k) -> (Row k -> Row k) -> Row k
+-- -- type AndK a b = forall (r :: Row k). a + b + r
 
-type And2 :: (Row Type -> Row Type) -> (Row Type -> Row Type) -> (Row Type -> Row Type)
-type And2 a b r = a + b + r
+-- type And2 :: (Row Type -> Row Type) -> (Row Type -> Row Type) -> (Row Type -> Row Type)
+-- type And2 a b r = a + b + r
 
-infixr 9 type And2 as <>
+-- infixr 9 type And2 as <>
 
-type Has :: (Row Type -> Row Type) -> Type
-type Has a = forall (r :: Row Type). { | a r }
+-- type Has :: (Row Type -> Row Type) -> Type
+-- type Has a = forall (r :: Row Type). { | a r }
 
-type Only :: (Row Type -> Row Type) -> Type
-type Only a = { | a () }
+-- type Only :: (Row Type -> Row Type) -> Type
+-- type Only a = { | a () }
 
-xx :: Point
-xx = { x: 1.0, y: 1.0 }
+-- xx :: Point
+-- xx = { x: 1.0, y: 1.0 }
 
-yy :: Has Rect -> Only Rect -- { | Rect () }
-yy { x, y, width, height } = { x, y, width, height }
+-- yy :: Has Rect -> Only Rect -- { | Rect () }
+-- yy { x, y, width, height } = { x, y, width, height }
 
-yyy :: Has X -> Only X -- { | Rect () }
-yyy { x } = { x }
+-- yyy :: Has X -> Only X -- { | Rect () }
+-- yyy { x } = { x }
 
-yyyy :: Has (X <> Y) -> { | X (Y ()) } -- { | Rect () }
-yyyy { x, y } = { x, y }
+-- yyyy :: Has (X <> Y) -> { | X (Y ()) } -- { | Rect () }
+-- yyyy { x, y } = { x, y }
 
--- type XY = X (Y ())
--- type YX = Y (X ())
+-- -- type XY = X (Y ())
+-- -- type YX = Y (X ())
 
--- zz :: { | XY } -> { | YX }
--- zz a = a
+-- -- zz :: { | XY } -> { | YX }
+-- -- zz a = a
 
--- type XYList :: RowList Type -> RowList Type
--- type XYList l = Cons "x" Number (Cons "y" Number l)
+-- -- type XYList :: RowList Type -> RowList Type
+-- -- type XYList l = Cons "x" Number (Cons "y" Number l)
 
--- type XYRow :: Row Type -> Type
--- type XYRow r =
---   forall (xyr :: Row Type) (l :: RowList Type)
---    . RowToList r l
---   => ListToRow (XYList l) xyr
---   => { | xyr }
+-- -- type XYRow :: Row Type -> Type
+-- -- type XYRow r =
+-- --   forall (xyr :: Row Type) (l :: RowList Type)
+-- --    . RowToList r l
+-- --   => ListToRow (XYList l) xyr
+-- --   => { | xyr }
 
--- -- type YX_ = Cons "y" Number $ Cons "x" Number Nil
+-- -- -- type YX_ = Cons "y" Number $ Cons "x" Number Nil
 
--- zzz :: { | XY } -> XYRow ()
--- zzz { x, y } = { x, y }
+-- -- zzz :: { | XY } -> XYRow ()
+-- -- zzz { x, y } = { x, y }
