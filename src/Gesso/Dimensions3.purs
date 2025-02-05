@@ -81,36 +81,32 @@ addDefaults = flip merge defaults
 --   -> { | gotten }
 -- removeDefaults = pick @given @keys @nub @from @gotten @into
 
--- | Make sure all keys in `keys` exist in `from` by adding them to `into`
--- | Is `into` necessary?
-class Pick :: RowList Type -> RowList Type -> RowList Type -> Constraint
-class Pick keys from into | keys from -> into
+-- | Make sure all keys in `keys` exist in `from`
+class Pick :: RowList Type -> RowList Type -> Constraint
+class Pick keys from
 
-instance pickNil :: Pick Nil Nil Nil
+instance pickEmpty :: Pick Nil Nil
 
-else instance pickEmptyFrom :: Pick (Cons key a keyTail) Nil Nil
+else instance pickNoMoreKeys :: Pick Nil (Cons key' b fromTail)
 
-else instance pickEmptyKeys :: Pick Nil (Cons key' b fromTail) Nil
-
-else instance pickKeyFound ::
-  ( Pick keyTail fromTail intoTail
+else instance pickKeyMatch ::
+  ( Pick keyTail fromTail
   ) =>
-  Pick (Cons key a keyTail) (Cons key a fromTail) (Cons key a intoTail)
+  Pick (Cons key a keyTail) (Cons key a fromTail)
 
-else instance pickKeyMissed ::
-  ( Pick (Cons key a keyTail) fromTail into
+else instance pickTryNext ::
+  ( Pick (Cons key a keyTail) fromTail
   ) =>
-  Pick (Cons key a keyTail) (Cons key' b fromTail) into
+  Pick (Cons key a keyTail) (Cons key' b fromTail)
 
 -- | Given two records, ensure that all fields appearing in `given` also appear
 -- | in `all`. Proof of concept for a function that extracts the values in `all`
 -- | associated with keys of `given`.
 pickprox
-  :: forall given all keys from into
+  :: forall given all keys from
    . RowToList given keys
   => RowToList all from
-  => RowToList given into
-  => Pick keys from into
+  => Pick keys from
   => { | given }
   -> { | all }
   -> Proxy given
@@ -137,13 +133,9 @@ xPlusDefaults = build addDefaults { x: 100.0 }
 pickX :: Proxy (x :: Number)
 pickX = pickprox { x: 100.0 } xPlusDefaults
 
--- Could not match type Cons "x" Number t6 with type Nil
 -- pickHeightX :: Proxy (height :: Number)
--- Could not match type "height" with type "x"
 -- pickHeightX :: Proxy (x :: Number)
--- Could not match type "x" with type "width"
 -- pickHeightX :: Proxy (x :: Number, height :: Number, width :: Number)
--- Could not match type "height" with type "b":
 -- pickHeightX :: Proxy (x :: Number, height :: Number, width :: Number, b :: Number)
 pickHeightX :: Proxy (x :: Number, height :: Number)
 pickHeightX = pickprox { x: 100.0, height: 100.0 } xPlusDefaults
@@ -153,6 +145,7 @@ othersPlusDefaults
 othersPlusDefaults = build addDefaults { a: "hello", b: true, c: (-9) }
 
 pickOthers :: Proxy (a :: String, b :: Boolean, c :: Int)
+-- pickOthers = pickprox { a: "", b: false } othersPlusDefaults
 pickOthers = pickprox { a: "", b: false, c: 0 } othersPlusDefaults
 
 -- ┌───────────────────────────┐
