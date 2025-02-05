@@ -38,13 +38,16 @@ import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow)
 -- │ Dimension + Helper Types │
 -- └──────────────────────────┘
 
+-- | Alias just so I don't have to break long lines
 type OpenRow = (Row Type -> Row Type)
 
+-- | Like RowApply but right argument is also open
 type OpenRowApply :: OpenRow -> OpenRow -> OpenRow
 type OpenRowApply a b r = a + b + r
 
 infixl 1 type OpenRowApply as ++
 
+-- | Fields that will have scaling functions
 type X r = (x :: Number | r)
 type Y r = (y :: Number | r)
 type Width r = (width :: Number | r)
@@ -56,14 +59,16 @@ type ConvertibleFields = X ++ Y ++ Width ++ Height + ()
 -- │ Default Fields + Operations │
 -- └─────────────────────────────┘
 
+-- | The values here are totally irrelevant; they're just to pad the record so
+-- | that the converter can run, and they'll be removed after.
 defaults :: { | ConvertibleFields }
 defaults = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
 
 addDefaults
-  :: forall given all nub
-   . Union given ConvertibleFields all
-  => Nub all nub
-  => Builder { | given } { | nub }
+  :: forall given union all
+   . Union given ConvertibleFields union
+  => Nub union all
+  => Builder { | given } { | all }
 addDefaults = flip merge defaults
 
 -- removeDefaults
@@ -76,27 +81,32 @@ addDefaults = flip merge defaults
 --   -> { | gotten }
 -- removeDefaults = pick @given @keys @nub @from @gotten @into
 
+-- | Make sure all keys in `keys` exist in `from` by adding them to `into`
+-- | Is `into` necessary?
 class Pick :: RowList Type -> RowList Type -> RowList Type -> Constraint
 class Pick keys from into | keys from -> into
 
 instance pickNil :: Pick Nil Nil Nil
 
-else instance pickNoKeys :: Pick Nil (Cons key a tail) Nil
+else instance pickEmptyFrom :: Pick (Cons key a keyTail) Nil Nil
 
-else instance pickNoFrom :: Pick (Cons key a tail) Nil Nil
+else instance pickEmptyKeys :: Pick Nil (Cons key' b fromTail) Nil
 
 else instance pickKeyFound ::
   ( Pick keyTail fromTail intoTail
   ) =>
   Pick (Cons key a keyTail) (Cons key a fromTail) (Cons key a intoTail)
 
-else instance pickMiss ::
+else instance pickKeyMissed ::
   ( Pick (Cons key a keyTail) fromTail into
   ) =>
   Pick (Cons key a keyTail) (Cons key' b fromTail) into
 
+-- | Given two records, ensure that all fields appearing in `given` also appear
+-- | in `all`. Proof of concept for a function that extracts the values in `all`
+-- | associated with keys of `given`.
 pickprox
-  :: forall given keys all from into
+  :: forall given all keys from into
    . RowToList given keys
   => RowToList all from
   => RowToList given into
@@ -121,7 +131,7 @@ pickprox _ _ = Proxy
 -- │ Default Field Tests │
 -- └─────────────────────┘
 
-xPlusDefaults :: { height :: Number, width :: Number, x :: Number, y :: Number }
+xPlusDefaults :: { | ConvertibleFields }
 xPlusDefaults = build addDefaults { x: 100.0 }
 
 pickX :: Proxy (x :: Number)
@@ -137,6 +147,13 @@ pickX = pickprox { x: 100.0 } xPlusDefaults
 -- pickHeightX :: Proxy (x :: Number, height :: Number, width :: Number, b :: Number)
 pickHeightX :: Proxy (x :: Number, height :: Number)
 pickHeightX = pickprox { x: 100.0, height: 100.0 } xPlusDefaults
+
+othersPlusDefaults
+  :: { a :: String, b :: Boolean, c :: Int | ConvertibleFields }
+othersPlusDefaults = build addDefaults { a: "hello", b: true, c: (-9) }
+
+pickOthers :: Proxy (a :: String, b :: Boolean, c :: Int)
+pickOthers = pickprox { a: "", b: false, c: 0 } othersPlusDefaults
 
 -- ┌───────────────────────────┐
 -- │ Record Builder Converters │
