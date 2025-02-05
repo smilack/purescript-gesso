@@ -113,19 +113,18 @@ pickprox
 pickprox _ _ = Proxy
 
 -- pick
---   :: forall given keys all from into
---    . RowToList given keys
---   => RowToList all from
---   => RowToList given into
---   => Pick keys from into
---   => { | given }
---   -> { | all }
---   -> { | given }
+--   :: forall keys k from f
+--    . RowToList k keys
+--   => RowToList f from
+--   => Pick keys from
+--   => { | k }
+--   -> { | f }
+--   -> { | k }
 -- pick = ?e
 
--- ┌─────────────────────┐
--- │ Default Field Tests │
--- └─────────────────────┘
+-- ┌────────────┐
+-- │ Pick Tests │
+-- └────────────┘
 
 xPlusDefaults :: { | ConvertibleFields }
 xPlusDefaults = build addDefaults { x: 100.0 }
@@ -147,6 +146,70 @@ othersPlusDefaults = build addDefaults { a: "hello", b: true, c: (-9) }
 pickOthers :: Proxy (a :: String, b :: Boolean, c :: Int)
 -- pickOthers = pickprox { a: "", b: false } othersPlusDefaults
 pickOthers = pickprox { a: "", b: false, c: 0 } othersPlusDefaults
+
+-- ┌──────────────┐
+-- │ Delete class │
+-- └──────────────┘
+
+-- | Find keys in `from` that don't exist in `keys`. `from` is assumed to be a
+-- | superset of `keys`, which simplifies a couple things:
+-- |
+-- |  - There's no need for an instance where `from` is `Nil` but `keys` is not.
+-- |
+-- |  - When the heads of `keys` and `from` are different, we only need to
+-- |    advance `from`, because the key will be in there later.
+-- |
+class Delete :: RowList Type -> RowList Type -> RowList Type -> Constraint
+class Delete keys from diff
+
+instance deleteEmpty :: Delete Nil Nil Nil
+
+else instance deleteNoMoreKeys :: Delete Nil from from
+
+else instance deleteDelKey ::
+  ( Delete keyTail fromTail diff
+  ) =>
+  Delete (Cons key a keyTail) (Cons key a fromTail) diff
+
+else instance deleteKeepKey ::
+  ( Delete (Cons key a keyTail) fromTail diffTail
+  ) =>
+  Delete (Cons key a keyTail) (Cons key' b fromTail) (Cons key' b diffTail)
+
+-- | Given two records, find the set of fields in the second that do not appear
+-- | in the first.
+delproxy
+  :: forall given all deleted keys from diff
+   . RowToList given keys
+  => RowToList all from
+  => RowToList deleted diff
+  => Delete keys from diff
+  => { | given }
+  -> { | all }
+  -> Proxy deleted
+delproxy _ _ = Proxy
+
+-- ┌──────────────┐
+-- │ Delete Tests │
+-- └──────────────┘
+
+-- from above:
+{-
+xPlusDefaults :: { | ConvertibleFields }
+xPlusDefaults = build addDefaults { x: 100.0 }
+
+othersPlusDefaults :: { a :: String, b :: Boolean, c :: Int | ConvertibleFields }
+othersPlusDefaults = build addDefaults { a: "hello", b: true, c: (-9) }
+-}
+
+delX :: Proxy (height :: Number, width :: Number, y :: Number)
+delX = delproxy { x: 100.0 } xPlusDefaults
+
+delHeightX :: Proxy (width :: Number, y :: Number)
+delHeightX = delproxy { x: 100.0, height: 100.0 } xPlusDefaults
+
+delOthers :: Proxy (height :: Number, width :: Number, x :: Number, y :: Number)
+delOthers = delproxy { a: "", b: false, c: 0 } othersPlusDefaults
 
 -- ┌───────────────────────────┐
 -- │ Record Builder Converters │
