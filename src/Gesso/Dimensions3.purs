@@ -10,13 +10,13 @@ import Type.Proxy (Proxy(..))
 import Type.Row (class Lacks, type (+), RowApply, class Cons)
 import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow)
 
-type Converter :: Symbol -> Type
-type Converter prop =
-  forall tail row
-   . Lacks prop tail
-  => Cons prop Number tail row
-  => Record row
-  -> Record row
+-- type Converter :: Symbol -> Type
+-- type Converter prop =
+--   forall tail row
+--    . Lacks prop tail
+--   => Cons prop Number tail row
+--   => Record row
+--   -> Record row
 
 -- cx :: Converter "x"
 -- cx
@@ -51,31 +51,48 @@ type Converter prop =
      5. returns scaled `x` and `y`
 -}
 
-bcx
-  :: forall @sym tail row listt
-   . Cleave tail row (Proxy (Cons sym Number listt))
+cleaver :: forall @sym. Proxy sym
+cleaver = Proxy
+
+type Converter :: Symbol -> RowList Type -> Type
+type Converter sym list =
+  forall tail row
+   . Cleave tail row (Proxy sym) (Proxy (Cons sym Number list))
   => Record row
   -> Record row
-bcx rec =
+
+converter :: forall @sym list. Converter sym list
+converter rec =
   let
-    listp = Proxy @(Cons sym Number listt)
-    x = get listp rec
-    rec' = uncon listp rec
-    rec'' = con listp x rec'
+    p = cleaver @sym
+    x = get p rec
+    rec' = uncon p rec
+    rec'' = con p x rec'
   in
     rec''
 
-converterX = bcx @"x"
+-- converters
+--   :: { x :: forall list. Converter "x" list
+--      , y :: forall list. Converter "y" list
+--      , width :: forall list. Converter "width" list
+--      , height :: forall list. Converter "height" list
+--      }
+-- converters =
+--   { x: converter @"x"
+--   , y: converter @"y"
+--   , width: converter @"width"
+--   , height: converter @"height"
+--   }
 
-rx = converterX { x: 1.0 }
-ry = converterX { y: 1.0, x: 1.0 }
+-- rx = converters.x { x: 1.0 }
+-- ry = converters.x { y: 1.0, x: 1.0 }
 
 -- | Like Prim.Row.Cons but with operations to get/insert/delete the field
-class Cleave :: Row Type -> Row Type -> Type -> Constraint
-class Cleave tail row prox | prox -> tail row where
-  get :: prox -> { | row } -> Number
-  con :: prox -> Number -> { | tail } -> { | row }
-  uncon :: prox -> { | row } -> { | tail }
+class Cleave :: Row Type -> Row Type -> Type -> Type -> Constraint
+class Cleave tail row symp listp | symp -> tail row listp where
+  get :: symp -> { | row } -> Number
+  con :: symp -> Number -> { | tail } -> { | row }
+  uncon :: symp -> { | row } -> { | tail }
 
 instance
   ( IsSymbol sym
@@ -83,13 +100,13 @@ instance
   , Lacks sym tail
   , RowToList tail listt
   ) =>
-  Cleave tail row (Proxy (Cons sym Number listt))
+  Cleave tail row (Proxy sym) (Proxy (Cons sym Number listt))
   where
-  get :: Proxy (Cons sym Number listt) -> { | row } -> Number
-  get _ = R.get (Proxy @sym)
+  get :: Proxy sym -> { | row } -> Number
+  get = R.get
 
-  con :: Proxy (Cons sym Number listt) -> Number -> { | tail } -> { | row }
-  con _ = R.insert (Proxy @sym)
+  con :: Proxy sym -> Number -> { | tail } -> { | row }
+  con = R.insert
 
-  uncon :: Proxy (Cons sym Number listt) -> { | row } -> { | tail }
-  uncon _ = R.delete (Proxy @sym)
+  uncon :: Proxy sym -> { | row } -> { | tail }
+  uncon = R.delete
