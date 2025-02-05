@@ -34,11 +34,27 @@ import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow)
     Also need to think about how the toDrawing/toPage indications will work. Explicit? Implicit?
 -}
 
--- ┌──────────┐
--- │ Defaults │
--- └──────────┘
+-- ┌──────────────────────────┐
+-- │ Dimension + Helper Types │
+-- └──────────────────────────┘
+
+type OpenRow = (Row Type -> Row Type)
+
+type OpenRowApply :: OpenRow -> OpenRow -> OpenRow
+type OpenRowApply a b r = a + b + r
+
+infixl 1 type OpenRowApply as ++
+
+type X r = (x :: Number | r)
+type Y r = (y :: Number | r)
+type Width r = (width :: Number | r)
+type Height r = (height :: Number | r)
 
 type ConvertibleFields = X ++ Y ++ Width ++ Height + ()
+
+-- ┌────────────────┐
+-- │ Default Fields │
+-- └────────────────┘
 
 defaults :: { | ConvertibleFields }
 defaults = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
@@ -49,6 +65,15 @@ addDefaults
   => Nub all nub
   => Builder { | given } { | nub }
 addDefaults = flip merge defaults
+
+-- removeDefaults
+--   :: forall given all nub
+--    . Union given ConvertibleFields all
+--   => Nub all nub
+--   => { | given }
+--   -> { | nub }
+--   -> { | given }
+-- removeDefaults = const
 
 -- removeDefaults
 --   :: forall given all nub keys from into gotten
@@ -114,39 +139,6 @@ else instance pickKeyFound ::
     in
       R.insert p val tail -}
 
-pick
-  :: forall given keys all from gotten into
-   . RowToList given keys
-  => RowToList all from
-  => RowToList gotten into
-  => Pick2 keys from into
-  => { | given }
-  -> { | all }
-  -> Proxy gotten
-pick _ _ = Proxy
-
-xpd :: { height :: Number, width :: Number, x :: Number, y :: Number }
-xpd = build addDefaults { x: 100.0 }
-
--- px :: ?p
-px :: Proxy (x :: Number)
-px = pick { x: 100.0 } xpd
-
--- Could not match type Cons "x" Number t6 with type Nil
--- pxh :: Proxy (height :: Number)
-
--- Could not match type "height" with type "x"
--- pxh :: Proxy (x :: Number)
-
--- Could not match type "x" with type "width"
--- pxh :: Proxy (x :: Number, height :: Number, width :: Number)
-
--- Could not match type "height" with type "b":
--- pxh :: Proxy (x :: Number, height :: Number, width :: Number, b :: Number)
-
-pxh :: Proxy (x :: Number, height :: Number)
-pxh = pick { x: 100.0, height: 100.0 } xpd
-
 class Pick2 :: RowList Type -> RowList Type -> RowList Type -> Constraint
 class Pick2 keys from into | keys from -> into
 
@@ -166,9 +158,55 @@ else instance pick2Miss ::
   ) =>
   Pick2 (Cons key a keyTail) (Cons key' b fromTail) into
 
+pickprox
+  :: forall given keys all from into
+   . RowToList given keys
+  => RowToList all from
+  => RowToList given into
+  => Pick2 keys from into
+  => { | given }
+  -> { | all }
+  -> Proxy given
+pickprox _ _ = Proxy
+
+-- pick
+--   :: forall given keys all from into
+--    . RowToList given keys
+--   => RowToList all from
+--   => RowToList given into
+--   => Pick2 keys from into
+--   => { | given }
+--   -> { | all }
+--   -> { | given }
+-- pick = ?e
+
+-- ┌─────────────────────┐
+-- │ Default Field Tests │
+-- └─────────────────────┘
+
+xPlusDefaults :: { height :: Number, width :: Number, x :: Number, y :: Number }
+xPlusDefaults = build addDefaults { x: 100.0 }
+
+pickX :: Proxy (x :: Number)
+pickX = pickprox { x: 100.0 } xPlusDefaults
+
+-- Could not match type Cons "x" Number t6 with type Nil
+-- pickHeightX :: Proxy (height :: Number)
+-- Could not match type "height" with type "x"
+-- pickHeightX :: Proxy (x :: Number)
+-- Could not match type "x" with type "width"
+-- pickHeightX :: Proxy (x :: Number, height :: Number, width :: Number)
+-- Could not match type "height" with type "b":
+-- pickHeightX :: Proxy (x :: Number, height :: Number, width :: Number, b :: Number)
+pickHeightX :: Proxy (x :: Number, height :: Number)
+pickHeightX = pickprox { x: 100.0, height: 100.0 } xPlusDefaults
+
 -- ┌───────────────────────────┐
 -- │ Record Builder Converters │
 -- └───────────────────────────┘
+
+type Converter :: (Row Type -> Row Type) -> Type
+type Converter f = forall r. Builder { | f r } { | f r }
 
 mkConverter
   :: forall @sym @a tail row
@@ -177,14 +215,6 @@ mkConverter
   => (a -> a)
   -> Builder { | row } { | row }
 mkConverter = modify (Proxy @sym)
-
-type X r = (x :: Number | r)
-type Y r = (y :: Number | r)
-type Width r = (width :: Number | r)
-type Height r = (height :: Number | r)
-
-type Converter :: (Row Type -> Row Type) -> Type
-type Converter f = forall r. Builder { | f r } { | f r }
 
 x :: Converter X
 x = mkConverter @"x" (_ + 10.0)
@@ -201,15 +231,9 @@ height = mkConverter @"height" (_ + 10.0)
 converters :: Converter (X ++ Y ++ Width ++ Height)
 converters = x <<< y <<< width <<< height
 
-type And2
-  :: (Row Type -> Row Type) -> (Row Type -> Row Type) -> (Row Type -> Row Type)
-type And2 a b r = a + b + r
-
-infixl 1 type And2 as ++
-
--- ┌───────┐
--- │ Tests │
--- └───────┘
+-- ┌─────────────────┐
+-- │ Converter Tests │
+-- └─────────────────┘
 
 rx :: { h :: Number, w :: Number, x :: Number, y :: Number }
 rx = build x { x: 1.0, y: 1.0, w: 1.0, h: 1.0 }
