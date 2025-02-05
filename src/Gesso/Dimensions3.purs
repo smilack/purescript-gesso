@@ -65,10 +65,10 @@ defaults :: { | ConvertibleFields }
 defaults = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
 
 addDefaults
-  :: forall given union all
-   . Union given ConvertibleFields union
-  => Nub union all
-  => Builder { | given } { | all }
+  :: forall partial union complete
+   . Union partial ConvertibleFields union
+  => Nub union complete
+  => Builder { | partial } { | complete }
 addDefaults = flip merge defaults
 
 -- removeDefaults
@@ -113,14 +113,14 @@ else instance deleteKeepKey ::
 -- | in the first. The fields should be usable to delete those keys from the
 -- | second record
 delproxy
-  :: forall given all deleted keys from diff
-   . RowToList given keys
+  :: forall keys required from all diff filler
+   . RowToList required keys
   => RowToList all from
-  => RowToList deleted diff
+  => RowToList filler diff
   => Delete keys from diff
-  => { | given }
+  => { | required }
   -> { | all }
-  -> Proxy deleted
+  -> Proxy filler
 delproxy _ _ = Proxy
 
 -- ┌──────────────┐
