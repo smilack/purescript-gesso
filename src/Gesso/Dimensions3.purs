@@ -140,17 +140,15 @@ extproxy
 extproxy _ _ = Proxy
 
 extract
-  :: forall keys required from all diff filler keys' extracted
+  :: forall keys required from all diff filler
    . RowToList required keys
   => RowToList all from
   => Delete keys from diff
-  => Delete diff from keys'
-  => RowToList extracted keys'
-  => Union extracted filler all
-  => Keys keys'
+  => Union required filler all
+  => Keys keys
   => { | required }
   -> { | all }
-  -> { | extracted }
+  -> { | required }
 extract _ = pick
 
 del
