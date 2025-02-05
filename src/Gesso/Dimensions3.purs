@@ -132,28 +132,39 @@ xpd = build addDefaults { x: 100.0 }
 px :: Proxy (x :: Number)
 px = pick { x: 100.0 } xpd
 
--- wrong:
-pxh :: Proxy (x :: Number, height :: Number, width :: Number, b :: Number)
+-- Could not match type Cons "x" Number t6 with type Nil
+-- pxh :: Proxy (height :: Number)
+
+-- Could not match type "height" with type "x"
+-- pxh :: Proxy (x :: Number)
+
+-- Could not match type "x" with type "width"
+-- pxh :: Proxy (x :: Number, height :: Number, width :: Number)
+
+-- Could not match type "height" with type "b":
+-- pxh :: Proxy (x :: Number, height :: Number, width :: Number, b :: Number)
+
+pxh :: Proxy (x :: Number, height :: Number)
 pxh = pick { x: 100.0, height: 100.0 } xpd
 
 class Pick2 :: RowList Type -> RowList Type -> RowList Type -> Constraint
 class Pick2 keys from into | keys from -> into
 
-instance pick2Nil :: Pick2 Nil Nil into
+instance pick2Nil :: Pick2 Nil Nil Nil
 
-else instance pick2NoKeys :: Pick2 Nil (Cons key a tail) into
+else instance pick2NoKeys :: Pick2 Nil (Cons key a tail) Nil
 
-else instance pick2NoFrom :: Pick2 (Cons key a tail) Nil into
-
-else instance pick2Miss ::
-  ( Pick2 (Cons key a keyTail) fromTail into
-  ) =>
-  Pick2 (Cons key a keyTail) (Cons key' b fromTail) into
+else instance pick2NoFrom :: Pick2 (Cons key a tail) Nil Nil
 
 else instance pick2KeyFound ::
   ( Pick2 keyTail fromTail intoTail
   ) =>
   Pick2 (Cons key a keyTail) (Cons key a fromTail) (Cons key a intoTail)
+
+else instance pick2Miss ::
+  ( Pick2 (Cons key a keyTail) fromTail into
+  ) =>
+  Pick2 (Cons key a keyTail) (Cons key' b fromTail) into
 
 -- ┌───────────────────────────┐
 -- │ Record Builder Converters │
