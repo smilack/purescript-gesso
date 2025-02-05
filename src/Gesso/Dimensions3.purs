@@ -5,6 +5,7 @@ import Prelude
 
 import Record (get, set, modify, insert, delete) as R
 import Record.Builder (modify, insert, delete, build, buildFromScratch, Builder, flip, merge)
+import Record.Extra (class Keys, pick)
 import Type.Prelude (class IsSymbol)
 import Type.Proxy (Proxy(..))
 import Type.Row (class Lacks, type (+), RowApply, class Cons, class Union, class Nub)
@@ -116,8 +117,8 @@ diffproxy
   :: forall keys required from all diff filler
    . RowToList required keys
   => RowToList all from
-  => RowToList filler diff
   => Delete keys from diff
+  => RowToList filler diff
   => { | required }
   -> { | all }
   -> Proxy filler
@@ -138,90 +139,32 @@ extproxy
   -> Proxy extracted
 extproxy _ _ = Proxy
 
--- extract
---   :: forall keys required from all diff keys' extracted
---    . RowToList required keys
---   => RowToList all from
---   => Delete keys from diff
---   => Delete diff from keys'
---   => RowToList extracted keys'
---   => { | all }
---   -> { | required }
---   -> { | extracted }
--- extract all req = subRecord (Proxy @keys') all req
+extract
+  :: forall keys required from all diff filler keys' extracted
+   . RowToList required keys
+  => RowToList all from
+  => Delete keys from diff
+  => Delete diff from keys'
+  => RowToList extracted keys'
+  => Union extracted filler all
+  => Keys keys'
+  => { | required }
+  -> { | all }
+  -> { | extracted }
+extract _ = pick
 
-ext
-  :: forall
-       (@get :: Row Type)
-       (getTail :: Row Type)
-       (key :: Symbol)
-       (a :: Type)
-       (from :: Row Type)
-       (fromTail :: Row Type)
-   . IsSymbol key
-  => Cons key a getTail get
-  => Cons key a fromTail from
-  => Lacks key getTail
-  => { | from }
-  -> Builder { | getTail } { | get }
-ext from =
-  let
-    key = Proxy @key
-    val = R.get key from
-  in
-    insert key val {-  <<< ext @getTail from -}
-
-class Extract :: RowList Type -> Symbol -> Type -> Row Type -> Row Type -> Constraint
-class
-  ( RowToList row list
-  , Cons key a tail row
-  , Lacks key tail
-  , IsSymbol key
-  ) <=
-  Extract list key a tail row
-  | list -> key a tail row where
-  ex :: a -> Builder { | tail } { | row }
-
-instance
-  ( RowToList row (Cons key a list)
-  , Cons key a tail row
-  , Lacks key tail
-  , IsSymbol key
-  ) =>
-  Extract (Cons key a list) key a tail row where
-  ex :: a -> Builder { | tail } { | row }
-  ex = insert (Proxy @key)
-
--- instance
---   ( Cons key a rt row
---   , RowToList row (Cons key a lt)
---   , Extract lt rt
---   ) =>
---   Extract (Cons key a lt) row where
---   extract = 
-
--- class Extract :: RowList Type -> RowList Type -> Constraint
--- class Extract fields source where
---   ext
---     :: forall from into key a tail
---      . RowToList from source
---     => Cons key a tail into
---     => { | from }
---     -> Builder { | tail } { | into }
-
--- instance Extract (Cons key a Nil) source where
---   ext
---     :: forall from into key a tail
---      . RowToList from source
---     => Cons key a tail into
---     => { | from }
---     -> Builder { | tail } { | into } 
-
--- instance  ( Cons key a () r  ) => Extract (Cons key a Nil) r () where
---   ext 
---   ext = insert (Proxy @key)
-
--- instance (Extract tail) => Extract (Cons key a tail)
+del
+  :: forall keys required from all diff filler
+   . RowToList required keys
+  => RowToList all from
+  => Delete keys from diff
+  => RowToList filler diff
+  => Union filler required all
+  => Keys diff
+  => { | required }
+  -> { | all }
+  -> { | filler }
+del _ = pick
 
 -- ┌──────────────┬───────┐
 -- │ Delete Tests │ Proxy │
@@ -258,24 +201,24 @@ extOthers = extproxy { a: "", b: false, c: 0 } othersPlusDefaults
 -- │ Delete Tests │ Record │
 -- └──────────────┴────────┘
 
-{- delXrec :: { height :: Number, width :: Number, y :: Number }
+delXrec :: { height :: Number, width :: Number, y :: Number }
 delXrec = del { x: 100.0 } xPlusDefaults
 
 delHeightXRec :: { width :: Number, y :: Number }
 delHeightXRec = del { x: 100.0, height: 100.0 } xPlusDefaults
 
 delOthersRec :: { height :: Number, width :: Number, x :: Number, y :: Number }
-delOthersRec = del { a: "", b: false, c: 0 } othersPlusDefaults -}
+delOthersRec = del { a: "", b: false, c: 0 } othersPlusDefaults
 
 -- find fields in r1 but not r2
--- extXR :: { x :: Number }
--- extXR = extract { x: -1.0 } xPlusDefaults
+extXR :: { x :: Number }
+extXR = extract { x: -1.0 } xPlusDefaults
 
--- extHeightXR :: { x :: Number, height :: Number }
--- extHeightXR = extract { x: -1.0, height: -1.0 } xPlusDefaults
+extHeightXR :: { x :: Number, height :: Number }
+extHeightXR = extract { x: -1.0, height: -1.0 } xPlusDefaults
 
--- extOthersR :: { a :: String, b :: Boolean, c :: Int }
--- extOthersR = extract { a: "", b: false, c: 0 } othersPlusDefaults
+extOthersR :: { a :: String, b :: Boolean, c :: Int }
+extOthersR = extract { a: "", b: false, c: 0 } othersPlusDefaults
 
 -- ┌───────────────────────────┐
 -- │ Record Builder Converters │
