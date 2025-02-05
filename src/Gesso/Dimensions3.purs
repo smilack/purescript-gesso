@@ -145,9 +145,10 @@ extproxy _ _ = Proxy
 --   => Delete keys from diff
 --   => Delete diff from keys'
 --   => RowToList extracted keys'
---   => { | required }
---   -> Builder { | all } { | extracted }
--- extract = merge
+--   => { | all }
+--   -> { | required }
+--   -> { | extracted }
+-- extract all req = subRecord (Proxy @keys') all req
 
 ext
   :: forall
@@ -170,12 +171,34 @@ ext from =
   in
     insert key val {-  <<< ext @getTail from -}
 
-class Extract :: RowList Type -> Row Type -> Constraint
-class (RowToList row list) <= Extract list row | list -> row where
-  extract :: { | row }
+class Extract :: RowList Type -> Symbol -> Type -> Row Type -> Row Type -> Constraint
+class
+  ( RowToList row list
+  , Cons key a tail row
+  , Lacks key tail
+  , IsSymbol key
+  ) <=
+  Extract list key a tail row
+  | list -> key a tail row where
+  ex :: a -> Builder { | tail } { | row }
 
-instance Extract Nil () where
-  extract = {}
+instance
+  ( RowToList row (Cons key a list)
+  , Cons key a tail row
+  , Lacks key tail
+  , IsSymbol key
+  ) =>
+  Extract (Cons key a list) key a tail row where
+  ex :: a -> Builder { | tail } { | row }
+  ex = insert (Proxy @key)
+
+-- instance
+--   ( Cons key a rt row
+--   , RowToList row (Cons key a lt)
+--   , Extract lt rt
+--   ) =>
+--   Extract (Cons key a lt) row where
+--   extract = 
 
 -- class Extract :: RowList Type -> RowList Type -> Constraint
 -- class Extract fields source where
@@ -243,6 +266,16 @@ delHeightXRec = del { x: 100.0, height: 100.0 } xPlusDefaults
 
 delOthersRec :: { height :: Number, width :: Number, x :: Number, y :: Number }
 delOthersRec = del { a: "", b: false, c: 0 } othersPlusDefaults -}
+
+-- find fields in r1 but not r2
+-- extXR :: { x :: Number }
+-- extXR = extract { x: -1.0 } xPlusDefaults
+
+-- extHeightXR :: { x :: Number, height :: Number }
+-- extHeightXR = extract { x: -1.0, height: -1.0 } xPlusDefaults
+
+-- extOthersR :: { a :: String, b :: Boolean, c :: Int }
+-- extOthersR = extract { a: "", b: false, c: 0 } othersPlusDefaults
 
 -- ┌───────────────────────────┐
 -- │ Record Builder Converters │
