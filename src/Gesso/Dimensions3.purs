@@ -123,9 +123,9 @@ delproxy
   -> Proxy filler
 delproxy _ _ = Proxy
 
--- ┌──────────────┐
--- │ Delete Tests │
--- └──────────────┘
+-- ┌──────────────┬───────┐
+-- │ Delete Tests │ Proxy │
+-- └──────────────┴───────┘
 
 xPlusDefaults :: { | ConvertibleFields }
 xPlusDefaults = build addDefaults { x: 100.0 }
@@ -141,6 +141,19 @@ delHeightX = delproxy { x: 100.0, height: 100.0 } xPlusDefaults
 
 delOthers :: Proxy (height :: Number, width :: Number, x :: Number, y :: Number)
 delOthers = delproxy { a: "", b: false, c: 0 } othersPlusDefaults
+
+-- ┌──────────────┬────────┐
+-- │ Delete Tests │ Record │
+-- └──────────────┴────────┘
+
+{- delXrec :: { height :: Number, width :: Number, y :: Number }
+delXrec = del { x: 100.0 } xPlusDefaults
+
+delHeightXRec :: { width :: Number, y :: Number }
+delHeightXRec = del { x: 100.0, height: 100.0 } xPlusDefaults
+
+delOthersRec :: { height :: Number, width :: Number, x :: Number, y :: Number }
+delOthersRec = del { a: "", b: false, c: 0 } othersPlusDefaults -}
 
 -- ┌───────────────────────────┐
 -- │ Record Builder Converters │
