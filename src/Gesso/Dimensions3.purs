@@ -51,45 +51,41 @@ import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow)
      5. returns scaled `x` and `y`
 -}
 
-cleaver :: forall @sym. Proxy sym
-cleaver = Proxy
-
-type Converter :: Symbol -> RowList Type -> Type
-type Converter sym list =
+type Converter :: Symbol -> Type
+type Converter sym =
   forall tail row
-   . Cleave tail row (Proxy sym) (Proxy (Cons sym Number list))
+   . Cleave tail row (Proxy sym)
   => Record row
   -> Record row
 
-converter :: forall @sym list. Converter sym list
+converter :: forall @sym. Converter sym
 converter rec =
   let
-    p = cleaver @sym
-    x = get p rec
-    rec' = uncon p rec
-    rec'' = con p x rec'
+    x = get (Proxy @sym) rec
+    rec' = uncon (Proxy @sym) rec
+    rec'' = con (Proxy @sym) x rec'
   in
     rec''
 
--- converters
---   :: { x :: forall list. Converter "x" list
---      , y :: forall list. Converter "y" list
---      , width :: forall list. Converter "width" list
---      , height :: forall list. Converter "height" list
---      }
--- converters =
---   { x: converter @"x"
---   , y: converter @"y"
---   , width: converter @"width"
---   , height: converter @"height"
---   }
+converters
+  :: { x :: Converter "x"
+     , y :: Converter "y"
+     , width :: Converter "width"
+     , height :: Converter "height"
+     }
+converters =
+  { x: converter @"x"
+  , y: converter @"y"
+  , width: converter @"width"
+  , height: converter @"height"
+  }
 
 -- rx = converters.x { x: 1.0 }
 -- ry = converters.x { y: 1.0, x: 1.0 }
 
 -- | Like Prim.Row.Cons but with operations to get/insert/delete the field
-class Cleave :: Row Type -> Row Type -> Type -> Type -> Constraint
-class Cleave tail row symp listp | symp -> tail row listp where
+class Cleave :: Row Type -> Row Type -> Type -> Constraint
+class Cleave tail row symp | symp -> tail row where
   get :: symp -> { | row } -> Number
   con :: symp -> Number -> { | tail } -> { | row }
   uncon :: symp -> { | row } -> { | tail }
@@ -98,9 +94,8 @@ instance
   ( IsSymbol sym
   , Cons sym Number tail row
   , Lacks sym tail
-  , RowToList tail listt
   ) =>
-  Cleave tail row (Proxy sym) (Proxy (Cons sym Number listt))
+  Cleave tail row (Proxy sym)
   where
   get :: Proxy sym -> { | row } -> Number
   get = R.get
