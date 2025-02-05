@@ -9,7 +9,7 @@ import Record.Builder (modify, insert, delete, build, buildFromScratch, Builder,
 import Type.Prelude (class IsSymbol)
 import Type.Proxy (Proxy(..))
 import Type.Row (class Lacks, type (+), RowApply, class Cons, class Union, class Nub)
-import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow)
+import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow, class RowListAppend, class RowListNub)
 
 {- Current idea:
   (inspired by https://github.com/natefaubion/purescript-convertable-options/blob/main/README.md)
@@ -94,7 +94,7 @@ addDefaults = flip merge defaults
 -- |  - When the heads of `keys` and `from` are different, we only need to
 -- |    advance `from`, because the key will be in there later.
 class Delete :: RowList Type -> RowList Type -> RowList Type -> Constraint
-class Delete keys from diff
+class Delete keys from diff | keys from -> diff
 
 instance deleteEmpty :: Delete Nil Nil Nil
 
@@ -110,10 +110,10 @@ else instance deleteKeepKey ::
   ) =>
   Delete (Cons key a keyTail) (Cons key' b fromTail) (Cons key' b diffTail)
 
--- | Given two records, find the set of fields in the second that do not appear
--- | in the first. The fields should be usable to delete those keys from the
--- | second record
-delproxy
+-- | Given two records, find the set of fields in `all` that do not appear in
+-- | `required`. In theory the fields should be usable to delete those keys from
+-- | `all`.
+diffproxy
   :: forall keys required from all diff filler
    . RowToList required keys
   => RowToList all from
@@ -122,40 +122,53 @@ delproxy
   => { | required }
   -> { | all }
   -> Proxy filler
-delproxy _ _ = Proxy
+diffproxy _ _ = Proxy
 
--- Does the return need to be different from `required`? Something determined
--- by a typeclass instead?
-del
-  :: forall keys required from all diff filler
+-- | Given two records, confirm that the fields in `required` are all present in
+-- | `all` by calculating the differences `diff = from - keys`
+-- | (`d = all - required`) and `keys' = from - diff` (`extracted = all - d`).
+extproxy
+  :: forall keys required from all diff keys' extracted
    . RowToList required keys
   => RowToList all from
-  => RowToList filler diff
   => Delete keys from diff
-  => Partial
+  => Delete diff from keys'
+  => RowToList extracted keys'
   => { | required }
   -> { | all }
-  -> { | required }
-del partial complete = crash
+  -> Proxy extracted
+extproxy _ _ = Proxy
 
 -- ┌──────────────┬───────┐
 -- │ Delete Tests │ Proxy │
 -- └──────────────┴───────┘
 
+-- setup
 xPlusDefaults :: { | ConvertibleFields }
 xPlusDefaults = build addDefaults { x: 100.0 }
 
 othersPlusDefaults :: { a :: String, b :: Boolean, c :: Int | ConvertibleFields }
 othersPlusDefaults = build addDefaults { a: "hello", b: true, c: (-9) }
 
-delX :: Proxy (height :: Number, width :: Number, y :: Number)
-delX = delproxy { x: 100.0 } xPlusDefaults
+-- find fields in r2 but not r1
+diffX :: Proxy (height :: Number, width :: Number, y :: Number)
+diffX = diffproxy { x: 100.0 } xPlusDefaults
 
-delHeightX :: Proxy (width :: Number, y :: Number)
-delHeightX = delproxy { x: 100.0, height: 100.0 } xPlusDefaults
+diffHeightX :: Proxy (width :: Number, y :: Number)
+diffHeightX = diffproxy { x: 100.0, height: 100.0 } xPlusDefaults
 
-delOthers :: Proxy (height :: Number, width :: Number, x :: Number, y :: Number)
-delOthers = delproxy { a: "", b: false, c: 0 } othersPlusDefaults
+diffOthers :: Proxy (height :: Number, width :: Number, x :: Number, y :: Number)
+diffOthers = diffproxy { a: "", b: false, c: 0 } othersPlusDefaults
+
+-- find fields in r1 but not r2
+extX :: Proxy (x :: Number)
+extX = extproxy { x: 100.0 } xPlusDefaults
+
+extHeightX :: Proxy (x :: Number, height :: Number)
+extHeightX = extproxy { x: 100.0, height: 100.0 } xPlusDefaults
+
+extOthers :: Proxy (a :: String, b :: Boolean, c :: Int)
+extOthers = extproxy { a: "", b: false, c: 0 } othersPlusDefaults
 
 -- ┌──────────────┬────────┐
 -- │ Delete Tests │ Record │
