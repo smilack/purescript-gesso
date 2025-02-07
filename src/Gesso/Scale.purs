@@ -13,44 +13,36 @@ import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow, class
 -- │ Dimension & scaling types │
 -- └───────────────────────────┘
 
-type X r = (x :: Number | r)
-type Y r = (y :: Number | r)
-type Width r = (width :: Number | r)
-type Height r = (height :: Number | r)
-
-type Scalable r = X + Y + Width + Height + r
+type X a r = (x :: a | r)
+type Y a r = (y :: a | r)
+type Width a r = (width :: a | r)
+type Height a r = (height :: a | r)
+type All a r = X a + Y a + Width a + Height a + r
 
 -- | Alias for record builder that applies a function to one or more fields in a
 -- | record without changing their types.
 type ScalerFor :: (Row Type -> Row Type) -> Type
-type ScalerFor f = forall r. Builder { | f r } { | f r }
-
-type ScalingFunctions =
-  { x :: Number -> Number
-  , y :: Number -> Number
-  , width :: Number -> Number
-  , height :: Number -> Number
-  }
+type ScalerFor f = forall r u n. Has r (f ()) u n => Builder { | r } { | r }
 
 -- | A record containing scalers for all scalable fields.
-type Scalers r =
-  { x :: ScalerFor X
-  , y :: ScalerFor Y
-  , width :: ScalerFor Width
-  , height :: ScalerFor Height
-  , all :: Builder { | Scalable r } { | Scalable r }
+type Scalers =
+  { x :: ScalerFor (X Number)
+  , y :: ScalerFor (Y Number)
+  , width :: ScalerFor (Width Number)
+  , height :: ScalerFor (Height Number)
+  , all :: ScalerFor (All Number)
   }
 
 -- ┌────────────────────┐
 -- │ Scaling operations │
 -- └────────────────────┘
 
-defaults :: Record (Scalable ())
+defaults :: Record (All Number ())
 defaults = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
 
 fill
   :: forall partial union complete
-   . Union partial (Scalable ()) union
+   . Union partial (All Number ()) union
   => Nub union complete
   => Builder (Record partial) (Record complete)
 fill = flip merge defaults
@@ -65,40 +57,42 @@ fill = flip merge defaults
 --   => { | required }
 --   -> { | all }
 --   -> { | required }
-scale
-  :: forall r l
-   . RowToList r l
-  => Scalers r
-  -> Record r
-  -> Record r
-scale { all } r =
-  extract @r @l r
-    $ build (all <<< fill) r
+-- scale
+--   :: forall r l
+--    . RowToList r l
+--   => Scalers r
+--   -> Record r
+--   -> Record r
+-- scale { all } r =
+--   extract @r @l r
+--     $ build (all <<< fill) r
 
 mkScaler
-  :: forall @sym a r row
+  :: forall @sym a r t row u n
    . IsSymbol sym
-  => Cons sym a r row
+  => Cons sym a () r
+  => Has row r u n
+  => Cons sym a t row
   => (a -> a)
   -> Builder (Record row) (Record row)
 mkScaler = modify (Proxy @sym)
 
-mkScalers :: forall r. ScalingFunctions -> Scalers r
+mkScalers :: Record (All (Number -> Number) ()) -> Scalers
 mkScalers fs = { x, y, width, height, all }
   where
-  x :: ScalerFor X
+  x :: ScalerFor (X Number)
   x = mkScaler @"x" fs.x
 
-  y :: ScalerFor Y
+  y :: ScalerFor (Y Number)
   y = mkScaler @"y" fs.y
 
-  width :: ScalerFor Width
+  width :: ScalerFor (Width Number)
   width = mkScaler @"width" fs.width
 
-  height :: ScalerFor Height
+  height :: ScalerFor (Height Number)
   height = mkScaler @"height" fs.height
 
-  all :: ScalerFor Scalable
+  all :: ScalerFor (All Number)
   all = x <<< y <<< width <<< height
 
 -- ┌──────────────────────────┐
@@ -144,17 +138,33 @@ delete
 delete _ = pick
 
 -- | Find values of all keys in `all` that also appear in `required`.
-extract
-  :: forall @keys @required from all diff filler
-   . RowToList required keys
-  => RowToList all from
-  => Del keys from diff
-  => Union required filler all
-  => Keys keys
-  => { | required }
-  -> { | all }
-  -> { | required }
-extract _ = pick
+-- extract
+--   :: forall @keys @required from all diff filler
+--    . RowToList required keys
+--   => RowToList all from
+--   => Del keys from diff
+--   => Union required filler all
+--   => Keys keys
+--   => { | required }
+--   -> { | all }
+--   -> { | required }
+-- extract _ = pick
+
+-- ┌─────────────────────────┐
+-- │ Row inclusion typeclass │
+-- └─────────────────────────┘
+
+class Has :: Row Type -> Row Type -> Row Type -> Row Type -> Constraint
+class Has a b u n | a b -> u n
+
+instance
+  ( RowToList a la
+  , RowToList b lb
+  , Del lb la lc
+  , Union a b u
+  , Nub u n
+  ) =>
+  Has a b u n
 
 -- ┌───────────────┐
 -- │ Utility types │
