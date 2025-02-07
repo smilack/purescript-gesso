@@ -13,61 +13,63 @@ import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow, class
 -- │ Dimension & scaling types │
 -- └───────────────────────────┘
 
-type X a r = (x :: a | r)
-type Y a r = (y :: a | r)
-type Width a r = (width :: a | r)
-type Height a r = (height :: a | r)
-type Fields a = X a + Y a + Width a & Height a
-
--- | Alias for record builder that applies a function to one or more fields in a
--- | record without changing their types.
--- type ScalerFor :: Type -> Type
--- type ScalerFor r = Builder r r
-
-type ScalerFor :: (Type -> Row Type -> Row Type) -> Type -> Type
-type ScalerFor r a = forall r'. Builder (Record (r a r')) (Record (r a r'))
-
-type ScalingFunctions = Record (Fields (Number -> Number))
-type Scalers = Record
-  ( X (ScalerFor X Number)
-      + Y (ScalerFor Y Number)
-      + Width (ScalerFor Width Number)
-      & Height (ScalerFor Height Number)
+type Dimensioned' a r =
+  ( x :: a
+  , y :: a
+  , width :: a
+  , height :: a
+  | r
   )
+
+type Dimensioned a r = Record (Dimensioned' a r)
+
+type Rect' = Dimensioned' Number ()
+type Rect = Record Rect'
+
+type ScalingFunctions = Record (Dimensioned' (Number -> Number) ())
+
+type Scaler = forall r. Builder (Dimensioned Number r) (Dimensioned Number r)
 
 -- ┌────────────────────┐
 -- │ Scaling operations │
 -- └────────────────────┘
 
-defaults :: Record (Fields Number)
+defaults :: Rect
 defaults = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
 
 fill
   :: forall partial union complete
-   . Union partial (Fields Number) union
+   . Union partial Rect' union
   => Nub union complete
   => Builder (Record partial) (Record complete)
 fill = flip merge defaults
 
--- extract
---   :: forall keys @required from all diff filler
---    . RowToList required keys
---   => RowToList all from
---   => Del keys from diff
---   => Union required filler all
---   => Keys keys
---   => { | required }
---   -> { | all }
---   -> { | required }
+-- | Find values of all keys in `all` that also appear in `required`.
+extract
+  :: forall keys @required from all diff filler
+   . RowToList required keys
+  => RowToList all from
+  => Del keys from diff
+  => Union required filler all
+  => Keys keys
+  => { | required }
+  -> { | all }
+  -> { | required }
+extract _ = pick
+
 -- scale
---   :: forall r l
---    . RowToList r l
---   => Scalers r
+--   :: forall r
+--    . Scalers
 --   -> Record r
 --   -> Record r
--- scale { all } r =
---   extract @r @l r
---     $ build (all <<< fill) r
+-- scale { x, y, width, height } r =
+--   extract @r r height'
+--   where
+--   filled = build fill r
+--   x' = build x filled
+--   y' = build y x'
+--   width' = build width y'
+--   height' = build height width'
 
 mkScaler
   :: forall @l a t r
@@ -77,14 +79,12 @@ mkScaler
   -> Builder (Record r) (Record r)
 mkScaler = modify (Proxy @l)
 
--- mkScalers :: Record (All (Number -> Number) ()) -> Scalers
-mkScalers :: ScalingFunctions -> Scalers
+mkScalers :: ScalingFunctions -> Scaler
 mkScalers fs =
-  { x: mkScaler @"x" fs.x
-  , y: mkScaler @"y" fs.y
-  , width: mkScaler @"width" fs.width
-  , height: mkScaler @"height" fs.height
-  }
+  mkScaler @"x" fs.x
+    <<< mkScaler @"y" fs.y
+    <<< mkScaler @"width" fs.width
+    <<< mkScaler @"height" fs.height
 
 -- all :: ScalerFor (All Number)
 -- all = x <<< y <<< width <<< height
