@@ -13,6 +13,7 @@ import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow, class
 -- │ Dimension & scaling types │
 -- └───────────────────────────┘
 
+type Dimensioned' :: Type -> Row Type -> Row Type
 type Dimensioned' a r =
   ( x :: a
   , y :: a
@@ -21,13 +22,19 @@ type Dimensioned' a r =
   | r
   )
 
+type Dimensioned :: Type -> Row Type -> Type
 type Dimensioned a r = Record (Dimensioned' a r)
 
+type Rect' :: Row Type
 type Rect' = Dimensioned' Number ()
+
+type Rect :: Type
 type Rect = Record Rect'
 
+type ScalingFunctions :: Type
 type ScalingFunctions = Record (Dimensioned' (Number -> Number) ())
 
+type Scaler :: Type
 type Scaler = forall r. Builder (Dimensioned Number r) (Dimensioned Number r)
 
 -- ┌────────────────────┐
@@ -46,7 +53,7 @@ fill = flip merge defaults
 
 -- | Find values of all keys in `all` that also appear in `required`.
 extract
-  :: forall keys @required from all diff filler
+  :: forall keys required from all diff filler
    . RowToList required keys
   => RowToList all from
   => Del keys from diff
@@ -57,19 +64,19 @@ extract
   -> { | required }
 extract _ = pick
 
--- scale
---   :: forall r
---    . Scalers
---   -> Record r
---   -> Record r
--- scale { x, y, width, height } r =
---   extract @r r height'
---   where
---   filled = build fill r
---   x' = build x filled
---   y' = build y x'
---   width' = build width y'
---   height' = build height width'
+scale
+  :: forall partial union complete keys from diff filler
+   . Union partial Rect' union
+  => Nub union complete
+  => RowToList partial keys
+  => RowToList complete from
+  => Del keys from diff
+  => Union partial filler complete
+  => Keys keys
+  => Builder (Record complete) (Record complete)
+  -> Record partial
+  -> Record partial
+scale scaler r = extract r $ build (scaler <<< fill) r
 
 mkScaler
   :: forall @l a t r
