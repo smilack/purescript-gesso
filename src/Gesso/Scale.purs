@@ -22,8 +22,8 @@ type Scalable r = X + Y + Width + Height + r
 
 -- | Alias for record builder that applies a function to one or more fields in a
 -- | record without changing their types.
-type ScalerFor :: (Row Type -> Row Type) -> Row Type -> Type
-type ScalerFor f r = Builder { | f r } { | f r }
+type ScalerFor :: (Row Type -> Row Type) -> Type
+type ScalerFor f = forall r. Builder { | f r } { | f r }
 
 type ScalingFunctions =
   { x :: Number -> Number
@@ -34,11 +34,11 @@ type ScalingFunctions =
 
 -- | A record containing scalers for all scalable fields.
 type Scalers r =
-  { x :: ScalerFor X r
-  , y :: ScalerFor Y r
-  , width :: ScalerFor Width r
-  , height :: ScalerFor Height r
-  , all :: ScalerFor Scalable r
+  { x :: ScalerFor X
+  , y :: ScalerFor Y
+  , width :: ScalerFor Width
+  , height :: ScalerFor Height
+  , all :: Builder { | Scalable r } { | Scalable r }
   }
 
 -- ┌────────────────────┐
@@ -66,14 +66,13 @@ fill = flip merge defaults
 --   -> { | all }
 --   -> { | required }
 scale
-  :: forall r union all
-   . Union r (Scalable ()) union
-  => Nub union all
+  :: forall r l
+   . RowToList r l
   => Scalers r
   -> Record r
   -> Record r
 scale { all } r =
-  extract @r @all r
+  extract @r @l r
     $ build (all <<< fill) r
 
 mkScaler
@@ -87,19 +86,19 @@ mkScaler = modify (Proxy @sym)
 mkScalers :: forall r. ScalingFunctions -> Scalers r
 mkScalers fs = { x, y, width, height, all }
   where
-  x :: ScalerFor X r
+  x :: ScalerFor X
   x = mkScaler @"x" fs.x
 
-  y :: ScalerFor Y r
+  y :: ScalerFor Y
   y = mkScaler @"y" fs.y
 
-  width :: ScalerFor Width r
+  width :: ScalerFor Width
   width = mkScaler @"width" fs.width
 
-  height :: ScalerFor Height r
+  height :: ScalerFor Height
   height = mkScaler @"height" fs.height
 
-  all :: ScalerFor Scalable r
+  all :: ScalerFor Scalable
   all = x <<< y <<< width <<< height
 
 -- ┌──────────────────────────┐
@@ -146,7 +145,7 @@ delete _ = pick
 
 -- | Find values of all keys in `all` that also appear in `required`.
 extract
-  :: forall keys @required from @all diff filler
+  :: forall @keys @required from all diff filler
    . RowToList required keys
   => RowToList all from
   => Del keys from diff
