@@ -17,35 +17,34 @@ type X a r = (x :: a | r)
 type Y a r = (y :: a | r)
 type Width a r = (width :: a | r)
 type Height a r = (height :: a | r)
-type All a r = X a + Y a + Width a + Height a + r
+type Fields a = X a + Y a + Width a & Height a
 
 -- | Alias for record builder that applies a function to one or more fields in a
 -- | record without changing their types.
 -- type ScalerFor :: Type -> Type
 -- type ScalerFor r = Builder r r
 
-type ScalerFor :: (Type -> Row Type -> Row Type) -> Type -> Row Type -> Type
-type ScalerFor r a r' = Builder (Record (r a r')) (Record (r a r'))
+type ScalerFor :: (Type -> Row Type -> Row Type) -> Type -> Type
+type ScalerFor r a = forall r'. Builder (Record (r a r')) (Record (r a r'))
 
--- | A record containing scalers for all scalable fields.
--- type Scalers =
---   { x :: ScalerFor' "x" Number
---   , y :: ScalerFor' "y" Number
---   , width :: ScalerFor' "width" Number
---   , height :: ScalerFor' "height" Number
---   -- , all :: ScalerFor' "all" Number
---   }
+type ScalingFunctions = Record (Fields (Number -> Number))
+type Scalers = Record
+  ( X (ScalerFor X Number)
+      + Y (ScalerFor Y Number)
+      + Width (ScalerFor Width Number)
+      & Height (ScalerFor Height Number)
+  )
 
 -- ┌────────────────────┐
 -- │ Scaling operations │
 -- └────────────────────┘
 
-defaults :: Record (All Number ())
+defaults :: Record (Fields Number)
 defaults = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
 
 fill
   :: forall partial union complete
-   . Union partial (All Number ()) union
+   . Union partial (Fields Number) union
   => Nub union complete
   => Builder (Record partial) (Record complete)
 fill = flip merge defaults
@@ -79,40 +78,13 @@ mkScaler
 mkScaler = modify (Proxy @l)
 
 -- mkScalers :: Record (All (Number -> Number) ()) -> Scalers
-mkScalers
-  :: forall
-       (rx' :: Row Type)
-       (ry' :: Row Type)
-       (rw' :: Row Type)
-       (rh' :: Row Type)
-   . { height :: (Number -> Number)
-     , width :: (Number -> Number)
-     , x :: (Number -> Number)
-     , y :: (Number -> Number)
-     }
-  -> { height :: ScalerFor Height Number rh'
-     , width :: ScalerFor Width Number rw'
-     , x :: ScalerFor X Number rx'
-     , y :: ScalerFor Y Number ry'
-     }
+mkScalers :: ScalingFunctions -> Scalers
 mkScalers fs =
-  { x: x @"x"
-  , y: y @"y"
-  , width: width @"width"
-  , height: height @"height" {- , all -}
+  { x: mkScaler @"x" fs.x
+  , y: mkScaler @"y" fs.y
+  , width: mkScaler @"width" fs.width
+  , height: mkScaler @"height" fs.height
   }
-  where
-  x :: forall @lx rx tx. IsSymbol lx => Cons lx Number tx rx => Builder (Record rx) (Record rx)
-  x = modify (Proxy @lx) fs.x
-
-  y :: forall @ly ry ty. IsSymbol ly => Cons ly Number ty ry => Builder (Record ry) (Record ry)
-  y = modify (Proxy @ly) fs.y
-
-  width :: forall @lw rw tw. IsSymbol lw => Cons lw Number tw rw => Builder (Record rw) (Record rw)
-  width = modify (Proxy @lw) fs.width
-
-  height :: forall @lh rh th. IsSymbol lh => Cons lh Number th rh => Builder (Record rh) (Record rh)
-  height = modify (Proxy @lh) fs.height
 
 -- all :: ScalerFor (All Number)
 -- all = x <<< y <<< width <<< height
