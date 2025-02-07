@@ -1,13 +1,13 @@
 module Gesso.Scale where
 
-import Prelude
+import Prelude hiding (flip)
 
 import Record.Builder (modify, build, Builder, flip, merge)
 import Record.Extra (class Keys, pick)
 import Type.Prelude (class IsSymbol)
 import Type.Proxy (Proxy(..))
-import Type.Row (class Lacks, type (+), RowApply, class Cons, class Union, class Nub)
-import Type.RowList (RowList, Nil, Cons, class RowToList, class ListToRow, class RowListAppend, class RowListNub)
+import Type.Row (class Cons, class Union, class Nub)
+import Type.RowList (RowList, Nil, Cons, class RowToList)
 
 -- ┌───────────────────────────┐
 -- │ Dimension & scaling types │
@@ -23,7 +23,7 @@ type Dimensioned' a r =
   )
 
 type Dimensioned :: Type -> Row Type -> Type
-type Dimensioned a r = Record (Dimensioned' a r)
+type Dimensioned a r = { | Dimensioned' a r }
 
 type Rect' :: Row Type
 type Rect' = Dimensioned' Number ()
@@ -32,10 +32,10 @@ type Rect :: Type
 type Rect = Record Rect'
 
 type ScalingFunctions :: Type
-type ScalingFunctions = Record (Dimensioned' (Number -> Number) ())
+type ScalingFunctions = { | Dimensioned' (Number -> Number) () }
 
-type Scaler :: Type
-type Scaler = forall r. Builder (Dimensioned Number r) (Dimensioned Number r)
+type Scaler :: Row Type -> Type
+type Scaler r = Builder (Record r) (Record r)
 
 -- ┌────────────────────┐
 -- │ Scaling operations │
@@ -51,19 +51,6 @@ fill
   => Builder (Record partial) (Record complete)
 fill = flip merge defaults
 
--- | Find values of all keys in `all` that also appear in `required`.
-extract
-  :: forall keys required from all diff filler
-   . RowToList required keys
-  => RowToList all from
-  => Del keys from diff
-  => Union required filler all
-  => Keys keys
-  => { | required }
-  -> { | all }
-  -> { | required }
-extract _ = pick
-
 scale
   :: forall partial union complete keys from diff filler
    . Union partial Rect' union
@@ -73,7 +60,7 @@ scale
   => Del keys from diff
   => Union partial filler complete
   => Keys keys
-  => Builder (Record complete) (Record complete)
+  => Scaler complete
   -> Record partial
   -> Record partial
 scale scaler r = extract r $ build (scaler <<< fill) r
@@ -86,15 +73,12 @@ mkScaler
   -> Builder (Record r) (Record r)
 mkScaler = modify (Proxy @l)
 
-mkScalers :: ScalingFunctions -> Scaler
+mkScalers :: forall r. ScalingFunctions -> Scaler (Dimensioned' Number r)
 mkScalers fs =
   mkScaler @"x" fs.x
     <<< mkScaler @"y" fs.y
     <<< mkScaler @"width" fs.width
     <<< mkScaler @"height" fs.height
-
--- all :: ScalerFor (All Number)
--- all = x <<< y <<< width <<< height
 
 -- ┌──────────────────────────┐
 -- │ Row Difference typeclass │
@@ -139,52 +123,17 @@ delete
 delete _ = pick
 
 -- | Find values of all keys in `all` that also appear in `required`.
--- extract
---   :: forall @keys @required from all diff filler
---    . RowToList required keys
---   => RowToList all from
---   => Del keys from diff
---   => Union required filler all
---   => Keys keys
---   => { | required }
---   -> { | all }
---   -> { | required }
--- extract _ = pick
-
--- ┌─────────────────────────┐
--- │ Row inclusion typeclass │
--- └─────────────────────────┘
-
-class Has :: Row Type -> Row Type -> Row Type -> Row Type -> Constraint
-class Has a b u n | a b -> u n
-
-instance
-  ( RowToList a la
-  , RowToList b lb
-  , Del lb la lc
-  , Union a b u
-  , Nub u n
-  ) =>
-  Has a b u n
-
--- ┌───────────────┐
--- │ Utility types │
--- └───────────────┘
-
--- | Alias just so I don't have to break long lines
-type OpenRow = Row Type -> Row Type
-
--- | Combine two open rows and close them
-type RowApplyClose :: OpenRow -> OpenRow -> Row Type
-type RowApplyClose a b = a + b + ()
-
-infixr 0 type RowApplyClose as &
-
--- | Combine two open rows and leave them open
-type RowApplyOpen :: OpenRow -> OpenRow -> OpenRow
-type RowApplyOpen a b r = a + b + r
-
-infixr 1 type RowApplyOpen as ++
+extract
+  :: forall keys required from all diff filler
+   . RowToList required keys
+  => RowToList all from
+  => Del keys from diff
+  => Union required filler all
+  => Keys keys
+  => { | required }
+  -> { | all }
+  -> { | required }
+extract _ = pick
 
 {-
 x:      -@   @>
@@ -192,22 +141,3 @@ width:  -@-  @>>
 y:      |@   @^
 height: |@|  @^^
 -}
-
--- instance
---   -- ( Cons "x" Number r r1
---   -- -- , RecordToRow rec r1
---   -- ) =>
---   ScalableField (Field "x" Number tail row) { | row } where
---   scale
---     :: Cons "x" Number r r1
---     => { | r1 }
---     -> { | r1 }
---   scale rec =
---     let
---       r :: ?e
---       r = rec
---     in
---       -- (modify (Proxy @"x") identity rec) --(r { x = r.x })
---       rec
-
--- Field rec
