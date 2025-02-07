@@ -21,17 +21,20 @@ type All a r = X a + Y a + Width a + Height a + r
 
 -- | Alias for record builder that applies a function to one or more fields in a
 -- | record without changing their types.
-type ScalerFor :: (Row Type -> Row Type) -> Type
-type ScalerFor f = forall r u n. Has r (f ()) u n => Builder { | r } { | r }
+-- type ScalerFor :: Type -> Type
+-- type ScalerFor r = Builder r r
+
+type ScalerFor :: (Type -> Row Type -> Row Type) -> Type -> Row Type -> Type
+type ScalerFor r a r' = Builder (Record (r a r')) (Record (r a r'))
 
 -- | A record containing scalers for all scalable fields.
-type Scalers =
-  { x :: ScalerFor (X Number)
-  , y :: ScalerFor (Y Number)
-  , width :: ScalerFor (Width Number)
-  , height :: ScalerFor (Height Number)
-  , all :: ScalerFor (All Number)
-  }
+-- type Scalers =
+--   { x :: ScalerFor' "x" Number
+--   , y :: ScalerFor' "y" Number
+--   , width :: ScalerFor' "width" Number
+--   , height :: ScalerFor' "height" Number
+--   -- , all :: ScalerFor' "all" Number
+--   }
 
 -- ┌────────────────────┐
 -- │ Scaling operations │
@@ -68,32 +71,51 @@ fill = flip merge defaults
 --     $ build (all <<< fill) r
 
 mkScaler
-  :: forall @sym a r t row u n
-   . IsSymbol sym
-  => Cons sym a () r
-  => Has row r u n
-  => Cons sym a t row
+  :: forall @l a t r
+   . IsSymbol l
+  => Cons l a t r
   => (a -> a)
-  -> Builder (Record row) (Record row)
-mkScaler = modify (Proxy @sym)
+  -> Builder (Record r) (Record r)
+mkScaler = modify (Proxy @l)
 
-mkScalers :: Record (All (Number -> Number) ()) -> Scalers
-mkScalers fs = { x, y, width, height, all }
+-- mkScalers :: Record (All (Number -> Number) ()) -> Scalers
+mkScalers
+  :: forall
+       (rx' :: Row Type)
+       (ry' :: Row Type)
+       (rw' :: Row Type)
+       (rh' :: Row Type)
+   . { height :: (Number -> Number)
+     , width :: (Number -> Number)
+     , x :: (Number -> Number)
+     , y :: (Number -> Number)
+     }
+  -> { height :: ScalerFor Height Number rh'
+     , width :: ScalerFor Width Number rw'
+     , x :: ScalerFor X Number rx'
+     , y :: ScalerFor Y Number ry'
+     }
+mkScalers fs =
+  { x: x @"x"
+  , y: y @"y"
+  , width: width @"width"
+  , height: height @"height" {- , all -}
+  }
   where
-  x :: ScalerFor (X Number)
-  x = mkScaler @"x" fs.x
+  x :: forall @lx rx tx. IsSymbol lx => Cons lx Number tx rx => Builder (Record rx) (Record rx)
+  x = modify (Proxy @lx) fs.x
 
-  y :: ScalerFor (Y Number)
-  y = mkScaler @"y" fs.y
+  y :: forall @ly ry ty. IsSymbol ly => Cons ly Number ty ry => Builder (Record ry) (Record ry)
+  y = modify (Proxy @ly) fs.y
 
-  width :: ScalerFor (Width Number)
-  width = mkScaler @"width" fs.width
+  width :: forall @lw rw tw. IsSymbol lw => Cons lw Number tw rw => Builder (Record rw) (Record rw)
+  width = modify (Proxy @lw) fs.width
 
-  height :: ScalerFor (Height Number)
-  height = mkScaler @"height" fs.height
+  height :: forall @lh rh th. IsSymbol lh => Cons lh Number th rh => Builder (Record rh) (Record rh)
+  height = modify (Proxy @lh) fs.height
 
-  all :: ScalerFor (All Number)
-  all = x <<< y <<< width <<< height
+-- all :: ScalerFor (All Number)
+-- all = x <<< y <<< width <<< height
 
 -- ┌──────────────────────────┐
 -- │ Row Difference typeclass │
