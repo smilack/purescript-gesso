@@ -15,6 +15,7 @@ import Gesso.Application as GApp
 import Gesso.Canvas (component, Input) as GC
 import Gesso.Dimensions as GDim
 import Gesso.Interactions as GInt
+import Gesso.Scale ((@>), (@>>), (@^), (@^^))
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -42,7 +43,7 @@ input =
   }
 
 render :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GLerp.Lerp Unit -> Effect Unit
-render context _ scale@{ toRectangle, screen, viewBox } _ = do
+render context _ { toRectangle, screen, viewBox, scaler: { page } } _ = do
   -- Clear background
   Canvas.setFillStyle context "white"
   Canvas.fillRect context (toRectangle screen)
@@ -56,12 +57,12 @@ render context _ scale@{ toRectangle, screen, viewBox } _ = do
   -- Center dot
   Canvas.setFillStyle context "#888888"
   Canvas.fillPath context do
-    Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: scale.width.toCr 15.0, useCounterClockwise: false }
+    Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: 15.0 @>> page, useCounterClockwise: false }
   where
   clock =
-    { x: scale.x.toCr $ (GDim.getWidth viewBox) / 2.0
-    , y: scale.y.toCr $ (GDim.getHeight viewBox) / 2.0
-    , r: scale.width.toCr $ 500.0
+    { x: (GDim.getWidth viewBox) / 2.0 @> page
+    , y: (GDim.getHeight viewBox) / 2.0 @^ page
+    , r: 500.0 @>> page
     }
 
   eta = pi / 2.0
@@ -83,14 +84,14 @@ render context _ scale@{ toRectangle, screen, viewBox } _ = do
     Canvas.fillPath context do
       Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r, useCounterClockwise: false }
     Canvas.setStrokeStyle context "#888888"
-    Canvas.setLineWidth context $ scale.width.toCr 25.0
+    Canvas.setLineWidth context $ 25.0 @>> page
     Canvas.strokePath context do
       Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r, useCounterClockwise: false }
 
   drawNumbers :: Effect Unit
   drawNumbers = do
     let
-      size = floor $ scale.width.toCr 78.0
+      size = floor $ 78.0 @>> page
     Canvas.setFillStyle context "black"
     Canvas.setFont context $ show size <> "pt Georgia"
     Canvas.setTextAlign context Canvas.AlignCenter
@@ -104,7 +105,7 @@ render context _ scale@{ toRectangle, screen, viewBox } _ = do
       x = clock.x + (0.775 * clock.r * cos angle)
 
       -- Graphics.Canvas doesn't have setTextBaseline, so push the numbers down a little
-      y = clock.y + (0.775 * clock.r * sin angle + scale.height.toCr 30.0)
+      y = clock.y + (0.775 * clock.r * sin angle + (30.0 @^^ page))
     Canvas.fillText context (show i) x y
 
   drawHashes :: Effect Unit
@@ -116,9 +117,9 @@ render context _ scale@{ toRectangle, screen, viewBox } _ = do
   drawHash :: Int -> Effect Unit
   drawHash i = do
     if i `mod` 5 == 0 then
-      Canvas.setLineWidth context $ scale.width.toCr 9.0
+      Canvas.setLineWidth context $ 9.0 @>> page
     else
-      Canvas.setLineWidth context $ scale.width.toCr 3.0
+      Canvas.setLineWidth context $ 3.0 @>> page
     let
       angle = (_ * (tau / 60.0)) <<< toNumber $ i
     drawLineSegment angle 0.9 0.95
@@ -129,7 +130,7 @@ render context _ scale@{ toRectangle, screen, viewBox } _ = do
       angle = (_ - eta) <<< (_ * (tau / 12.0)) $ (_ + (minute / 60.0)) $ hour
     Canvas.setLineCap context Canvas.Round
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ scale.width.toCr 16.0
+    Canvas.setLineWidth context $ 16.0 @>> page
     drawLineSegment angle (-0.1) 0.5
 
   drawMinuteHand :: Number -> Number -> Effect Unit
@@ -138,7 +139,7 @@ render context _ scale@{ toRectangle, screen, viewBox } _ = do
       angle = (_ - eta) <<< (_ * (tau / 60.0)) $ (_ + (second / 60.0)) $ minute
     Canvas.setLineCap context Canvas.Round
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ scale.width.toCr 16.0
+    Canvas.setLineWidth context $ 16.0 @>> page
     drawLineSegment angle (-0.1) 0.7
 
   drawSecondHand :: Number -> Effect Unit
@@ -147,9 +148,9 @@ render context _ scale@{ toRectangle, screen, viewBox } _ = do
       angle = (_ - eta) <<< (_ * (tau / 60.0)) $ second
     Canvas.setLineCap context Canvas.Square
     Canvas.setStrokeStyle context "#DD0000"
-    Canvas.setLineWidth context $ scale.width.toCr 7.0
+    Canvas.setLineWidth context $ 7.0 @>> page
     drawLineSegment angle (-0.2) 0.7
-    Canvas.setLineWidth context $ scale.width.toCr 16.0
+    Canvas.setLineWidth context $ 16.0 @>> page
     Canvas.setLineCap context Canvas.Round
     drawLineSegment angle (-0.2) (-0.1)
 
