@@ -370,8 +370,8 @@ type Scaler =
       }
   , toRectangle :: forall d. Dimensioned d => d -> Rectangle
   , scaler ::
-      { page :: forall r. Gesso.Scale.Scaler Gesso.Scale.Page r
-      , drawing :: forall r. Gesso.Scale.Scaler Gesso.Scale.Drawing r
+      { page :: forall r. Gesso.Scale.Scaler Gesso.Scale.Page (Gesso.Scale.Rectangular' Number r)
+      , drawing :: forall r. Gesso.Scale.Scaler Gesso.Scale.Drawing (Gesso.Scale.Rectangular' Number r)
       }
   }
 
