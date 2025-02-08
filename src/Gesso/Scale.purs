@@ -5,20 +5,20 @@ module Gesso.Scale
   , (@^)
   , (@^^)
   , CoordinateSystem(..)
-  , Dimensioned
-  , Dimensioned'
   , Drawing
   , Page
   , Rect
   , Rect'
+  , Rectangular
+  , Rectangular'
   , Scaler
   , ScalingFunctions
+  , heightTo
   , mkScalers
-  , scale
-  , scaleHeight
-  , scaleWidth
-  , scaleX
-  , scaleY
+  , to
+  , widthTo
+  , xTo
+  , yTo
   ) where
 
 import Prelude hiding (flip)
@@ -34,8 +34,8 @@ import Type.RowList (class RowToList)
 -- │ Dimension & scaling types │
 -- └───────────────────────────┘
 
-type Dimensioned' :: Type -> Row Type -> Row Type
-type Dimensioned' a r =
+type Rectangular' :: Type -> Row Type -> Row Type
+type Rectangular' a r =
   ( x :: a
   , y :: a
   , width :: a
@@ -43,17 +43,17 @@ type Dimensioned' a r =
   | r
   )
 
-type Dimensioned :: Type -> Row Type -> Type
-type Dimensioned a r = { | Dimensioned' a r }
+type Rectangular :: Type -> Row Type -> Type
+type Rectangular a r = { | Rectangular' a r }
 
 type Rect' :: Row Type
-type Rect' = Dimensioned' Number ()
+type Rect' = Rectangular' Number ()
 
 type Rect :: Type
 type Rect = Record Rect'
 
 type ScalingFunctions :: Row Type
-type ScalingFunctions = Dimensioned' (Number -> Number) ()
+type ScalingFunctions = Rectangular' (Number -> Number) ()
 
 data CoordinateSystem
 
@@ -81,7 +81,7 @@ fill
   => Builder (Record partial) (Record complete)
 fill = flip merge defaults
 
-scale
+to
   :: forall partial u complete keys filler c
    . Union partial Rect' u
   => Nub u complete
@@ -91,25 +91,25 @@ scale
   => Record partial
   -> Scaler c complete
   -> Record partial
-scale r { scaler } = pick $ build (scaler <<< fill) r
+to r { scaler } = pick $ build (scaler <<< fill) r
 
-scaleX :: forall c r. Number -> Scaler c r -> Number
-scaleX n { x } = x n
+xTo :: forall c r. Number -> Scaler c r -> Number
+xTo n { x } = x n
 
-scaleY :: forall c r. Number -> Scaler c r -> Number
-scaleY n { y } = y n
+yTo :: forall c r. Number -> Scaler c r -> Number
+yTo n { y } = y n
 
-scaleWidth :: forall c r. Number -> Scaler c r -> Number
-scaleWidth n { width } = width n
+widthTo :: forall c r. Number -> Scaler c r -> Number
+widthTo n { width } = width n
 
-scaleHeight :: forall c r. Number -> Scaler c r -> Number
-scaleHeight n { height } = height n
+heightTo :: forall c r. Number -> Scaler c r -> Number
+heightTo n { height } = height n
 
-infix 2 scale as @@
-infix 2 scaleX as @>
-infix 2 scaleY as @^
-infix 2 scaleWidth as @>>
-infix 2 scaleHeight as @^^
+infix 2 to as @@
+infix 2 xTo as @>
+infix 2 yTo as @^
+infix 2 widthTo as @>>
+infix 2 heightTo as @^^
 
 mkScaler
   :: forall @l a t r
@@ -122,7 +122,7 @@ mkScaler = modify (Proxy @l)
 mkScalers
   :: forall @c r
    . Record ScalingFunctions
-  -> Scaler c (Dimensioned' Number r)
+  -> Scaler c (Rectangular' Number r)
 mkScalers { x, y, width, height } = { scaler, x, y, width, height }
   where
   scaler = mkScaler @"x" x
