@@ -20,6 +20,10 @@ Potential names:
   - the name of the function to get the element's page coordinates
 - `DOMRect`
   - the actual type of the `clientRect`
+- canvas
+  - this is also the coordinate system the Canvas functions use
+- context
+  - same reason
 
 The `ClientRect` type is maybe conflated with screen coordinates? It makes sense for `ClientRect` to represent the dimensions of the canvas element, but I don't think it should be a term for *any* pagespace coordinate.
 
@@ -29,12 +33,16 @@ User-supplied, with arbitrary "origin" and size. Origin might not be `(0, 0)`. F
 
 Potential names:
 
-- `ViewBox`
+- viewBox
   - same format as SVG `viewBox`
-- viewport
+- ~~viewport~~
+  - confusing because page boxes are traditionally called viewports
 - drawing
-- canvas
+- ~~canvas~~
+  - confusing because coordinates given to the Canvas drawing functions are in page coordinates, not drawing
 - app
+- camera?
+  - as in a camera in a 3d rendering
 
 ## Data types
 
@@ -91,3 +99,20 @@ View box/drawing ⇌ page/viewport/client rect:
 - rectangle (untagged point and size record)
 
 Convert dimensions to rectangle
+
+Operators (draft):
+
+- Convert record: `@@`
+- x: `@>`
+- y: `@^`
+- width: `@>>`
+- height: `@^^`
+
+## Flexibility
+
+Currently planning to allow converting any of x/y/width/height. It could support other aliases too for convenience:
+
+- `x1`, `x2`
+- `y1`, `y2`
+- `w`, `w1`, `w2`, `width1`, `width2`
+- `h`, `h1`, `h2`, `height1`, `height2`
