@@ -26,36 +26,36 @@ import Type.Proxy (Proxy(..))
 import Type.Row (class Cons, class Union, class Nub)
 import Type.RowList (class RowToList)
 
-main :: Effect Unit
-main = do
-  -- render =<< withConsole do
-  log "Conversions:"
-  log "  x: (_ * 2.0)"
-  log "  y: (_ * 10.0)"
+-- main :: Effect Unit
+-- main = do
+--   render =<< withConsole do
+--     log "Conversions:"
+--     log "  x: (_ * 2.0)"
+--     log "  y: (_ * 10.0)"
 
--- results <- runSpecT defaultConfig [ consoleReporter ] do
---   describe "Only convertable fields" do
+--   results <- runSpecT defaultConfig [ consoleReporter ] do
+--     describe "Only convertable fields" do
 
---     it "{ x1: 1.0 } == { x1: 2.0 }" $
---       convert { x1: 1.0 } `shouldEqual` { x1: 2.0 }
+--       it "{ x1: 1.0 } == { x1: 2.0 }" $
+--         convert { x1: 1.0 } `shouldEqual` { x1: 2.0 }
 
---     it "{ y2: 1.0 } == { y2: 10.0 }" $
---       convert { y2: 1.0 } `shouldEqual` { y2: 10.0 }
+--       it "{ y2: 1.0 } == { y2: 10.0 }" $
+--         convert { y2: 1.0 } `shouldEqual` { y2: 10.0 }
 
---     it "{ x1: 1.0, y1: 1.0 } == { x1: 2.0, y1: 10.0 }" $
---       convert { x1: 1.0, y1: 1.0 } `shouldEqual` { x1: 2.0, y1: 10.0 }
+--       it "{ x1: 1.0, y1: 1.0 } == { x1: 2.0, y1: 10.0 }" $
+--         convert { x1: 1.0, y1: 1.0 } `shouldEqual` { x1: 2.0, y1: 10.0 }
 
---     it "{ x1: 1.0, x2: 1.0 } == { x1: 2.0, x2: 2.0 }" $
---       convert { x1: 1.0, x2: 1.0 } `shouldEqual` { x1: 2.0, x2: 2.0 }
+--       it "{ x1: 1.0, x2: 1.0 } == { x1: 2.0, x2: 2.0 }" $
+--         convert { x1: 1.0, x2: 1.0 } `shouldEqual` { x1: 2.0, x2: 2.0 }
 
---     it "{ x1: 1.0, y1: 1.0, x2: 1.0, y2: 1.0 } == { x1: 2.0, y1: 10.0, x2: 2.0, y2: 10.0 }" $
---       convert { x1: 1.0, y1: 1.0, x2: 1.0, y2: 1.0 } `shouldEqual` { x1: 2.0, y1: 10.0, x2: 2.0, y2: 10.0 }
+--       it "{ x1: 1.0, y1: 1.0, x2: 1.0, y2: 1.0 } == { x1: 2.0, y1: 10.0, x2: 2.0, y2: 10.0 }" $
+--         convert { x1: 1.0, y1: 1.0, x2: 1.0, y2: 1.0 } `shouldEqual` { x1: 2.0, y1: 10.0, x2: 2.0, y2: 10.0 }
 
--- void $ launchAff do
---   a <- results
---   liftEffect $ render =<< withConsole (logShow a)
+--   void $ launchAff do
+--     a <- results
+--     liftEffect $ render =<< withConsole (logShow a)
 
--- render =<< withConsole (log "After")
+--   render =<< withConsole (log "After")
 
 {-
   Main goal: convert arbitrary records between coordinate systems
@@ -86,39 +86,46 @@ conversions =
 defaults :: { | Fields Number }
 defaults = { x1: 0.0, y1: 0.0, x2: 0.0, y2: 0.0 }
 
-tst :: { x1 :: Number, y1 :: Number, x2 :: Number, y2 :: Number }
-tst = convert defaults { x1: 1.0, y1: 1.0, x2: 1.0, y2: 1.0 }
+tst1 :: { x1 :: Number, y1 :: Number, x2 :: Number, y2 :: Number }
+tst1 = convert { x1: 1.0, y1: 1.0, x2: 1.0, y2: 1.0 }
 
-convert
+tst2 :: { x1 :: Number }
+tst2 = convert { x1: 1.0 }
+
+convert = convert' @"x1" @"x2" @"y1" @"y2"
+
+convert'
   :: forall
        row union complete
        lst r'
-       x1 tx1 x1ord x2 tx2 x2ord
-       y1 ty1 y1ord y2 ty2 y2ord
+       @x1 tx1 -- x1ord
+       @x2 tx2 -- x2ord
+       @y1 ty1 -- y1ord
+       @y2 ty2 -- y2ord
    . Union row (Fields Number) union
   => Union (Fields Number) row union
   => Nub union complete
   -- x1
-  => Compare "x1" x1 x1ord
-  => Ord.Equals EQ x1ord True
+  -- => Compare "x1" x1 x1ord
+  -- => Ord.Equals EQ x1ord True
   => Equals "x1" x1 True
   => IsSymbol x1
   => Cons x1 Number tx1 complete
   -- x2
-  => Compare "x2" x2 x2ord
-  => Ord.Equals EQ x2ord True
+  -- => Compare "x2" x2 x2ord
+  -- => Ord.Equals EQ x2ord True
   => Equals "x2" x2 True
   => IsSymbol x2
-  => Cons x2 Number tx1 complete
+  => Cons x2 Number tx2 complete
   -- y1
-  => Compare "y1" y1 y1ord
-  => Ord.Equals EQ y1ord True
+  -- => Compare "y1" y1 y1ord
+  -- => Ord.Equals EQ y1ord True
   => Equals "y1" y1 True
   => IsSymbol y1
   => Cons y1 Number ty1 complete
   -- y2
-  => Compare "y2" y2 y2ord
-  => Ord.Equals EQ y2ord True
+  -- => Compare "y2" y2 y2ord
+  -- => Ord.Equals EQ y2ord True
   => Equals "y2" y2 True
   => IsSymbol y2
   => Cons y2 Number ty2 complete
@@ -127,10 +134,10 @@ convert
   => Keys lst
   => Union row r' complete
   -- params
-  => { | Fields Number }
+  => {- { | Fields Number }
+  -> -} { | row }
   -> { | row }
-  -> { | row }
-convert d r = pick $ build (my2 <<< my1 <<< mx2 <<< mx1 <<< merge r) d
+convert' {- d -} r = pick $ build (my2 <<< my1 <<< mx2 <<< mx1 <<< merge r) defaults
   where
   mx1 = modify (Proxy @x1) conversions.x
   mx2 = modify (Proxy @x2) conversions.x
