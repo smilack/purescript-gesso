@@ -57,7 +57,7 @@ getF :: forall a @sym. IsSymbol sym => Map String (a -> a) -> Maybe (a -> a)
 getF = lookup $ reflectSymbol $ Proxy @sym
 
 class Scalable :: RowList Type -> Row Type -> Type -> Constraint
-class (RowToList r rl) <= Scalable rl r a | rl -> r a where
+class (RowToList r rl) <= Scalable rl r a | rl -> r where
   scaler :: Map String (a -> a) -> { | r } -> Builder {} { | r }
 
 instance
@@ -74,6 +74,19 @@ instance
       v' = fromMaybe identity f $ v
     in
       insert (Proxy @k) v'
+
+else instance
+  ( RowToList r (Cons k v Nil)
+  , IsSymbol k
+  , Cons k v () r
+  ) =>
+  Scalable (Cons k v Nil) r a where
+  scaler :: Map String (a -> a) -> { | r } -> Builder {} { | r }
+  scaler _ r =
+    let
+      v = get (Proxy @k) r
+    in
+      insert (Proxy @k) v
 
 else instance
   ( RowToList r (Cons k a tl)
