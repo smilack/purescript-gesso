@@ -5,14 +5,19 @@ module Gesso.Dimensions6 where
 import Prelude
 -- import TryPureScript (render, withConsole)
 
+import Data.Maybe (Maybe(..))
+import Data.Either (either)
+import Data.Traversable (foldMap)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Effect.Console (log, logShow)
+import Effect.Console (log)
 -- import Test.Spec (pending, describe, it)
 -- import Test.Spec.Assertions (shouldEqual)
--- import Test.Spec.Runner (runSpecT, defaultConfig)
 -- import Test.Spec.Reporter (consoleReporter)
+-- import Test.Spec.Result (Result(..))
+-- import Test.Spec.Runner (runSpecT, defaultConfig)
+-- import Test.Spec.Tree (Tree(..))
 
 import Prim.Boolean (True)
 import Prim.Ordering (EQ)
@@ -29,12 +34,12 @@ import Type.RowList (class RowToList)
 -- main :: Effect Unit
 -- main = do
 --   render =<< withConsole do
---     log "Conversions:"
+--     log "Conversions functions:"
 --     log "  x: (_ * 2.0)"
 --     log "  y: (_ * 10.0)"
 
 --   results <- runSpecT defaultConfig [ consoleReporter ] do
---     describe "Only convertable fields" do
+--     describe "Only convertable fields:" do
 
 --       it "{ x1: 1.0 } == { x1: 2.0 }" $
 --         convert { x1: 1.0 } `shouldEqual` { x1: 2.0 }
@@ -51,11 +56,26 @@ import Type.RowList (class RowToList)
 --       it "{ x1: 1.0, y1: 1.0, x2: 1.0, y2: 1.0 } == { x1: 2.0, y1: 10.0, x2: 2.0, y2: 10.0 }" $
 --         convert { x1: 1.0, y1: 1.0, x2: 1.0, y2: 1.0 } `shouldEqual` { x1: 2.0, y1: 10.0, x2: 2.0, y2: 10.0 }
 
+--     describe "Extra fields:" do
+--       pending ""
+
+--     describe "No convertable fields:" do
+--       pending ""
+
 --   void $ launchAff do
 --     a <- results
---     liftEffect $ render =<< withConsole (logShow a)
+--     liftEffect $ render =<< withConsole (log $ printResults a)
 
---   render =<< withConsole (log "After")
+-- printResults :: Array (Tree String Void Result) -> String
+-- printResults = foldMap go
+--   where
+--   go = case _ of
+--     Node enc at -> "\n" <> either identity show enc <> foldMap go at <> "\n"
+--     Leaf n (Just a) ->
+--       case a of
+--         Success _ _ -> "\n ✓  " <> n
+--         Failure _ -> "\n  ✗ " <>  n
+--     Leaf n Nothing -> "\n (Nothing) " <> n
 
 {-
   Main goal: convert arbitrary records between coordinate systems
