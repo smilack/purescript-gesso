@@ -170,14 +170,14 @@ htol
   -> Proxy r
 htol _ = Proxy
 
-a0 :: Proxy ()
-a0 = htol (Proxy :: Proxy ())
+-- a0 :: Proxy ()
+-- a0 = htol (Proxy :: Proxy ())
 
-a1 :: Proxy (x :: Int)
-a1 = htol (Proxy :: Proxy (x :: Int))
+-- a1 :: Proxy (x :: Int)
+-- a1 = htol (Proxy :: Proxy (x :: Int))
 
-a2 :: Proxy (y :: Int)
-a2 = htol (Proxy :: Proxy (y :: Int))
+-- a2 :: Proxy (y :: Int)
+-- a2 = htol (Proxy :: Proxy (y :: Int))
 
 -- a3 :: Proxy (x :: Int, y :: Int)
 -- a3 = htol (Proxy :: Proxy (x :: Int, y :: Int))
