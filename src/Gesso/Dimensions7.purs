@@ -2,14 +2,16 @@ module Gesso.Dimensions7 where
 
 import Prelude
 
-import Data.Map (Map, fromFoldable, lookup)
+import Data.Map (Map)
+import Data.Map (fromFoldable, lookup) as Map
 import Data.Maybe (Maybe, fromMaybe)
 import Data.Symbol (reflectSymbol, class IsSymbol)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Effect.Console (logShow)
-import Record (get, delete)
-import Record.Builder (Builder, insert, buildFromScratch)
+import Record (get, delete) as Record
+import Record.Builder (Builder, buildFromScratch)
+import Record.Builder (insert) as Builder
 import Type.Proxy (Proxy(..))
 import Type.Row (class Cons, class Lacks)
 import Type.RowList (RowList, class RowToList, Cons, Nil)
@@ -25,36 +27,52 @@ scale :: forall rl r a. RowToList r rl => Scalable rl r a => Map String (a -> a)
 scale m r = buildFromScratch (scaler @rl m r)
 
 tst1 :: { x1 :: Number, y1 :: Number, x2 :: Number, y2 :: Number }
-tst1 = scale conversions { x1: 1.0, y1: 1.0, x2: 1.0, y2: 1.0 }
+tst1 = scale (toConversions fs) { x1: 1.0, y1: 1.0, x2: 1.0, y2: 1.0 }
 
 tst2 :: { x1 :: Number }
-tst2 = scale conversions { x1: 1.0 }
+tst2 = scale (toConversions fs) { x1: 1.0 }
 
 tst3 :: { z :: Number }
-tst3 = scale conversions { z: 1.0 }
+tst3 = scale (toConversions fs) { z: 1.0 }
 
 tst4 :: { x2 :: Number, y2 :: Number, z2 :: Number }
-tst4 = scale conversions { x2: 1.0, y2: 1.0, z2: 1.0 }
+tst4 = scale (toConversions fs) { x2: 1.0, y2: 1.0, z2: 1.0 }
 
-fs :: { x :: Number -> Number, y :: Number -> Number }
+type BasicConversions =
+  { x :: Number -> Number
+  , y :: Number -> Number
+  , width :: Number -> Number
+  , height :: Number -> Number
+  }
+
+fs :: BasicConversions
 fs =
   { x: (_ * 2.0)
   , y: (_ * 10.0)
+  , width: identity
+  , height: identity
   }
 
-type Fields :: Type -> Row Type
-type Fields a = (x1 :: a, y1 :: a, x2 :: a, y2 :: a)
-
-conversions :: Map String (Number -> Number)
-conversions = fromFoldable
-  [ "x1" /\ fs.x
-  , "x2" /\ fs.x
-  , "y1" /\ fs.y
-  , "y2" /\ fs.y
+toConversions :: BasicConversions -> Map String (Number -> Number)
+toConversions { x, y } = Map.fromFoldable
+  [ "x1" /\ x
+  , "x2" /\ x
+  , "y1" /\ y
+  , "y2" /\ y
   ]
 
-getF :: forall a @sym. IsSymbol sym => Map String (a -> a) -> Maybe (a -> a)
-getF = lookup $ reflectSymbol $ Proxy @sym
+--
+-- Scaler helper class
+--
+
+class Buildable :: Symbol -> Type -> Row Type -> Row Type -> Constraint
+class (IsSymbol k, Cons k a t r, Lacks k t) <= Buildable k a t r
+
+instance (IsSymbol k, Cons k a t r, Lacks k t) => Buildable k a t r
+
+--
+-- Scaler instances
+--
 
 class Scalable :: RowList Type -> Row Type -> Type -> Constraint
 class (RowToList r rl) <= Scalable rl r a | rl -> r where
@@ -62,90 +80,65 @@ class (RowToList r rl) <= Scalable rl r a | rl -> r where
 
 instance
   ( RowToList r (Cons k a Nil)
-  , IsSymbol k
-  , Cons k a () r
+  , Buildable k a () r
   ) =>
   Scalable (Cons k a Nil) r a where
-  scaler :: Map String (a -> a) -> { | r } -> Builder {} { | r }
-  scaler m r =
-    let
-      f = getF @k m
-      v = get (Proxy @k) r
-      v' = fromMaybe identity f $ v
-    in
-      insert (Proxy @k) v'
+  scaler = scalerSameType @k
 
 else instance
   ( RowToList r (Cons k v Nil)
-  , IsSymbol k
-  , Cons k v () r
+  , Buildable k v () r
   ) =>
   Scalable (Cons k v Nil) r a where
-  scaler :: Map String (a -> a) -> { | r } -> Builder {} { | r }
-  scaler _ r =
-    let
-      v = get (Proxy @k) r
-    in
-      insert (Proxy @k) v
+  scaler _ = scalerDiffType @k
 
 else instance
   ( RowToList r (Cons k a tl)
-  , IsSymbol k
-  , Cons k a t r
-  , Lacks k t
+  , Buildable k a t r
   , Scalable tl t a
   ) =>
   Scalable (Cons k a tl) r a where
-  scaler
-    :: Map String (a -> a)
-    -> { | r }
-    -> Builder {} { | r }
-  scaler m r =
-    let
-      t :: { | t }
-      t = delete (Proxy @k) r
-
-      tbuilder :: Builder {} { | t }
-      tbuilder = scaler @tl m t
-
-      f :: Maybe (a -> a)
-      f = getF @k m
-
-      v :: a
-      v = get (Proxy @k) r
-
-      v' :: a
-      v' = fromMaybe identity f $ v
-
-      rbuilder :: Builder { | t } { | r }
-      rbuilder = insert (Proxy @k) v'
-    in
-      rbuilder <<< tbuilder
+  scaler m r = scalerSameType @k m r <<< scaler @tl m (delete @k r)
 
 else instance
   ( RowToList r (Cons k v tl)
-  , IsSymbol k
-  , Cons k v t r
-  , Lacks k t
+  , Buildable k v t r
   , Scalable tl t a
   ) =>
   Scalable (Cons k v tl) r a where
-  scaler
-    :: Map String (a -> a)
-    -> { | r }
-    -> Builder {} { | r }
-  scaler m r =
-    let
-      t :: { | t }
-      t = delete (Proxy @k) r
+  scaler m r = scalerDiffType @k r <<< scaler @tl m (delete @k r)
 
-      tbuilder :: Builder {} { | t }
-      tbuilder = scaler @tl m t
+--
+-- Scaler impl
+--
 
-      v :: v
-      v = get (Proxy @k) r
+scalerSameType
+  :: forall @k a t r
+   . Buildable k a t r
+  => Map String (a -> a)
+  -> { | r }
+  -> Builder { | t } { | r }
+scalerSameType m = insert @k <<< fromMaybe identity (lookup @k m) <<< get @k
 
-      rbuilder :: Builder { | t } { | r }
-      rbuilder = insert (Proxy @k) v
-    in
-      rbuilder <<< tbuilder
+scalerDiffType
+  :: forall @k a t r
+   . Buildable k a t r
+  => { | r }
+  -> Builder { | t } { | r }
+scalerDiffType = insert @k <<< get @k
+
+--
+-- Aliases for functions that need proxies
+--
+
+lookup :: forall @k a. IsSymbol k => Map String (a -> a) -> Maybe (a -> a)
+lookup = Map.lookup $ reflectSymbol $ Proxy @k
+
+insert :: forall @k a t r. Buildable k a t r => a -> Builder { | t } { | r }
+insert = Builder.insert $ Proxy @k
+
+get :: forall @k a t r. Buildable k a t r => { | r } -> a
+get = Record.get $ Proxy @k
+
+delete :: forall @k a t r. Buildable k a t r => { | r } -> { | t }
+delete = Record.delete $ Proxy @k
