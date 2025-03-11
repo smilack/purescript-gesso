@@ -1,21 +1,20 @@
 module Gesso.Scale
-  ( (@<~)
-  , (@>)
-  , (@>>)
-  , (@^)
-  , (@^^)
+  ( (>>@)
+  , (@<~)
+  , (^^@)
   , (~>@)
+  , (~~@)
   , Dimensions
-  , Rectangular'
+  , Point
   , Scaler
   , ScalingFunctions
+  , Size
   , class Scalable
   , from
-  , heightTo
+  , lengthTo
   , mkScaler
   , scale
   , to
-  , widthTo
   , xTo
   , yTo
   ) where
@@ -31,26 +30,31 @@ import Record (delete, get) as Record
 import Record.Builder (Builder, buildFromScratch, nub)
 import Record.Builder (insert) as Builder
 import Type.Proxy (Proxy(..))
-import Type.Row (class Cons, class Lacks)
+import Type.Row (class Cons, class Lacks, type (+))
 import Type.RowList (RowList, class RowToList, Cons, Nil)
 
 -- ┌───────────────────────────┐
 -- │ Dimension & scaling types │
 -- └───────────────────────────┘
 
-type Rectangular' :: Type -> Row Type
-type Rectangular' a =
+type Point :: Type -> Row Type -> Row Type
+type Point a r =
   ( x :: a
   , y :: a
-  , width :: a
+  | r
+  )
+
+type Size :: Type -> Row Type
+type Size a =
+  ( width :: a
   , height :: a
   )
 
 type Dimensions :: Row Type
-type Dimensions = Rectangular' Number
+type Dimensions = Point Number + Size Number
 
 type ScalingFunctions :: Row Type
-type ScalingFunctions = Rectangular' (Number -> Number)
+type ScalingFunctions = Point (Number -> Number) + (length :: Number -> Number)
 
 type Scaler :: Type
 type Scaler =
@@ -95,18 +99,14 @@ xTo n { scaling: { x } } = x n
 yTo :: Number -> Scaler -> Number
 yTo n { scaling: { y } } = y n
 
-widthTo :: Number -> Scaler -> Number
-widthTo n { scaling: { width } } = width n
-
-heightTo :: Number -> Scaler -> Number
-heightTo n { scaling: { height } } = height n
+lengthTo :: Number -> Scaler -> Number
+lengthTo n { scaling: { length } } = length n
 
 infix 2 to as ~>@
 infix 2 from as @<~
-infix 2 xTo as @>
-infix 2 yTo as @^
-infix 2 widthTo as @>>
-infix 2 heightTo as @^^
+infix 2 xTo as >>@
+infix 2 yTo as ^^@
+infix 2 lengthTo as ~~@
 
 -- ┌─────────────────┐
 -- │ Scaler creation │
@@ -122,8 +122,7 @@ mkScaler rect fns =
   , scaling:
       { x: fns.x
       , y: fns.y
-      , width: fns.width
-      , height: fns.height
+      , length: fns.length
       , all
       }
   }
@@ -137,19 +136,22 @@ mkScaler rect fns =
   all = scale @rl $ toMap fns
 
 toMap :: { | ScalingFunctions } -> Map String (Number -> Number)
-toMap { x, y, width, height } = Map.fromFoldable
+toMap { x, y, length } = Map.fromFoldable
   [ "x" /\ x
   , "x1" /\ x
   , "x2" /\ x
   , "y" /\ y
   , "y1" /\ y
   , "y2" /\ y
-  , "width" /\ width
-  , "w" /\ width
-  , "height" /\ height
-  , "h" /\ height
-  , "radius" /\ width
-  , "r" /\ width
+  , "width" /\ length
+  , "w" /\ length
+  , "height" /\ length
+  , "h" /\ length
+  , "radius" /\ length
+  , "r" /\ length
+  , "length" /\ length
+  , "len" /\ length
+  , "l" /\ length
   ]
 
 -- | Walk through fields of record, if any value :: a, check if the map has a
