@@ -4,8 +4,7 @@ module Gesso.Scale
   , (@@)
   , (@^)
   , (@^^)
-  , Rect
-  , Rectangular
+  , Dimensions
   , Rectangular'
   , Scaler
   , ScalingFunctions
@@ -45,24 +44,25 @@ type Rectangular' a =
   , height :: a
   )
 
-type Rectangular :: Type -> Type
-type Rectangular a = { | Rectangular' a }
-
-type Rect :: Type
-type Rect = Rectangular Number
+type Dimensions :: Row Type
+type Dimensions = Rectangular' Number
 
 type ScalingFunctions :: Row Type
 type ScalingFunctions = Rectangular' (Number -> Number)
 
 type Scaler :: Type
 type Scaler =
-  { scaler ::
-      forall rl r
-       . RowToList r rl
-      => Scalable rl r Number
-      => { | r }
-      -> Builder {} { | r }
-  | ScalingFunctions
+  { scaling ::
+      { all ::
+          forall rl r
+           . RowToList r rl
+          => Scalable rl r Number
+          => { | r }
+          -> Builder {} { | r }
+      | ScalingFunctions
+      }
+  , rect :: { | Dimensions }
+  | Dimensions
   }
 
 -- ┌────────────────────┐
@@ -76,19 +76,19 @@ to
   => { | r }
   -> Scaler
   -> { | r }
-to r { scaler } = buildFromScratch $ scaler r
+to r { scaling: { all } } = buildFromScratch $ all r
 
 xTo :: Number -> Scaler -> Number
-xTo n { x } = x n
+xTo n { scaling: { x } } = x n
 
 yTo :: Number -> Scaler -> Number
-yTo n { y } = y n
+yTo n { scaling: { y } } = y n
 
 widthTo :: Number -> Scaler -> Number
-widthTo n { width } = width n
+widthTo n { scaling: { width } } = width n
 
 heightTo :: Number -> Scaler -> Number
-heightTo n { height } = height n
+heightTo n { scaling: { height } } = height n
 
 infix 2 to as @@
 infix 2 xTo as @>
@@ -100,16 +100,29 @@ infix 2 heightTo as @^^
 -- │ Scaler creation │
 -- └─────────────────┘
 
-mkScaler :: { | ScalingFunctions } -> Scaler
-mkScaler fns@{ x, y, width, height } = { scaler, x, y, width, height }
+mkScaler :: { | Dimensions } -> { | ScalingFunctions } -> Scaler
+mkScaler rect fns =
+  { x: rect.x
+  , y: rect.y
+  , width: rect.width
+  , height: rect.height
+  , rect
+  , scaling:
+      { x: fns.x
+      , y: fns.y
+      , width: fns.width
+      , height: fns.height
+      , all
+      }
+  }
   where
-  scaler
+  all
     :: forall rl r
      . RowToList r rl
     => Scalable rl r Number
     => { | r }
     -> Builder {} { | r }
-  scaler = scale @rl $ toMap fns
+  all = scale @rl $ toMap fns
 
 toMap :: { | ScalingFunctions } -> Map String (Number -> Number)
 toMap { x, y, width, height } = Map.fromFoldable
