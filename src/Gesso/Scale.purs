@@ -4,17 +4,14 @@ module Gesso.Scale
   , (@@)
   , (@^)
   , (@^^)
-  , CoordinateSystem(..)
-  , Drawing
-  , Page
   , Rect
-  , Rect'
   , Rectangular
   , Rectangular'
-  , Scaler
   , ScalingFunctions
+  , class ConvertableRecord
+  , convertRec
   , heightTo
-  , mkScalers
+  , mkScaler
   , to
   , widthTo
   , xTo
@@ -23,47 +20,42 @@ module Gesso.Scale
 
 import Prelude hiding (flip)
 
-import Record.Builder (modify, build, Builder, flip, merge)
-import Record.Extra (class Keys, pick)
-import Type.Prelude (class IsSymbol)
+import Data.Map (Map)
+import Data.Map (fromFoldable, lookup) as Map
+import Data.Maybe (Maybe, fromMaybe)
+import Data.Symbol (reflectSymbol, class IsSymbol)
+import Data.Tuple.Nested ((/\))
+import Record (delete, get, insert) as Record
+import Record.Builder (Builder, buildFromScratch, nub)
+import Record.Builder (insert) as Builder
 import Type.Proxy (Proxy(..))
-import Type.Row (class Cons, class Union, class Nub)
-import Type.RowList (class RowToList)
+import Type.Row (class Cons, class Lacks)
+import Type.RowList (RowList, class RowToList, Cons, Nil)
 
 -- ┌───────────────────────────┐
 -- │ Dimension & scaling types │
 -- └───────────────────────────┘
 
-type Rectangular' :: Type -> Row Type -> Row Type
-type Rectangular' a r =
+type Rectangular' :: Type -> Row Type
+type Rectangular' a =
   ( x :: a
   , y :: a
   , width :: a
   , height :: a
-  | r
   )
 
-type Rectangular :: Type -> Row Type -> Type
-type Rectangular a r = { | Rectangular' a r }
-
-type Rect' :: Row Type
-type Rect' = Rectangular' Number ()
+type Rectangular :: Type -> Type
+type Rectangular a = { | Rectangular' a }
 
 type Rect :: Type
-type Rect = Record Rect'
+type Rect = Rectangular Number
 
 type ScalingFunctions :: Row Type
-type ScalingFunctions = Rectangular' (Number -> Number) ()
+type ScalingFunctions = Rectangular' (Number -> Number)
 
-data CoordinateSystem
-
-foreign import data Page :: CoordinateSystem
-
-foreign import data Drawing :: CoordinateSystem
-
-type Scaler :: CoordinateSystem -> Row Type -> Type
-type Scaler c r =
-  { scaler :: Builder (Record r) (Record r)
+type Scaler :: Type
+type Scaler =
+  { scaler :: forall rl r. RowToList r rl => ConvertableRecord rl r Number => { | r } -> Builder {} { | r }
   | ScalingFunctions
   }
 
@@ -71,38 +63,19 @@ type Scaler c r =
 -- │ Scaling operations │
 -- └────────────────────┘
 
-defaults :: Rect
-defaults = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
+to :: forall rl r. RowToList r rl => ConvertableRecord rl r Number => { | r } -> Scaler -> { | r }
+to r { scaler } = buildFromScratch $ scaler r
 
-fill
-  :: forall partial union complete
-   . Union partial Rect' union
-  => Nub union complete
-  => Builder (Record partial) (Record complete)
-fill = flip merge defaults
-
-to
-  :: forall partial u complete keys filler c
-   . Union partial Rect' u
-  => Nub u complete
-  => RowToList partial keys
-  => Union partial filler complete
-  => Keys keys
-  => Record partial
-  -> Scaler c complete
-  -> Record partial
-to r { scaler } = pick $ build (scaler <<< fill) r
-
-xTo :: forall c r. Number -> Scaler c r -> Number
+xTo :: Number -> Scaler -> Number
 xTo n { x } = x n
 
-yTo :: forall c r. Number -> Scaler c r -> Number
+yTo :: Number -> Scaler -> Number
 yTo n { y } = y n
 
-widthTo :: forall c r. Number -> Scaler c r -> Number
+widthTo :: Number -> Scaler -> Number
 widthTo n { width } = width n
 
-heightTo :: forall c r. Number -> Scaler c r -> Number
+heightTo :: Number -> Scaler -> Number
 heightTo n { height } = height n
 
 infix 2 to as @@
@@ -111,21 +84,89 @@ infix 2 yTo as @^
 infix 2 widthTo as @>>
 infix 2 heightTo as @^^
 
-mkScaler
-  :: forall @l a t r
-   . IsSymbol l
-  => Cons l a t r
-  => (a -> a)
-  -> Builder (Record r) (Record r)
-mkScaler = modify (Proxy @l)
+-- ┌─────────────────┐
+-- │ Scaler creation │
+-- └─────────────────┘
 
-mkScalers
-  :: forall @c r
-   . Record ScalingFunctions
-  -> Scaler c (Rectangular' Number r)
-mkScalers { x, y, width, height } = { scaler, x, y, width, height }
+mkScaler :: { | ScalingFunctions } -> Scaler
+mkScaler fns@{ x, y, width, height } = { scaler, x, y, width, height }
   where
-  scaler = mkScaler @"x" x
-    <<< mkScaler @"y" y
-    <<< mkScaler @"width" width
-    <<< mkScaler @"height" height
+  scaler :: forall rl r. RowToList r rl => ConvertableRecord rl r Number => { | r } -> Builder {} { | r }
+  scaler = convertRec @rl $ toConvMap fns
+
+toConvMap :: { | ScalingFunctions } -> Map String (Number -> Number)
+toConvMap { x, y, width, height } = Map.fromFoldable
+  [ "x" /\ x
+  , "y" /\ y
+  , "width" /\ width
+  , "height" /\ height
+  ]
+
+-- Alias for three constraints that appear together a lot
+class CanInsert :: Symbol -> Type -> Row Type -> Row Type -> Constraint
+class (IsSymbol k, Cons k a t r, Lacks k t) <= CanInsert k a t r
+
+instance (IsSymbol k, Cons k a t r, Lacks k t) => CanInsert k a t r
+
+-- | Walk through fields of record, if any value :: a, check if the map has a
+-- | function with the same key, if so apply the function otherwise continue.
+class ConvertableRecord :: RowList Type -> Row Type -> Type -> Constraint
+class (RowToList r rl) <= ConvertableRecord rl r a | rl -> r where
+  convertRec :: Map String (a -> a) -> { | r } -> Builder {} { | r }
+
+instance convertableRecEmpty :: ConvertableRecord Nil () a where
+  convertRec _ _ = nub
+
+instance convertableRecConvertableType ::
+  ( RowToList r (Cons k a tl)
+  , CanInsert k a t r
+  , ConvertableRecord tl t a
+  ) =>
+  ConvertableRecord (Cons k a tl) r a where
+  convertRec m r = convertRecConvType @k m r <<< convertRecRecur @tl @k m r
+
+else instance convertableRecOtherType ::
+  ( RowToList r (Cons k v tl)
+  , CanInsert k v t r
+  , ConvertableRecord tl t a
+  ) =>
+  ConvertableRecord (Cons k v tl) r a where
+  convertRec m r = convertRecOtherType @k r <<< convertRecRecur @tl @k m r
+
+convertRecConvType
+  :: forall @k a t r
+   . CanInsert k a t r
+  => Map String (a -> a)
+  -> { | r }
+  -> Builder { | t } { | r }
+convertRecConvType m = insert @k <<< fromMaybe identity (lookup @k m) <<< get @k
+
+convertRecOtherType
+  :: forall @k a t r
+   . CanInsert k a t r
+  => { | r }
+  -> Builder { | t } { | r }
+convertRecOtherType = insert @k <<< get @k
+
+convertRecRecur
+  :: forall @tl @k a v t r
+   . RowToList t tl
+  => ConvertableRecord tl t a
+  => CanInsert k v t r
+  => Map String (a -> a)
+  -> { | r }
+  -> Builder {} { | t }
+convertRecRecur m = convertRec @tl m <<< delete @k
+
+-- Aliases for functions that use proxies
+lookup :: forall @k a. IsSymbol k => Map String (a -> a) -> Maybe (a -> a)
+lookup = Map.lookup $ reflectSymbol $ Proxy @k
+
+insert :: forall @k a t r. CanInsert k a t r => a -> Builder { | t } { | r }
+insert = Builder.insert $ Proxy @k
+
+get :: forall @k a t r. CanInsert k a t r => { | r } -> a
+get = Record.get $ Proxy @k
+
+delete :: forall @k a t r. CanInsert k a t r => { | r } -> { | t }
+delete = Record.delete $ Proxy @k
