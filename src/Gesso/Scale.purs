@@ -7,25 +7,26 @@ module Gesso.Scale
   , Rect
   , Rectangular
   , Rectangular'
+  , Scaler
   , ScalingFunctions
-  , class ConvertableRecord
-  , convertRec
+  , class Scalable
   , heightTo
   , mkScaler
+  , scale
   , to
   , widthTo
   , xTo
   , yTo
   ) where
 
-import Prelude hiding (flip)
+import Prelude
 
 import Data.Map (Map)
 import Data.Map (fromFoldable, lookup) as Map
 import Data.Maybe (Maybe, fromMaybe)
 import Data.Symbol (reflectSymbol, class IsSymbol)
 import Data.Tuple.Nested ((/\))
-import Record (delete, get, insert) as Record
+import Record (delete, get) as Record
 import Record.Builder (Builder, buildFromScratch, nub)
 import Record.Builder (insert) as Builder
 import Type.Proxy (Proxy(..))
@@ -55,7 +56,12 @@ type ScalingFunctions = Rectangular' (Number -> Number)
 
 type Scaler :: Type
 type Scaler =
-  { scaler :: forall rl r. RowToList r rl => ConvertableRecord rl r Number => { | r } -> Builder {} { | r }
+  { scaler ::
+      forall rl r
+       . RowToList r rl
+      => Scalable rl r Number
+      => { | r }
+      -> Builder {} { | r }
   | ScalingFunctions
   }
 
@@ -63,7 +69,13 @@ type Scaler =
 -- │ Scaling operations │
 -- └────────────────────┘
 
-to :: forall rl r. RowToList r rl => ConvertableRecord rl r Number => { | r } -> Scaler -> { | r }
+to
+  :: forall rl r
+   . RowToList r rl
+  => Scalable rl r Number
+  => { | r }
+  -> Scaler
+  -> { | r }
 to r { scaler } = buildFromScratch $ scaler r
 
 xTo :: Number -> Scaler -> Number
@@ -91,11 +103,16 @@ infix 2 heightTo as @^^
 mkScaler :: { | ScalingFunctions } -> Scaler
 mkScaler fns@{ x, y, width, height } = { scaler, x, y, width, height }
   where
-  scaler :: forall rl r. RowToList r rl => ConvertableRecord rl r Number => { | r } -> Builder {} { | r }
-  scaler = convertRec @rl $ toConvMap fns
+  scaler
+    :: forall rl r
+     . RowToList r rl
+    => Scalable rl r Number
+    => { | r }
+    -> Builder {} { | r }
+  scaler = scale @rl $ toMap fns
 
-toConvMap :: { | ScalingFunctions } -> Map String (Number -> Number)
-toConvMap { x, y, width, height } = Map.fromFoldable
+toMap :: { | ScalingFunctions } -> Map String (Number -> Number)
+toMap { x, y, width, height } = Map.fromFoldable
   [ "x" /\ x
   , "y" /\ y
   , "width" /\ width
@@ -110,53 +127,54 @@ instance (IsSymbol k, Cons k a t r, Lacks k t) => CanInsert k a t r
 
 -- | Walk through fields of record, if any value :: a, check if the map has a
 -- | function with the same key, if so apply the function otherwise continue.
-class ConvertableRecord :: RowList Type -> Row Type -> Type -> Constraint
-class (RowToList r rl) <= ConvertableRecord rl r a | rl -> r where
-  convertRec :: Map String (a -> a) -> { | r } -> Builder {} { | r }
+class Scalable :: RowList Type -> Row Type -> Type -> Constraint
+class (RowToList r rl) <= Scalable rl r a | rl -> r where
+  scale :: Map String (a -> a) -> { | r } -> Builder {} { | r }
 
-instance convertableRecEmpty :: ConvertableRecord Nil () a where
-  convertRec _ _ = nub
+instance scalableRecEmpty :: Scalable Nil () a where
+  scale _ _ = nub
 
-instance convertableRecConvertableType ::
+instance scalableRecScalableType ::
   ( RowToList r (Cons k a tl)
   , CanInsert k a t r
-  , ConvertableRecord tl t a
+  , Scalable tl t a
   ) =>
-  ConvertableRecord (Cons k a tl) r a where
-  convertRec m r = convertRecConvType @k m r <<< convertRecRecur @tl @k m r
+  Scalable (Cons k a tl) r a where
+  scale m r = scaleRecScalableType @k m r <<< scaleRecRecur @tl @k m r
 
-else instance convertableRecOtherType ::
+else instance scalableRecOtherType ::
   ( RowToList r (Cons k v tl)
   , CanInsert k v t r
-  , ConvertableRecord tl t a
+  , Scalable tl t a
   ) =>
-  ConvertableRecord (Cons k v tl) r a where
-  convertRec m r = convertRecOtherType @k r <<< convertRecRecur @tl @k m r
+  Scalable (Cons k v tl) r a where
+  scale m r = scaleRecOtherType @k r <<< scaleRecRecur @tl @k m r
 
-convertRecConvType
+scaleRecScalableType
   :: forall @k a t r
    . CanInsert k a t r
   => Map String (a -> a)
   -> { | r }
   -> Builder { | t } { | r }
-convertRecConvType m = insert @k <<< fromMaybe identity (lookup @k m) <<< get @k
+scaleRecScalableType m =
+  insert @k <<< fromMaybe identity (lookup @k m) <<< get @k
 
-convertRecOtherType
+scaleRecOtherType
   :: forall @k a t r
    . CanInsert k a t r
   => { | r }
   -> Builder { | t } { | r }
-convertRecOtherType = insert @k <<< get @k
+scaleRecOtherType = insert @k <<< get @k
 
-convertRecRecur
+scaleRecRecur
   :: forall @tl @k a v t r
    . RowToList t tl
-  => ConvertableRecord tl t a
+  => Scalable tl t a
   => CanInsert k v t r
   => Map String (a -> a)
   -> { | r }
   -> Builder {} { | t }
-convertRecRecur m = convertRec @tl m <<< delete @k
+scaleRecRecur m = scale @tl m <<< delete @k
 
 -- Aliases for functions that use proxies
 lookup :: forall @k a. IsSymbol k => Map String (a -> a) -> Maybe (a -> a)

@@ -43,7 +43,7 @@ input =
   }
 
 render :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GLerp.Lerp Unit -> Effect Unit
-render context _ { toRectangle, screen, viewBox, scaler: { page } } _ = do
+render context _ { toRectangle, screen, viewBox, scaler: { canvas } } _ = do
   -- Clear background
   Canvas.setFillStyle context "white"
   Canvas.fillRect context (toRectangle screen)
@@ -57,12 +57,12 @@ render context _ { toRectangle, screen, viewBox, scaler: { page } } _ = do
   -- Center dot
   Canvas.setFillStyle context "#888888"
   Canvas.fillPath context do
-    Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: 15.0 @>> page, useCounterClockwise: false }
+    Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: 15.0 @>> canvas, useCounterClockwise: false }
   where
   clock =
-    { x: (GDim.getWidth viewBox) / 2.0 @> page
-    , y: (GDim.getHeight viewBox) / 2.0 @^ page
-    , r: 500.0 @>> page
+    { x: (GDim.getWidth viewBox) / 2.0 @> canvas
+    , y: (GDim.getHeight viewBox) / 2.0 @^ canvas
+    , r: 500.0 @>> canvas
     }
 
   eta = pi / 2.0
@@ -84,14 +84,14 @@ render context _ { toRectangle, screen, viewBox, scaler: { page } } _ = do
     Canvas.fillPath context do
       Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r, useCounterClockwise: false }
     Canvas.setStrokeStyle context "#888888"
-    Canvas.setLineWidth context $ 25.0 @>> page
+    Canvas.setLineWidth context $ 25.0 @>> canvas
     Canvas.strokePath context do
       Canvas.arc context { x: clock.x, y: clock.y, start: 0.0, end: tau, radius: clock.r, useCounterClockwise: false }
 
   drawNumbers :: Effect Unit
   drawNumbers = do
     let
-      size = floor $ 78.0 @>> page
+      size = floor $ 78.0 @>> canvas
     Canvas.setFillStyle context "black"
     Canvas.setFont context $ show size <> "pt Georgia"
     Canvas.setTextAlign context Canvas.AlignCenter
@@ -105,7 +105,7 @@ render context _ { toRectangle, screen, viewBox, scaler: { page } } _ = do
       x = clock.x + (0.775 * clock.r * cos angle)
 
       -- Graphics.Canvas doesn't have setTextBaseline, so push the numbers down a little
-      y = clock.y + (0.775 * clock.r * sin angle + (30.0 @^^ page))
+      y = clock.y + (0.775 * clock.r * sin angle + (30.0 @^^ canvas))
     Canvas.fillText context (show i) x y
 
   drawHashes :: Effect Unit
@@ -117,9 +117,9 @@ render context _ { toRectangle, screen, viewBox, scaler: { page } } _ = do
   drawHash :: Int -> Effect Unit
   drawHash i = do
     if i `mod` 5 == 0 then
-      Canvas.setLineWidth context $ 9.0 @>> page
+      Canvas.setLineWidth context $ 9.0 @>> canvas
     else
-      Canvas.setLineWidth context $ 3.0 @>> page
+      Canvas.setLineWidth context $ 3.0 @>> canvas
     let
       angle = (_ * (tau / 60.0)) <<< toNumber $ i
     drawLineSegment angle 0.9 0.95
@@ -130,7 +130,7 @@ render context _ { toRectangle, screen, viewBox, scaler: { page } } _ = do
       angle = (_ - eta) <<< (_ * (tau / 12.0)) $ (_ + (minute / 60.0)) $ hour
     Canvas.setLineCap context Canvas.Round
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ 16.0 @>> page
+    Canvas.setLineWidth context $ 16.0 @>> canvas
     drawLineSegment angle (-0.1) 0.5
 
   drawMinuteHand :: Number -> Number -> Effect Unit
@@ -139,7 +139,7 @@ render context _ { toRectangle, screen, viewBox, scaler: { page } } _ = do
       angle = (_ - eta) <<< (_ * (tau / 60.0)) $ (_ + (second / 60.0)) $ minute
     Canvas.setLineCap context Canvas.Round
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ 16.0 @>> page
+    Canvas.setLineWidth context $ 16.0 @>> canvas
     drawLineSegment angle (-0.1) 0.7
 
   drawSecondHand :: Number -> Effect Unit
@@ -148,9 +148,9 @@ render context _ { toRectangle, screen, viewBox, scaler: { page } } _ = do
       angle = (_ - eta) <<< (_ * (tau / 60.0)) $ second
     Canvas.setLineCap context Canvas.Square
     Canvas.setStrokeStyle context "#DD0000"
-    Canvas.setLineWidth context $ 7.0 @>> page
+    Canvas.setLineWidth context $ 7.0 @>> canvas
     drawLineSegment angle (-0.2) 0.7
-    Canvas.setLineWidth context $ 16.0 @>> page
+    Canvas.setLineWidth context $ 16.0 @>> canvas
     Canvas.setLineCap context Canvas.Round
     drawLineSegment angle (-0.2) (-0.1)
 
