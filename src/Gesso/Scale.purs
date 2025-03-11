@@ -63,6 +63,7 @@ type Scaler =
           -> Builder {} { | r }
       | ScalingFunctions
       }
+  , rect :: { | Dimensions }
   | Dimensions
   }
 
@@ -117,6 +118,7 @@ mkScaler rect fns =
   , y: rect.y
   , width: rect.width
   , height: rect.height
+  , rect
   , scaling:
       { x: fns.x
       , y: fns.y
