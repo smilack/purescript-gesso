@@ -140,12 +140,6 @@ toMap { x, y, width, height } = Map.fromFoldable
   , "r" /\ width
   ]
 
--- Alias for three constraints that appear together a lot
-class CanInsert :: Symbol -> Type -> Row Type -> Row Type -> Constraint
-class (IsSymbol k, Cons k a t r, Lacks k t) <= CanInsert k a t r
-
-instance (IsSymbol k, Cons k a t r, Lacks k t) => CanInsert k a t r
-
 -- | Walk through fields of record, if any value :: a, check if the map has a
 -- | function with the same key, if so apply the function otherwise continue.
 class Scalable :: RowList Type -> Row Type -> Type -> Constraint
@@ -157,7 +151,9 @@ instance scalableRecEmpty :: Scalable Nil () a where
 
 instance scalableRecScalableType ::
   ( RowToList r (Cons k a tl)
-  , CanInsert k a t r
+  , IsSymbol k
+  , Cons k a t r
+  , Lacks k t
   , Scalable tl t a
   ) =>
   Scalable (Cons k a tl) r a where
@@ -165,7 +161,9 @@ instance scalableRecScalableType ::
 
 else instance scalableRecOtherType ::
   ( RowToList r (Cons k v tl)
-  , CanInsert k v t r
+  , IsSymbol k
+  , Cons k v t r
+  , Lacks k t
   , Scalable tl t a
   ) =>
   Scalable (Cons k v tl) r a where
@@ -173,7 +171,9 @@ else instance scalableRecOtherType ::
 
 scaleRecScalableType
   :: forall @k a t r
-   . CanInsert k a t r
+   . IsSymbol k
+  => Cons k a t r
+  => Lacks k t
   => Map String (a -> a)
   -> { | r }
   -> Builder { | t } { | r }
@@ -182,7 +182,9 @@ scaleRecScalableType m =
 
 scaleRecOtherType
   :: forall @k a t r
-   . CanInsert k a t r
+   . IsSymbol k
+  => Cons k a t r
+  => Lacks k t
   => { | r }
   -> Builder { | t } { | r }
 scaleRecOtherType = insert @k <<< get @k
@@ -191,7 +193,9 @@ scaleRecRecur
   :: forall @tl @k a v t r
    . RowToList t tl
   => Scalable tl t a
-  => CanInsert k v t r
+  => IsSymbol k
+  => Cons k v t r
+  => Lacks k t
   => Map String (a -> a)
   -> { | r }
   -> Builder {} { | t }
@@ -201,11 +205,23 @@ scaleRecRecur m = scale @tl m <<< delete @k
 lookup :: forall @k a. IsSymbol k => Map String (a -> a) -> Maybe (a -> a)
 lookup = Map.lookup $ reflectSymbol $ Proxy @k
 
-insert :: forall @k a t r. CanInsert k a t r => a -> Builder { | t } { | r }
+insert
+  :: forall @k a t r
+   . IsSymbol k
+  => Cons k a t r
+  => Lacks k t
+  => a
+  -> Builder { | t } { | r }
 insert = Builder.insert $ Proxy @k
 
-get :: forall @k a t r. CanInsert k a t r => { | r } -> a
+get :: forall @k a t r. IsSymbol k => Cons k a t r => Lacks k t => { | r } -> a
 get = Record.get $ Proxy @k
 
-delete :: forall @k a t r. CanInsert k a t r => { | r } -> { | t }
+delete
+  :: forall @k a t r
+   . IsSymbol k
+  => Cons k a t r
+  => Lacks k t
+  => { | r }
+  -> { | t }
 delete = Record.delete $ Proxy @k
