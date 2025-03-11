@@ -420,7 +420,7 @@ queueAnimationFrame lastTime toIntRatio context scaler stateHistory app notify =
 
     history <- tryUpdate scaler (app.update delta) (pure stateHistory)
 
-    when stateHistory.changed
+    when history.changed
       $ notify
       $ StateUpdated delta scaler { old: history.original, new: history.new }
 
