@@ -47,14 +47,14 @@ canvasInput =
   }
 
 fixedUpdate :: Time.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
-fixedUpdate { delta } scale { ball, seconds } = do
+fixedUpdate { delta } { scaler: { canvas } } { ball, seconds } = do
   pure $ Just $
     { ball: move { min, max } delta ball
     , seconds: seconds + delta / 1000.0
     }
   where
-  min = GDims.getX scale.screen
-  max = min + GDims.getWidth scale.screen
+  min = canvas.x
+  max = min + canvas.width
 
 move :: { min :: Number, max :: Number } -> Number -> Ball -> Ball
 move { min, max } dt ball@{ x, vx, r } = ball { x = x', vx = vx' }

@@ -22,6 +22,7 @@ import Gesso.Canvas as GC
 import Gesso.Dimensions as GDim
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
+import Gesso.Scale ((>>@), (^^@), (~>@), (~~@))
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -145,13 +146,13 @@ highlightCell = GInt.Interaction GEv.onMouseMove getMousePos
         Just state { mouseCell = Just { x, y } }
 
 toXY :: GEv.MouseEvent -> GDim.Scaler -> { x :: Int, y :: Int }
-toXY event scale =
+toXY event { scaler: { drawing } } =
   let
-    point = scale.point.toVb (GDim.fromMouseEvent event)
+    point = GDim.fromMouseEvent event
 
-    x = floor $ GDim.getX point
+    x = floor $ GDim.getX point >>@ drawing
 
-    y = floor $ GDim.getY point
+    y = floor $ GDim.getY point ^^@ drawing
   in
     { x, y }
 
@@ -173,7 +174,7 @@ mouseUp :: GInt.Interaction GEv.MouseEvent CanvasState
 mouseUp = GInt.Interaction GEv.onMouseUp (\_ _ _ s -> pure $ Just s { mouseDown = false })
 
 renderApp :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GLerp.Lerp CanvasState -> Effect Unit
-renderApp context _ scale { new: { mouseCell, showGrid, color, pixels } } = do
+renderApp context _ { scaler: { canvas } } { new: { mouseCell, showGrid, color, pixels } } = do
   clearBackground
   drawOutline
   when showGrid drawGrid
@@ -183,13 +184,13 @@ renderApp context _ scale { new: { mouseCell, showGrid, color, pixels } } = do
   clearBackground :: Effect Unit
   clearBackground = do
     Canvas.setFillStyle context "white"
-    Canvas.fillRect context (scale.toRectangle scale.screen)
+    Canvas.fillRect context canvas.rect
 
   drawOutline :: Effect Unit
   drawOutline = do
-    Canvas.setLineWidth context $ scale.width.toCr 0.05
+    Canvas.setLineWidth context $ 0.05 ~~@ canvas
     Canvas.setStrokeStyle context "#888"
-    Canvas.strokeRect context (scale.toRectangle scale.screen)
+    Canvas.strokeRect context canvas.rect
 
   drawGrid :: Effect Unit
   drawGrid = do
@@ -199,10 +200,10 @@ renderApp context _ scale { new: { mouseCell, showGrid, color, pixels } } = do
   drawGridLine :: Int -> Effect Unit
   drawGridLine i = do
     Canvas.strokePath context do
-      Canvas.moveTo context (scale.x.toCr n) (scale.y.toCr 0.0)
-      Canvas.lineTo context (scale.x.toCr n) (scale.y.toCr 32.0)
-      Canvas.moveTo context (scale.x.toCr 0.0) (scale.y.toCr n)
-      Canvas.lineTo context (scale.x.toCr 32.0) (scale.y.toCr n)
+      Canvas.moveTo context (n >>@ canvas) (0.0 ^^@ canvas)
+      Canvas.lineTo context (n >>@ canvas) (32.0 ^^@ canvas)
+      Canvas.moveTo context (0.0 >>@ canvas) (n ^^@ canvas)
+      Canvas.lineTo context (32.0 >>@ canvas) (n ^^@ canvas)
     where
     n = toNumber i
 
@@ -215,4 +216,5 @@ renderApp context _ scale { new: { mouseCell, showGrid, color, pixels } } = do
   drawPixel :: Pixel -> Effect Unit
   drawPixel (Pixel { x, y, color: c }) = do
     Canvas.setFillStyle context c
-    Canvas.fillRect context { x: scale.x.toCr $ toNumber x, y: scale.y.toCr $ toNumber y, width: scale.width.toCr 1.0, height: scale.height.toCr 1.0 }
+    Canvas.fillRect context $
+      { x: toNumber x, y: toNumber y, width: 1.0, height: 1.0 } ~>@ canvas
