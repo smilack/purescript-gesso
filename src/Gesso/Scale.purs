@@ -127,9 +127,17 @@ mkScaler rect fns =
 toMap :: { | ScalingFunctions } -> Map String (Number -> Number)
 toMap { x, y, width, height } = Map.fromFoldable
   [ "x" /\ x
+  , "x1" /\ x
+  , "x2" /\ x
   , "y" /\ y
+  , "y1" /\ y
+  , "y2" /\ y
   , "width" /\ width
+  , "w" /\ width
   , "height" /\ height
+  , "h" /\ height
+  , "radius" /\ width
+  , "r" /\ width
   ]
 
 -- Alias for three constraints that appear together a lot
