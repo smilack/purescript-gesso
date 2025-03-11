@@ -38,18 +38,18 @@ canvasInput =
   }
 
 update :: GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
-update _ scale { x, vx, y, vy, radius } = pure $
+update _ { scaler: { canvas } } { x, vx, y, vy, radius } = pure $
   Just { x: x + vx', vx: vx', y: y + vy', vy: vy', radius }
   where
-  xMin = GDims.getX scale.screen
+  xMin = canvas.x
 
-  xMax = xMin + GDims.getWidth scale.screen
+  xMax = xMin + canvas.width
 
   vx' = updateV x radius xMin xMax vx
 
-  yMin = GDims.getY scale.screen
+  yMin = canvas.y
 
-  yMax = yMin + GDims.getHeight scale.screen
+  yMax = yMin + canvas.height
 
   vy' = updateV y radius yMin yMax vy
 
@@ -61,8 +61,8 @@ updateV position radius min max velocity
 
 render
   :: Canvas.Context2D -> GTime.Delta -> GDims.Scaler -> GLerp.Lerp State -> Effect Unit
-render context _ scale { new: { x, y, radius } } = do
-  Canvas.clearRect context (scale.toRectangle scale.screen)
+render context _ { scaler: { canvas } } { new: { x, y, radius } } = do
+  Canvas.clearRect context canvas.rect
   Canvas.setFillStyle context "red"
   Canvas.fillPath context do
     Canvas.arc context { x, y, radius, start: 0.0, end: 2.0 * pi, useCounterClockwise: false }

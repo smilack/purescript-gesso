@@ -73,7 +73,7 @@ keyUp = GInt.Interaction GEv.onKeyUp go
     _ -> Nothing
 
 update :: GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
-update _ scale state@{ x, y, radius, keys: { up, down, left, right } } = pure $
+update _ { scaler: { canvas } } state@{ x, y, radius, keys: { up, down, left, right } } = pure $
   Just
     state
       { x = updateP x radius xMin xMax vx
@@ -82,15 +82,15 @@ update _ scale state@{ x, y, radius, keys: { up, down, left, right } } = pure $
   where
   vx = getV left right
 
-  xMin = GDims.getX scale.screen
+  xMin = canvas.x
 
-  xMax = xMin + GDims.getWidth scale.screen
+  xMax = xMin + canvas.width
 
   vy = getV up down
 
-  yMin = GDims.getY scale.screen
+  yMin = canvas.y
 
-  yMax = yMin + GDims.getHeight scale.screen
+  yMax = yMin + canvas.height
 
 getV :: Boolean -> Boolean -> Number
 getV neg pos = case neg of
@@ -108,8 +108,8 @@ updateP p r min max v
   | otherwise = p + v
 
 render :: Canvas.Context2D -> GTime.Delta -> GDims.Scaler -> GLerp.Lerp State -> Effect Unit
-render context _ scale { new: { x, y, radius } } = do
-  Canvas.clearRect context (scale.toRectangle scale.screen)
+render context _ { scaler: { canvas } } { new: { x, y, radius } } = do
+  Canvas.clearRect context canvas.rect
   Canvas.setFillStyle context "red"
   Canvas.fillPath context do
     Canvas.arc context { x, y, radius, start: 0.0, end: 2.0 * pi, useCounterClockwise: false }
