@@ -15,7 +15,7 @@ import Gesso.Application as GApp
 import Gesso.Canvas (component, Input) as GC
 import Gesso.Dimensions as GDim
 import Gesso.Interactions as GInt
-import Gesso.Scale ((@>>), (@^^), to)
+import Gesso.Scale ((@>>), (@^^), (~>@))
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -63,7 +63,7 @@ render context _ { toRectangle, screen, scaler: { canvas, drawing } } _ = do
     { x: drawing.width / 2.0
     , y: drawing.height / 2.0
     , r: 500.0
-    } `to` canvas
+    } ~>@ canvas
 
   eta = pi / 2.0
 

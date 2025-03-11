@@ -1,14 +1,16 @@
 module Gesso.Scale
-  ( (@>)
+  ( (@<~)
+  , (@>)
   , (@>>)
-  , (@@)
   , (@^)
   , (@^^)
+  , (~>@)
   , Dimensions
   , Rectangular'
   , Scaler
   , ScalingFunctions
   , class Scalable
+  , from
   , heightTo
   , mkScaler
   , scale
@@ -78,6 +80,15 @@ to
   -> { | r }
 to r { scaling: { all } } = buildFromScratch $ all r
 
+from
+  :: forall rl r
+   . RowToList r rl
+  => Scalable rl r Number
+  => Scaler
+  -> { | r }
+  -> { | r }
+from = flip to
+
 xTo :: Number -> Scaler -> Number
 xTo n { scaling: { x } } = x n
 
@@ -90,7 +101,8 @@ widthTo n { scaling: { width } } = width n
 heightTo :: Number -> Scaler -> Number
 heightTo n { scaling: { height } } = height n
 
-infix 2 to as @@
+infix 2 to as ~>@
+infix 2 from as @<~
 infix 2 xTo as @>
 infix 2 yTo as @^
 infix 2 widthTo as @>>
