@@ -55,7 +55,7 @@ type ScalingFunctions = Rectangular' (Number -> Number)
 
 type Scaler :: Type
 type Scaler =
-  { conversions :: Map String (Number -> Number)
+  { scaler :: forall rl r. RowToList r rl => ConvertableRecord rl r Number => { | r } -> Builder {} { | r }
   | ScalingFunctions
   }
 
@@ -63,19 +63,8 @@ type Scaler =
 -- │ Scaling operations │
 -- └────────────────────┘
 
-mkScaler :: { | ScalingFunctions } -> Scaler
-mkScaler fns = Record.insert (Proxy @"conversions") (toConvMap fns) fns
-
 to :: forall rl r. RowToList r rl => ConvertableRecord rl r Number => { | r } -> Scaler -> { | r }
-to r { conversions } = buildFromScratch (convertRec @rl conversions r)
-
-toConvMap :: { | ScalingFunctions } -> Map String (Number -> Number)
-toConvMap { x, y, width, height } = Map.fromFoldable
-  [ "x" /\ x
-  , "y" /\ y
-  , "width" /\ width
-  , "height" /\ height
-  ]
+to r { scaler } = buildFromScratch $ scaler r
 
 xTo :: Number -> Scaler -> Number
 xTo n { x } = x n
@@ -95,12 +84,32 @@ infix 2 yTo as @^
 infix 2 widthTo as @>>
 infix 2 heightTo as @^^
 
--- | Alias for three constraints that appear together a lot
+-- ┌─────────────────┐
+-- │ Scaler creation │
+-- └─────────────────┘
+
+mkScaler :: { | ScalingFunctions } -> Scaler
+mkScaler fns@{ x, y, width, height } = { scaler, x, y, width, height }
+  where
+  scaler :: forall rl r. RowToList r rl => ConvertableRecord rl r Number => { | r } -> Builder {} { | r }
+  scaler = convertRec @rl $ toConvMap fns
+
+toConvMap :: { | ScalingFunctions } -> Map String (Number -> Number)
+toConvMap { x, y, width, height } = Map.fromFoldable
+  [ "x" /\ x
+  , "y" /\ y
+  , "width" /\ width
+  , "height" /\ height
+  ]
+
+-- Alias for three constraints that appear together a lot
 class CanInsert :: Symbol -> Type -> Row Type -> Row Type -> Constraint
 class (IsSymbol k, Cons k a t r, Lacks k t) <= CanInsert k a t r
 
 instance (IsSymbol k, Cons k a t r, Lacks k t) => CanInsert k a t r
 
+-- | Walk through fields of record, if any value :: a, check if the map has a
+-- | function with the same key, if so apply the function otherwise continue.
 class ConvertableRecord :: RowList Type -> Row Type -> Type -> Constraint
 class (RowToList r rl) <= ConvertableRecord rl r a | rl -> r where
   convertRec :: Map String (a -> a) -> { | r } -> Builder {} { | r }
@@ -149,10 +158,7 @@ convertRecRecur
   -> Builder {} { | t }
 convertRecRecur m = convertRec @tl m <<< delete @k
 
---
 -- Aliases for functions that use proxies
---
-
 lookup :: forall @k a. IsSymbol k => Map String (a -> a) -> Maybe (a -> a)
 lookup = Map.lookup $ reflectSymbol $ Proxy @k
 
