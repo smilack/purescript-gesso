@@ -416,13 +416,13 @@ mkScaler viewBox clientRect@(Dimensions _ crSize) =
       }
   , toRectangle
   , scaler:
-      { canvas: GS.mkScaler
+      { canvas: GS.mkScaler (toRectangle $ Dimensions origin crSize)
           { x: x'
           , y: y'
           , width: w'
           , height: h'
           }
-      , drawing: GS.mkScaler
+      , drawing: GS.mkScaler (toRectangle viewBox)
           { x: toVb.x'
           , y: toVb.y'
           , width: toVb.w'
