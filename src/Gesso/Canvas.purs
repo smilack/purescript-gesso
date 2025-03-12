@@ -23,7 +23,7 @@ import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as App
 import Gesso.Canvas.Element as GEl
-import Gesso.Dimensions as Dims
+import Gesso.Geometry as Geo
 import Gesso.Interactions as GI
 import Gesso.Time as T
 import Gesso.Util.Lerp (Versions, History)
@@ -62,8 +62,8 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |     element.
 -- |   - `canvas` is the canvas element.
 -- |   - `context` is the `Context2D` for the canvas element.
--- |   - `scaler` is the scaler record that converts between viewbox and client
--- |     rect coordinates.
+-- |   - `scalers` is a record containing scaling information for transforming
+-- |     coordinates between the drawing and the canvas.
 -- | - `subscriptions`: Event subscriptions created during initialization and
 -- |   kept until the application is destroyed.
 -- |   - `resize` is a subscription to window resize events, to re-check the
@@ -86,14 +86,14 @@ type State localState appInput appOutput =
   { name :: String
   , app :: App.AppSpec Context2D localState appInput appOutput
   , localState :: localState
-  , viewBox :: Dims.ViewBox
+  , viewBox :: Geo.Rect
   , interactions :: GI.Interactions localState
   , dom ::
       Maybe
-        { clientRect :: Dims.ClientRect
+        { clientRect :: Geo.Rect
         , canvas :: GEl.Canvas
         , context :: Context2D
-        , scaler :: Dims.Scaler
+        , scalers :: Geo.Scalers
         }
   , subscriptions ::
       Maybe
@@ -118,7 +118,7 @@ data Action localState
   | FirstTick (Action localState -> Effect Unit)
   | Tick (Action localState -> Effect Unit) T.Last
   | Finalize
-  | StateUpdated T.Delta Dims.Scaler (Versions localState)
+  | StateUpdated T.Delta Geo.Scalers (Versions localState)
   | QueueUpdate (App.UpdateFunction localState)
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
@@ -152,7 +152,7 @@ type Input localState appInput appOutput =
   { name :: String
   , app :: App.AppSpec Context2D localState appInput appOutput
   , localState :: localState
-  , viewBox :: Dims.ViewBox
+  , viewBox :: Geo.Rect
   , interactions :: GI.Interactions localState
   }
 
@@ -212,7 +212,7 @@ render
 render { name, dom, app, interactions } =
   HH.canvas $ [ id name, GEl.style app.window, tabIndex 0 ]
     <> GI.toProps QueueUpdate interactions
-    <> maybe [] Dims.toSizeProps (dom <#> _.clientRect)
+    <> maybe [] GEl.toSizeProps (dom <#> _.clientRect)
 
 -- | - `Initialize`: Create `subscriptions` and `dom` records, then recurse with
 -- |   `FirstTick` to request the first animation frame.
@@ -263,7 +263,7 @@ handleAction = case _ of
 
     results <- runMaybeT do
       { fixed } <- MaybeT $ H.gets _.timers
-      { context, scaler } <- MaybeT $ H.gets _.dom
+      { context, scalers } <- MaybeT $ H.gets _.dom
 
       lift $ H.liftEffect do
         -- schedule fixed updates
@@ -281,7 +281,7 @@ handleAction = case _ of
             }
         stateHistory <-
           foldr
-            (tryUpdate scaler)
+            (tryUpdate scalers)
             (pure initialHistory)
             (updateQueue <#> _.item)
 
@@ -289,7 +289,7 @@ handleAction = case _ of
           lastFrame
           (T.toRatio last interval)
           context
-          scaler
+          scalers
           stateHistory
           app
           notify
@@ -313,8 +313,8 @@ handleAction = case _ of
       stampedUpdate <- H.liftEffect $ T.stamp frame handlerFn
       H.modify_ (_ { pendingUpdates = stampedUpdate : pendingUpdates })
 
-  StateUpdated delta scaler stateVersions ->
-    saveNewState delta scaler stateVersions
+  StateUpdated delta scalers stateVersions ->
+    saveNewState delta scalers stateVersions
 
   FrameRequested rafId -> H.modify_ (_ { rafId = Just rafId })
 
@@ -357,13 +357,13 @@ initialize = do
     context <- GEl.getContextByAppName name
     canvas <- GEl.getCanvasByAppName name
     clientRect <- traverse GEl.getCanvasClientRect canvas
-    let scaler = Dims.mkScaler viewBox <$> clientRect
+    let scalers = Geo.mkScalers viewBox <$> clientRect
     pure $
-      { clientRect: _, canvas: _, context: _, scaler: _ }
+      { clientRect: _, canvas: _, context: _, scalers: _ }
         <$> clientRect
         <*> canvas
         <*> context
-        <*> scaler
+        <*> scalers
 
 -- | The reusable chunk of requesting an animation frame:
 -- |
@@ -406,25 +406,25 @@ queueAnimationFrame
    . T.Last
   -> (T.Now -> Number)
   -> Context2D
-  -> Dims.Scaler
+  -> Geo.Scalers
   -> History localState
   -> App.AppSpec Context2D localState appInput appOutput
   -> (Action localState -> Effect Unit)
   -> Effect Unit
-queueAnimationFrame lastTime toIntRatio context scaler stateHistory app notify =
+queueAnimationFrame lastTime toIntRatio context scalers stateHistory app notify =
   requestAnimationFrame rafCallback notify
   where
   rafCallback :: T.Now -> Effect Unit
   rafCallback timestamp = do
     let delta = T.delta timestamp lastTime
 
-    history <- tryUpdate scaler (app.update delta) (pure stateHistory)
+    history <- tryUpdate scalers (app.update delta) (pure stateHistory)
 
     when history.changed
       $ notify
-      $ StateUpdated delta scaler { old: history.original, new: history.new }
+      $ StateUpdated delta scalers { old: history.original, new: history.new }
 
-    app.render context delta scaler
+    app.render context delta scalers
       { old: history.old, new: history.new, t: toIntRatio timestamp }
 
 -- | Run an update function, using a current state if available, or an older one
@@ -433,17 +433,17 @@ queueAnimationFrame lastTime toIntRatio context scaler stateHistory app notify =
 -- | most current state.
 tryUpdate
   :: forall localState
-   . Dims.Scaler
-  -> (Dims.Scaler -> localState -> Effect (Maybe localState))
+   . Geo.Scalers
+  -> (Geo.Scalers -> localState -> Effect (Maybe localState))
   -> Effect (History localState)
   -> Effect (History localState)
-tryUpdate scaler update state = do
+tryUpdate scalers update state = do
   { original, new } <- state
-  update scaler new >>= case _ of
+  update scalers new >>= case _ of
     Nothing -> state
     Just new' -> pure { original, old: new, new: new', changed: true }
 
--- | Get a new `clientRect` for the `canvas` element and create a new scaler for
+-- | Get a new `clientRect` for the `canvas` element and create new scalers for
 -- | it, saving both to the component state.
 updateClientRect
   :: forall localState appInput appOutput action slots output m
@@ -457,7 +457,7 @@ updateClientRect = do
     clientRect <- GEl.getCanvasClientRect d.canvas
     pure d
       { clientRect = clientRect
-      , scaler = Dims.mkScaler viewBox clientRect
+      , scalers = Geo.mkScalers viewBox clientRect
       }
 
 -- | Unsubscribe from window resize events and paired listener/emitter.
@@ -517,7 +517,7 @@ saveNewState
   :: forall localState appInput appOutput slots m
    . MonadAff m
   => T.Delta
-  -> Dims.Scaler
+  -> Geo.Scalers
   -> Versions localState
   -> H.HalogenM
        (State localState appInput appOutput)
@@ -526,10 +526,10 @@ saveNewState
        (Output appOutput)
        m
        Unit
-saveNewState delta scaler stateVersions = do
+saveNewState delta scalers stateVersions = do
   { app: { output } } <- H.get
   H.modify_ (_ { localState = stateVersions.new })
-  mOutput <- liftEffect $ output delta scaler stateVersions
+  mOutput <- liftEffect $ output delta scalers stateVersions
   traverse_ (H.raise <<< Output) mOutput
 
 -- | Receiving input from the host application. Convert it into an `Update` and

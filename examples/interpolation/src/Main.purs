@@ -9,7 +9,7 @@ import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application (defaultApp, WindowMode(..))
 import Gesso.Canvas (Input)
-import Gesso.Dimensions as GDims
+import Gesso.Geometry as GGeo
 import Gesso.Interactions as Interactions
 import Gesso.Time (Delta, hz) as Time
 import Gesso.Util.Lerp (Lerp, lerp)
@@ -42,12 +42,12 @@ canvasInput =
       , render = render
       , fixed = { interval: Time.hz 20.0, function: fixedUpdate }
       }
-  , viewBox: GDims.p1080
+  , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
   , interactions: Interactions.default
   }
 
-fixedUpdate :: Time.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
-fixedUpdate { delta } { scaler: { canvas } } { ball, seconds } = do
+fixedUpdate :: Time.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
+fixedUpdate { delta } { canvas } { ball, seconds } = do
   pure $ Just $
     { ball: move { min, max } delta ball
     , seconds: seconds + delta / 1000.0
@@ -68,7 +68,7 @@ move { min, max } dt ball@{ x, vx, r } = ball { x = x', vx = vx' }
 render
   :: Canvas.Context2D
   -> Time.Delta
-  -> GDims.Scaler
+  -> GGeo.Scalers
   -> Lerp State
   -> Effect Unit
 render context _ _ { old, new: { ball, seconds }, t } = do

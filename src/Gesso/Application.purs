@@ -16,7 +16,7 @@ import Prelude
 
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Gesso.Dimensions as D
+import Gesso.Geometry as Geo
 import Gesso.Util.Lerp (Versions, Lerp)
 import Gesso.Time as T
 
@@ -45,7 +45,7 @@ defaultApp
   :: forall context local input output
    . AppSpec context local input output
 defaultApp =
-  { window: Fixed D.sizeless
+  { window: Fixed Geo.sizeless
   , render: \_ _ _ _ -> pure unit
   , fixed:
       { interval: T.never
@@ -64,7 +64,7 @@ defaultApp =
 -- | - `FullScreen` takes up the entire page from the top left corner to the
 -- |   bottom right.
 data WindowMode
-  = Fixed D.Size
+  = Fixed Geo.Area
   | Stretch
   | Fullscreen
 
@@ -73,23 +73,23 @@ data WindowMode
 -- | - `context` is the drawing context of canvas element, like `Context2D`
 -- | - `Delta` is a record containing current and previous timestamps and the
 -- |   time elapsed since the previous frame.
--- | - `Scaler` is a record containg scaling functions for converting canvas
--- |   coordinates to screen coordinates.
+-- | - `Scalers` is a record containing scaling information for transforming
+-- |   coordinates between the drawing and the canvas.
 -- | - `local` is the local state of the application, with `Lerp` being the two
 -- |   most recent states and the time progress between them.
 -- |
 -- | The render function may run any operations in `Effect`, not just functions
 -- | related to drawing on the canvas.
 type RenderFunction context local =
-  context -> T.Delta -> D.Scaler -> Lerp local -> Effect Unit
+  context -> T.Delta -> Geo.Scalers -> Lerp local -> Effect Unit
 
 -- | An function that may update the application state. It runs on every frame,
 -- | before the render function. It knows the following:
 -- |
 -- | - `Delta` is a record containing current and previous timestamps and the
 -- |   time elapsed since the previous frame.
--- | - `Scaler` is a record containg scaling functions for converting canvas
--- |   coordinates to screen coordinates.
+-- | - `Scalers` is a record containing scaling information for transforming
+-- |   coordinates between the drawing and the canvas.
 -- | - `local` is the local state of the application
 -- |
 -- | The update function may return a new local state if changes are necessary
@@ -102,7 +102,7 @@ type UpdateFunction local =
 
 -- | A partially applied `UpdateFunction` that already has the `Delta` record.
 type TimestampedUpdate local =
-  D.Scaler -> local -> Effect (Maybe local)
+  Geo.Scalers -> local -> Effect (Maybe local)
 
 -- | An update function that occurs at a fixed, regular interval, rather than on
 -- | every animation frame, which may vary.
@@ -120,4 +120,4 @@ type InputReceiver local input = input -> UpdateFunction local
 -- | the old and new local states and may send output to the component's parent
 -- | based on the difference.
 type OutputProducer local output =
-  T.Delta -> D.Scaler -> Versions local -> Effect (Maybe output)
+  T.Delta -> Geo.Scalers -> Versions local -> Effect (Maybe output)

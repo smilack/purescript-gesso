@@ -13,7 +13,7 @@ import Effect.Now (nowTime) as Now
 import Gesso (runGessoAff, awaitBody, run) as G
 import Gesso.Application as GApp
 import Gesso.Canvas (component, Input) as GC
-import Gesso.Dimensions as GDim
+import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.Geometry ((~~@), (~>@))
 import Gesso.Time as GTime
@@ -38,15 +38,15 @@ input =
         { window = GApp.Fullscreen
         , render = render
         }
-  , viewBox: GDim.p1080
+  , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
   , interactions: GInt.default
   }
 
-render :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GLerp.Lerp Unit -> Effect Unit
-render context _ { toRectangle, screen, scaler: { canvas, drawing } } _ = do
+render :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp Unit -> Effect Unit
+render context _ { canvas, drawing } _ = do
   -- Clear background
   Canvas.setFillStyle context "white"
-  Canvas.fillRect context (toRectangle screen)
+  Canvas.fillRect context canvas.rect
   drawFrame
   drawNumbers
   drawHashes

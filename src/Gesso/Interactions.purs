@@ -15,15 +15,17 @@ module Gesso.Interactions
   , Interaction(..)
   , Interactions
   , default
-  , toProps
+  , fromMouseEvent
   , mousePosition
+  , toProps
   ) where
 
 import Prelude
+import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import DOM.HTML.Indexed (HTMLcanvas)
 import Gesso.Application (UpdateFunction) as App
-import Gesso.Dimensions as Dims
+import Gesso.Geometry (Point) as Geo
 import Gesso.Interactions.Events as Events
 import Gesso.Interactions.Events
   ( Event
@@ -36,6 +38,7 @@ import Gesso.Interactions.Events
   , WheelEvent
   )
 import Halogen.HTML.Properties (IProp)
+import Web.UIEvent.MouseEvent (pageX, pageY) as MouseEvent
 
 -- | This is the type of the `on` functions from `Gesso.Interactions.Events`.
 -- | For example,
@@ -112,9 +115,14 @@ toProps
 -- | containing at least a `mousePos :: Maybe Gesso.Dimensions.Point` field.
 mousePosition
   :: forall moreState
-   . Interaction MouseEvent { mousePos :: Maybe Dims.Point | moreState }
-mousePosition =
-  Interaction Events.onMouseMove getMousePos
+   . Interaction MouseEvent { mousePos :: Maybe Geo.Point | moreState }
+mousePosition = Interaction Events.onMouseMove getMousePos
   where
   getMousePos event _ _ state = pure $
-    Just state { mousePos = Just $ Dims.fromMouseEvent event }
+    Just state { mousePos = Just $ fromMouseEvent event }
+
+fromMouseEvent :: MouseEvent -> Geo.Point
+fromMouseEvent event =
+  { x: toNumber $ MouseEvent.pageX event
+  , y: toNumber $ MouseEvent.pageY event
+  }
