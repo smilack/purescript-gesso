@@ -17,13 +17,13 @@ module Gesso.Geometry.Scaler
   ) where
 
 import Prelude
-import Gesso.Geometry.Dimensions (Point, Rect)
 
 import Data.Map (Map)
 import Data.Map (fromFoldable, lookup) as Map
 import Data.Maybe (Maybe, fromMaybe)
 import Data.Symbol (reflectSymbol, class IsSymbol)
 import Data.Tuple.Nested ((/\))
+import Gesso.Geometry.Dimensions (Position, Rect, Rectangular)
 import Record (delete, get) as Record
 import Record.Builder (Builder, buildFromScratch, nub)
 import Record.Builder (insert) as Builder
@@ -35,21 +35,23 @@ import Type.RowList (RowList, class RowToList, Cons, Nil)
 -- │ Dimension & scaling types │
 -- └───────────────────────────┘
 type ScalingFunctions :: Row Type
-type ScalingFunctions = Point (Number -> Number) + (length :: Number -> Number)
+type ScalingFunctions =
+  Position (Number -> Number) + (length :: Number -> Number)
 
 type Scaler :: Type
 type Scaler =
-  { scaling ::
-      { all ::
-          forall rl r
-           . RowToList r rl
-          => Scalable rl r Number
-          => { | r }
-          -> Builder {} { | r }
-      | ScalingFunctions
-      }
-  , rect :: { | Rect }
-  | Rect
+  { | Rectangular Number +
+      ( scaling ::
+          { all ::
+              forall rl r
+               . RowToList r rl
+              => Scalable rl r Number
+              => { | r }
+              -> Builder {} { | r }
+          | ScalingFunctions
+          }
+      , rect :: Rect
+      )
   }
 
 -- ┌────────────────────┐
@@ -93,7 +95,7 @@ infix 2 lengthTo as ~~@
 -- │ Scaler creation │
 -- └─────────────────┘
 
-mkScaler :: { | Rect } -> { | ScalingFunctions } -> Scaler
+mkScaler :: Rect -> { | ScalingFunctions } -> Scaler
 mkScaler rect fns =
   { x: rect.x
   , y: rect.y

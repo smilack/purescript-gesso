@@ -7,7 +7,7 @@ module Gesso.Geometry
 import Prelude
 
 import Gesso.Geometry.Dimensions (Rect, largestContainedArea)
-import Gesso.Geometry.Dimensions (Point, Rect, Size, null, origin, sizeless) as Exports
+import Gesso.Geometry.Dimensions (Area, Point, Position, Rect, Rectangular, Size, null, origin, sizeless) as Exports
 import Gesso.Geometry.Scaler (Scaler, mkScaler)
 import Gesso.Geometry.Scaler ((>>@), (@<~), (^^@), (~>@), (~~@), Scaler, from, lengthTo, to, xTo, yTo) as Exports
 
@@ -17,7 +17,7 @@ type Scalers =
   , drawing :: Scaler
   }
 
-mkScalers :: { | Rect } -> { | Rect } -> Scalers
+mkScalers :: Rect -> Rect -> Scalers
 mkScalers viewBox clientRect =
   { scale: k
   , drawing: mkScaler viewBox toDrawing

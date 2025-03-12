@@ -1,7 +1,10 @@
 -- | A collection of types and functions for specifying sizes and positions.
 module Gesso.Geometry.Dimensions
-  ( Point
+  ( Area
+  , Point
+  , Position
   , Rect
+  , Rectangular
   , Size
   , largestContainedArea
   , null
@@ -13,12 +16,15 @@ import Prelude
 
 import Type.Row (type (+))
 
-type Point :: Type -> Row Type -> Row Type
-type Point a r =
+type Position :: Type -> Row Type -> Row Type
+type Position a r =
   ( x :: a
   , y :: a
   | r
   )
+
+type Point :: Type
+type Point = { | Position Number () }
 
 type Size :: Type -> Row Type -> Row Type
 type Size a r =
@@ -27,14 +33,20 @@ type Size a r =
   | r
   )
 
-type Rect :: Row Type
-type Rect = Point Number + Size Number + ()
+type Area :: Type
+type Area = { | Size Number () }
+
+type Rectangular :: Type -> Row Type -> Row Type
+type Rectangular a r = Position a + Size a + r
+
+type Rect :: Type
+type Rect = { | Rectangular Number () }
 
 largestContainedArea
   :: forall r1 r2
    . { | Size Number r1 }
   -> { | Size Number r2 }
-  -> { | Size Number () }
+  -> Area
 largestContainedArea drawing canvas = area
   where
   area
@@ -53,11 +65,11 @@ largestContainedArea drawing canvas = area
     , width: canvas.height * ratio
     }
 
-origin :: { | Point Number () }
+origin :: Point
 origin = { x: 0.0, y: 0.0 }
 
-sizeless :: { | Size Number () }
+sizeless :: Area
 sizeless = { width: 0.0, height: 0.0 }
 
-null :: { | Rect }
+null :: Rect
 null = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
