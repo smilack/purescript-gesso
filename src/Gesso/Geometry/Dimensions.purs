@@ -1,5 +1,5 @@
 -- | A collection of types and functions for specifying sizes and positions.
-module Gesso.Scaling.Dimensions
+module Gesso.Geometry.Dimensions
   ( Point
   , Rect
   , Size

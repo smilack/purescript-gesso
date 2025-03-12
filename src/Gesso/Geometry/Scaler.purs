@@ -1,4 +1,4 @@
-module Gesso.Scaling.Scaler
+module Gesso.Geometry.Scaler
   ( (>>@)
   , (@<~)
   , (^^@)
@@ -17,7 +17,7 @@ module Gesso.Scaling.Scaler
   ) where
 
 import Prelude
-import Gesso.Scaling.Dimensions (Point, Rect)
+import Gesso.Geometry.Dimensions (Point, Rect)
 
 import Data.Map (Map)
 import Data.Map (fromFoldable, lookup) as Map

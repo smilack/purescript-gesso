@@ -39,7 +39,7 @@ import CSS as CSS
 import Data.Int (round, toNumber)
 import Gesso.Dimensions.AspectRatio (AspectRatio)
 import Gesso.Dimensions.AspectRatio as AR
-import Gesso.Scaling.Scaler (Scaler, mkScaler) as GS
+import Gesso.Geometry.Scaler (Scaler, mkScaler) as GS
 import Graphics.Canvas (Rectangle)
 import Halogen.HTML.Properties as HP
 import Web.DOM.Element (DOMRect)
