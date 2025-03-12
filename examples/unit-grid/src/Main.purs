@@ -11,7 +11,7 @@ import Effect (Effect)
 import Gesso (runGessoAff, awaitBody, run) as G
 import Gesso.Application as GApp
 import Gesso.Canvas (component, Input) as GC
-import Gesso.Dimensions as GDim
+import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
 import Gesso.Geometry ((^^@), (>>@), (~~@), to)
@@ -26,8 +26,8 @@ main =
     G.run GC.component input body
 
 type LocalState =
-  { mousePos :: Maybe GDim.Point
-  , clicked :: Maybe GDim.Point
+  { mousePos :: Maybe GGeo.Point
+  , clicked :: Maybe GGeo.Point
   }
 
 input :: forall i o. GC.Input LocalState i o
@@ -39,22 +39,19 @@ input =
         { window = GApp.Fullscreen
         , render = render
         }
-  , viewBox:
-      GDim.fromPointAndSize
-        (GDim.fromXAndY { x: -1.5, y: -1.5 })
-        (GDim.fromWidthAndHeight { width: 3.0, height: 3.0 })
+  , viewBox: { x: -1.5, y: 1.5, width: 3.0, height: 3.0 }
   , interactions: GInt.default { mouse = [ GInt.mousePosition, mouseDown ] }
   }
 
 mouseDown
   :: forall r
-   . GInt.Interaction GEv.MouseEvent { clicked :: Maybe GDim.Point | r }
+   . GInt.Interaction GEv.MouseEvent { clicked :: Maybe GGeo.Point | r }
 mouseDown = GInt.Interaction GEv.onMouseDown getMousePos
   where
-  getMousePos event _ _ state = pure $ Just state { clicked = Just $ GDim.fromMouseEvent event }
+  getMousePos event _ _ state = pure $ Just state { clicked = Just $ GInt.fromMouseEvent event }
 
-render :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GLerp.Lerp LocalState -> Effect Unit
-render context _ { scaler: { canvas, drawing } } { new: { clicked, mousePos } } = do
+render :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp LocalState -> Effect Unit
+render context _ { canvas, drawing } { new: { clicked, mousePos } } = do
   clearBackground
   drawAxes
   drawGridLines
@@ -92,7 +89,7 @@ render context _ { scaler: { canvas, drawing } } { new: { clicked, mousePos } } 
     where
     n = (_ / 10.0) <<< toNumber $ i
 
-  drawMouseClicked :: Maybe GDim.Point -> Effect Unit
+  drawMouseClicked :: Maybe GGeo.Point -> Effect Unit
   drawMouseClicked mxy = do
     Canvas.setFont context $ size <> "px 'Courier New'"
     Canvas.setFillStyle context "black"
@@ -104,8 +101,8 @@ render context _ { scaler: { canvas, drawing } } { new: { clicked, mousePos } } 
         Canvas.setStrokeStyle context "black"
         Canvas.setLineWidth context $ 0.01 ~~@ canvas
         Canvas.strokePath context do
-          Canvas.arc context { x: GDim.getX p, y: GDim.getY p, radius: 0.05 ~~@ canvas, start: 0.0, end: tau, useCounterClockwise: false }
-        drawCross { x: GDim.getX p, y: GDim.getY p } 0.05
+          Canvas.arc context { x: p.x, y: p.y, radius: 0.05 ~~@ canvas, start: 0.0, end: tau, useCounterClockwise: false }
+        drawCross p 0.05
     where
     size = show $ floor $ 0.2 ~~@ canvas
 
@@ -115,13 +112,13 @@ render context _ { scaler: { canvas, drawing } } { new: { clicked, mousePos } } 
 
     text = case mxy of
       Nothing -> "Nothing)"
-      Just p -> show (x' $ GDim.getX p) <> ", " <> show (y' $ GDim.getY p) <> ")"
+      Just p -> show (x' p.x) <> ", " <> show (y' p.y) <> ")"
 
-  drawMouseCursor :: GDim.Point -> Effect Unit
+  drawMouseCursor :: GGeo.Point -> Effect Unit
   drawMouseCursor point = do
     Canvas.setStrokeStyle context "black"
     Canvas.setLineWidth context $ 0.01 ~~@ canvas
-    drawCross { x: GDim.getX point, y: GDim.getY point } 0.05
+    drawCross point 0.05
 
   drawCross :: { x :: Number, y :: Number } -> Number -> Effect Unit
   drawCross { x, y } length = do
