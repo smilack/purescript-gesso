@@ -3,7 +3,7 @@
 -- | use 360 vertical units in your coordinate system (which divides evenly
 -- | into 720 and 1080), you could specify your `Size` as 640 wide by 360 high
 -- | or as 360 high with 16:9 ratio.
-module Gesso.AspectRatio
+module Gesso.Dimensions.AspectRatio
   ( AspectRatio
   , toNumber
   , width
