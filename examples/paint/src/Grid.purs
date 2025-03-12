@@ -17,12 +17,11 @@ import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as GApp
-import Gesso.AspectRatio as GAR
 import Gesso.Canvas as GC
 import Gesso.Dimensions as GDim
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
-import Gesso.Scale ((>>@), (^^@), (~>@), (~~@))
+import Gesso.Geometry ((>>@), (^^@), (~>@), (~~@))
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -94,7 +93,7 @@ canvasInput =
   , viewBox:
       GDim.fromPointAndSize
         GDim.origin
-        (GDim.fromWidthAndRatio { width: 32.0, aspectRatio: GAR.w1h1 })
+        (GDim.fromWidthAndHeight { width: 32.0, height: 32.0 })
   , interactions: GInt.default { mouse = [ highlightCell, clearHighlight, mouseDown, mouseUp ] }
   }
 

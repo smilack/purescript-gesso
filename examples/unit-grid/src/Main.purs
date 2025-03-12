@@ -14,7 +14,7 @@ import Gesso.Canvas (component, Input) as GC
 import Gesso.Dimensions as GDim
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
-import Gesso.Scale ((^^@), (>>@), (~~@), to)
+import Gesso.Geometry ((^^@), (>>@), (~~@), to)
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas

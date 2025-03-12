@@ -37,9 +37,9 @@ module Gesso.Dimensions
 import Prelude
 import CSS as CSS
 import Data.Int (round, toNumber)
-import Gesso.AspectRatio (AspectRatio)
-import Gesso.AspectRatio as AR
-import Gesso.Scale (Scaler, mkScaler) as GS
+import Gesso.Dimensions.AspectRatio (AspectRatio)
+import Gesso.Dimensions.AspectRatio as AR
+import Gesso.Geometry.Scaler (Scaler, mkScaler) as GS
 import Graphics.Canvas (Rectangle)
 import Halogen.HTML.Properties as HP
 import Web.DOM.Element (DOMRect)

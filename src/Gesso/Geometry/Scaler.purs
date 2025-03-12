@@ -1,14 +1,11 @@
-module Gesso.Scale
+module Gesso.Geometry.Scaler
   ( (>>@)
   , (@<~)
   , (^^@)
   , (~>@)
   , (~~@)
-  , Dimensions
-  , Point
   , Scaler
   , ScalingFunctions
-  , Size
   , class Scalable
   , from
   , lengthTo
@@ -26,6 +23,7 @@ import Data.Map (fromFoldable, lookup) as Map
 import Data.Maybe (Maybe, fromMaybe)
 import Data.Symbol (reflectSymbol, class IsSymbol)
 import Data.Tuple.Nested ((/\))
+import Gesso.Geometry.Dimensions (Position, Rect, Rectangular)
 import Record (delete, get) as Record
 import Record.Builder (Builder, buildFromScratch, nub)
 import Record.Builder (insert) as Builder
@@ -36,39 +34,24 @@ import Type.RowList (RowList, class RowToList, Cons, Nil)
 -- ┌───────────────────────────┐
 -- │ Dimension & scaling types │
 -- └───────────────────────────┘
-
-type Point :: Type -> Row Type -> Row Type
-type Point a r =
-  ( x :: a
-  , y :: a
-  | r
-  )
-
-type Size :: Type -> Row Type
-type Size a =
-  ( width :: a
-  , height :: a
-  )
-
-type Dimensions :: Row Type
-type Dimensions = Point Number + Size Number
-
 type ScalingFunctions :: Row Type
-type ScalingFunctions = Point (Number -> Number) + (length :: Number -> Number)
+type ScalingFunctions =
+  Position (Number -> Number) + (length :: Number -> Number)
 
 type Scaler :: Type
 type Scaler =
-  { scaling ::
-      { all ::
-          forall rl r
-           . RowToList r rl
-          => Scalable rl r Number
-          => { | r }
-          -> Builder {} { | r }
-      | ScalingFunctions
-      }
-  , rect :: { | Dimensions }
-  | Dimensions
+  { | Rectangular Number +
+      ( scaling ::
+          { all ::
+              forall rl r
+               . RowToList r rl
+              => Scalable rl r Number
+              => { | r }
+              -> Builder {} { | r }
+          | ScalingFunctions
+          }
+      , rect :: Rect
+      )
   }
 
 -- ┌────────────────────┐
@@ -112,7 +95,7 @@ infix 2 lengthTo as ~~@
 -- │ Scaler creation │
 -- └─────────────────┘
 
-mkScaler :: { | Dimensions } -> { | ScalingFunctions } -> Scaler
+mkScaler :: Rect -> { | ScalingFunctions } -> Scaler
 mkScaler rect fns =
   { x: rect.x
   , y: rect.y
