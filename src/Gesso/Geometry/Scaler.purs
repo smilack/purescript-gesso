@@ -1,9 +1,9 @@
 module Gesso.Geometry.Scaler
-  ( (>>@)
+  ( (>@)
   , (@<~)
-  , (^^@)
+  , (^@)
   , (~>@)
-  , (~~@)
+  , (-@)
   , Scaler
   , ScalingFunctions
   , class Scalable
@@ -87,9 +87,9 @@ lengthTo n { scaling: { length } } = length n
 
 infix 2 to as ~>@
 infix 2 from as @<~
-infix 2 xTo as >>@
-infix 2 yTo as ^^@
-infix 2 lengthTo as ~~@
+infix 2 xTo as >@
+infix 2 yTo as ^@
+infix 2 lengthTo as -@
 
 -- ┌─────────────────┐
 -- │ Scaler creation │

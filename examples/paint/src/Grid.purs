@@ -21,7 +21,7 @@ import Gesso.Canvas as GC
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
-import Gesso.Geometry ((>>@), (^^@), (~>@), (~~@))
+import Gesso.Geometry ((>@), (^@), (~>@), (-@))
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -146,9 +146,9 @@ toXY event { drawing } =
   let
     point = GInt.fromMouseEvent event
 
-    x = floor $ point.x >>@ drawing
+    x = floor $ point.x >@ drawing
 
-    y = floor $ point.y ^^@ drawing
+    y = floor $ point.y ^@ drawing
   in
     { x, y }
 
@@ -184,7 +184,7 @@ renderApp context _ { canvas } { new: { mouseCell, showGrid, color, pixels } } =
 
   drawOutline :: Effect Unit
   drawOutline = do
-    Canvas.setLineWidth context $ 0.05 ~~@ canvas
+    Canvas.setLineWidth context $ 0.05 -@ canvas
     Canvas.setStrokeStyle context "#888"
     Canvas.strokeRect context canvas.rect
 
@@ -196,10 +196,10 @@ renderApp context _ { canvas } { new: { mouseCell, showGrid, color, pixels } } =
   drawGridLine :: Int -> Effect Unit
   drawGridLine i = do
     Canvas.strokePath context do
-      Canvas.moveTo context (n >>@ canvas) (0.0 ^^@ canvas)
-      Canvas.lineTo context (n >>@ canvas) (32.0 ^^@ canvas)
-      Canvas.moveTo context (0.0 >>@ canvas) (n ^^@ canvas)
-      Canvas.lineTo context (32.0 >>@ canvas) (n ^^@ canvas)
+      Canvas.moveTo context (n >@ canvas) (0.0 ^@ canvas)
+      Canvas.lineTo context (n >@ canvas) (32.0 ^@ canvas)
+      Canvas.moveTo context (0.0 >@ canvas) (n ^@ canvas)
+      Canvas.lineTo context (32.0 >@ canvas) (n ^@ canvas)
     where
     n = toNumber i
 

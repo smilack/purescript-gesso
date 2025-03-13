@@ -14,7 +14,7 @@ import Gesso.Canvas (component, Input) as GC
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
-import Gesso.Geometry ((^^@), (>>@), (~~@), to)
+import Gesso.Geometry ((^@), (>@), (-@), to)
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -66,26 +66,26 @@ render context _ { canvas, drawing } { new: { clicked, mousePos } } = do
   drawAxes :: Effect Unit
   drawAxes = do
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ 0.015 ~~@ canvas
+    Canvas.setLineWidth context $ 0.015 -@ canvas
     drawCross ({ x: 0.0, y: 0.0 } `to` canvas) 1.0
 
   drawGridLines :: Effect Unit
   drawGridLines = do
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ 0.005 ~~@ canvas
+    Canvas.setLineWidth context $ 0.005 -@ canvas
     sequence_ $ map drawGridLine $ range 1 10
 
   drawGridLine :: Int -> Effect Unit
   drawGridLine i = do
     Canvas.strokePath context do
-      Canvas.moveTo context (-n >>@ canvas) (-1.0 ^^@ canvas)
-      Canvas.lineTo context (-n >>@ canvas) (1.0 ^^@ canvas)
-      Canvas.moveTo context (n >>@ canvas) (-1.0 ^^@ canvas)
-      Canvas.lineTo context (n >>@ canvas) (1.0 ^^@ canvas)
-      Canvas.moveTo context (-1.0 >>@ canvas) (-n ^^@ canvas)
-      Canvas.lineTo context (1.0 >>@ canvas) (-n ^^@ canvas)
-      Canvas.moveTo context (-1.0 >>@ canvas) (n ^^@ canvas)
-      Canvas.lineTo context (1.0 >>@ canvas) (n ^^@ canvas)
+      Canvas.moveTo context (-n >@ canvas) (-1.0 ^@ canvas)
+      Canvas.lineTo context (-n >@ canvas) (1.0 ^@ canvas)
+      Canvas.moveTo context (n >@ canvas) (-1.0 ^@ canvas)
+      Canvas.lineTo context (n >@ canvas) (1.0 ^@ canvas)
+      Canvas.moveTo context (-1.0 >@ canvas) (-n ^@ canvas)
+      Canvas.lineTo context (1.0 >@ canvas) (-n ^@ canvas)
+      Canvas.moveTo context (-1.0 >@ canvas) (n ^@ canvas)
+      Canvas.lineTo context (1.0 >@ canvas) (n ^@ canvas)
     where
     n = (_ / 10.0) <<< toNumber $ i
 
@@ -94,21 +94,21 @@ render context _ { canvas, drawing } { new: { clicked, mousePos } } = do
     Canvas.setFont context $ size <> "px 'Courier New'"
     Canvas.setFillStyle context "black"
     Canvas.setTextAlign context Canvas.AlignCenter
-    Canvas.fillText context ("Clicked: (" <> text) (0.0 >>@ canvas) (-1.1 ^^@ canvas)
+    Canvas.fillText context ("Clicked: (" <> text) (0.0 >@ canvas) (-1.1 ^@ canvas)
     case mxy of
       Nothing -> pure unit
       Just p -> do
         Canvas.setStrokeStyle context "black"
-        Canvas.setLineWidth context $ 0.01 ~~@ canvas
+        Canvas.setLineWidth context $ 0.01 -@ canvas
         Canvas.strokePath context do
-          Canvas.arc context { x: p.x, y: p.y, radius: 0.05 ~~@ canvas, start: 0.0, end: tau, useCounterClockwise: false }
+          Canvas.arc context { x: p.x, y: p.y, radius: 0.05 -@ canvas, start: 0.0, end: tau, useCounterClockwise: false }
         drawCross p 0.05
     where
-    size = show $ floor $ 0.2 ~~@ canvas
+    size = show $ floor $ 0.2 -@ canvas
 
-    x' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< (_ >>@ drawing)
+    x' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< (_ >@ drawing)
 
-    y' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< (_ ^^@ drawing)
+    y' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< (_ ^@ drawing)
 
     text = case mxy of
       Nothing -> "Nothing)"
@@ -117,14 +117,14 @@ render context _ { canvas, drawing } { new: { clicked, mousePos } } = do
   drawMouseCursor :: GGeo.Point -> Effect Unit
   drawMouseCursor point = do
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ 0.01 ~~@ canvas
+    Canvas.setLineWidth context $ 0.01 -@ canvas
     drawCross point 0.05
 
   drawCross :: { x :: Number, y :: Number } -> Number -> Effect Unit
   drawCross { x, y } length = do
     Canvas.strokePath context do
       let
-        l = length ~~@ canvas
+        l = length -@ canvas
       Canvas.moveTo context (x - l) y
       Canvas.lineTo context (x + l) y
       Canvas.moveTo context x (y - l)
