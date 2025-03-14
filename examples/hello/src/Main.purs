@@ -4,7 +4,7 @@ import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application as Gesso.Application
 import Gesso.Canvas as Gesso.Canvas
-import Gesso.Dimensions as Gesso.Dimensions
+import Gesso.Geometry as Gesso.Geometry
 import Gesso.Interactions as Gesso.Interactions
 import Gesso.Time as Gesso.Time
 import Gesso.Util.Lerp as Gesso.Util.Lerp
@@ -30,10 +30,10 @@ canvasInput =
         { window = Gesso.Application.Fullscreen
         , render = render
         }
-  , viewBox: Gesso.Dimensions.p1080
+  , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
   , interactions: Gesso.Interactions.default
   }
 
-render :: Graphics.Canvas.Context2D -> Gesso.Time.Delta -> Gesso.Dimensions.Scaler -> Gesso.Util.Lerp.Lerp Unit -> Effect Unit
+render :: Graphics.Canvas.Context2D -> Gesso.Time.Delta -> Gesso.Geometry.Scalers -> Gesso.Util.Lerp.Lerp Unit -> Effect Unit
 render context _ _ _ = do
   Graphics.Canvas.fillText context "hello world" 500.0 500.0

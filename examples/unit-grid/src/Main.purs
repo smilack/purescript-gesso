@@ -11,9 +11,10 @@ import Effect (Effect)
 import Gesso (runGessoAff, awaitBody, run) as G
 import Gesso.Application as GApp
 import Gesso.Canvas (component, Input) as GC
-import Gesso.Dimensions as GDim
+import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
+import Gesso.Geometry ((^@), (>@), (-@), to)
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -25,8 +26,8 @@ main =
     G.run GC.component input body
 
 type LocalState =
-  { mousePos :: Maybe GDim.Point
-  , clicked :: Maybe GDim.Point
+  { mousePos :: Maybe GGeo.Point
+  , clicked :: Maybe GGeo.Point
   }
 
 input :: forall i o. GC.Input LocalState i o
@@ -38,22 +39,19 @@ input =
         { window = GApp.Fullscreen
         , render = render
         }
-  , viewBox:
-      GDim.fromPointAndSize
-        (GDim.fromXAndY { x: -1.5, y: -1.5 })
-        (GDim.fromWidthAndHeight { width: 3.0, height: 3.0 })
+  , viewBox: { x: -1.5, y: 1.5, width: 3.0, height: 3.0 }
   , interactions: GInt.default { mouse = [ GInt.mousePosition, mouseDown ] }
   }
 
 mouseDown
   :: forall r
-   . GInt.Interaction GEv.MouseEvent { clicked :: Maybe GDim.Point | r }
+   . GInt.Interaction GEv.MouseEvent { clicked :: Maybe GGeo.Point | r }
 mouseDown = GInt.Interaction GEv.onMouseDown getMousePos
   where
-  getMousePos event _ _ state = pure $ Just state { clicked = Just $ GDim.fromMouseEvent event }
+  getMousePos event _ _ state = pure $ Just state { clicked = Just $ GInt.fromMouseEvent event }
 
-render :: Canvas.Context2D -> GTime.Delta -> GDim.Scaler -> GLerp.Lerp LocalState -> Effect Unit
-render context _ scale { new: { clicked, mousePos } } = do
+render :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp LocalState -> Effect Unit
+render context _ { canvas, drawing } { new: { clicked, mousePos } } = do
   clearBackground
   drawAxes
   drawGridLines
@@ -63,69 +61,71 @@ render context _ scale { new: { clicked, mousePos } } = do
   clearBackground :: Effect Unit
   clearBackground = do
     Canvas.setFillStyle context "white"
-    Canvas.fillRect context (scale.toRectangle scale.screen)
+    Canvas.fillRect context canvas.rect
 
   drawAxes :: Effect Unit
   drawAxes = do
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ scale.width.toCr 0.015
-    drawCross (scale.x.toCr 0.0) (scale.y.toCr 0.0) 1.0
+    Canvas.setLineWidth context $ 0.015 -@ canvas
+    drawCross ({ x: 0.0, y: 0.0 } `to` canvas) 1.0
 
   drawGridLines :: Effect Unit
   drawGridLines = do
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ scale.width.toCr 0.005
+    Canvas.setLineWidth context $ 0.005 -@ canvas
     sequence_ $ map drawGridLine $ range 1 10
 
   drawGridLine :: Int -> Effect Unit
   drawGridLine i = do
     Canvas.strokePath context do
-      Canvas.moveTo context (scale.x.toCr $ -n) (scale.y.toCr $ -1.0)
-      Canvas.lineTo context (scale.x.toCr $ -n) (scale.y.toCr $ 1.0)
-      Canvas.moveTo context (scale.x.toCr n) (scale.y.toCr $ -1.0)
-      Canvas.lineTo context (scale.x.toCr n) (scale.y.toCr $ 1.0)
-      Canvas.moveTo context (scale.x.toCr $ -1.0) (scale.y.toCr $ -n)
-      Canvas.lineTo context (scale.x.toCr $ 1.0) (scale.y.toCr $ -n)
-      Canvas.moveTo context (scale.x.toCr $ -1.0) (scale.y.toCr n)
-      Canvas.lineTo context (scale.x.toCr $ 1.0) (scale.y.toCr n)
+      Canvas.moveTo context (-n >@ canvas) (-1.0 ^@ canvas)
+      Canvas.lineTo context (-n >@ canvas) (1.0 ^@ canvas)
+      Canvas.moveTo context (n >@ canvas) (-1.0 ^@ canvas)
+      Canvas.lineTo context (n >@ canvas) (1.0 ^@ canvas)
+      Canvas.moveTo context (-1.0 >@ canvas) (-n ^@ canvas)
+      Canvas.lineTo context (1.0 >@ canvas) (-n ^@ canvas)
+      Canvas.moveTo context (-1.0 >@ canvas) (n ^@ canvas)
+      Canvas.lineTo context (1.0 >@ canvas) (n ^@ canvas)
     where
     n = (_ / 10.0) <<< toNumber $ i
 
-  drawMouseClicked :: Maybe GDim.Point -> Effect Unit
+  drawMouseClicked :: Maybe GGeo.Point -> Effect Unit
   drawMouseClicked mxy = do
     Canvas.setFont context $ size <> "px 'Courier New'"
     Canvas.setFillStyle context "black"
     Canvas.setTextAlign context Canvas.AlignCenter
-    Canvas.fillText context ("Clicked: (" <> text) (scale.x.toCr $ 0.0) (scale.y.toCr $ -1.1)
+    Canvas.fillText context ("Clicked: (" <> text) (0.0 >@ canvas) (-1.1 ^@ canvas)
     case mxy of
       Nothing -> pure unit
       Just p -> do
         Canvas.setStrokeStyle context "black"
-        Canvas.setLineWidth context $ scale.width.toCr 0.01
+        Canvas.setLineWidth context $ 0.01 -@ canvas
         Canvas.strokePath context do
-          Canvas.arc context { x: GDim.getX p, y: GDim.getY p, radius: scale.width.toCr 0.05, start: 0.0, end: tau, useCounterClockwise: false }
-        drawCross (GDim.getX p) (GDim.getY p) 0.05
+          Canvas.arc context { x: p.x, y: p.y, radius: 0.05 -@ canvas, start: 0.0, end: tau, useCounterClockwise: false }
+        drawCross p 0.05
     where
-    size = show $ floor $ scale.width.toCr 0.2
+    size = show $ floor $ 0.2 -@ canvas
 
-    x' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< scale.x.toVb
+    x' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< (_ >@ drawing)
 
-    y' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< scale.y.toVb
+    y' = (_ / 1000.0) <<< toNumber <<< round <<< (_ * 1000.0) <<< (_ ^@ drawing)
 
     text = case mxy of
       Nothing -> "Nothing)"
-      Just p -> show (x' $ GDim.getX p) <> ", " <> show (y' $ GDim.getY p) <> ")"
+      Just p -> show (x' p.x) <> ", " <> show (y' p.y) <> ")"
 
-  drawMouseCursor :: GDim.Point -> Effect Unit
+  drawMouseCursor :: GGeo.Point -> Effect Unit
   drawMouseCursor point = do
     Canvas.setStrokeStyle context "black"
-    Canvas.setLineWidth context $ scale.width.toCr 0.01
-    drawCross (GDim.getX point) (GDim.getY point) 0.05
+    Canvas.setLineWidth context $ 0.01 -@ canvas
+    drawCross point 0.05
 
-  drawCross :: Number -> Number -> Number -> Effect Unit
-  drawCross x y length = do
+  drawCross :: { x :: Number, y :: Number } -> Number -> Effect Unit
+  drawCross { x, y } length = do
     Canvas.strokePath context do
-      Canvas.moveTo context (x - scale.width.toCr length) y
-      Canvas.lineTo context (x + scale.width.toCr length) y
-      Canvas.moveTo context x (y - scale.height.toCr length)
-      Canvas.lineTo context x (y + scale.height.toCr length)
+      let
+        l = length -@ canvas
+      Canvas.moveTo context (x - l) y
+      Canvas.lineTo context (x + l) y
+      Canvas.moveTo context x (y - l)
+      Canvas.lineTo context x (y + l)

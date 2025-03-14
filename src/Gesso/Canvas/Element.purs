@@ -4,21 +4,24 @@ module Gesso.Canvas.Element
   , getCanvasClientRect
   , getContextByAppName
   , style
+  , toSizeProps
   ) where
 
 import Prelude
 
 import CSS (CSS)
 import CSS as CSS
+import Data.Int (round)
 import Data.Maybe (Maybe, fromMaybe)
 import Data.Traversable (traverse)
 import Effect (Effect)
-import Gesso.Application as Application
-import Gesso.Dimensions as Dimensions
+import Gesso.Application (WindowMode(..)) as App
+import Gesso.Geometry (Rect, Size) as Geo
 import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
 import Halogen.HTML (AttrName(..), attr)
-import Halogen.HTML.Properties (IProp)
-import Web.DOM.Element (Element, getBoundingClientRect)
+import Halogen.HTML.Properties (IProp, CSSPixel)
+import Halogen.HTML.Properties (width, height) as HP
+import Web.DOM.Element (Element, DOMRect, getBoundingClientRect)
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.HTML (window)
 import Web.HTML.HTMLDocument (toNonElementParentNode)
@@ -44,15 +47,18 @@ getCanvasByAppName name =
 
 -- | Get the bounding client rect for a `Canvas` element and convert it to a
 -- | `ClientRect` value.
-getCanvasClientRect :: Canvas -> Effect Dimensions.ClientRect
+getCanvasClientRect :: Canvas -> Effect Geo.Rect
 getCanvasClientRect (Canvas canvas) =
-  Dimensions.fromDOMRect <$> getBoundingClientRect canvas
+  fromDOMRect <$> getBoundingClientRect canvas
+
+fromDOMRect :: DOMRect -> Geo.Rect
+fromDOMRect { left, top, width, height } = { x: left, y: top, width, height }
 
 -- | Attempt to get the `Context2D` for this component's `canvas` element.
 getContextByAppName :: String -> Effect (Maybe Context2D)
 getContextByAppName name = getCanvasElementById name >>= traverse getContext2D
 
-style :: forall r i. Application.WindowMode -> IProp (style :: String | r) i
+style :: forall r i. App.WindowMode -> IProp (style :: String | r) i
 style =
   attr (AttrName "style")
     <<< fromMaybe ""
@@ -62,17 +68,18 @@ style =
     <<< windowCss
 
 -- | Get the appropriate CSS for the screen element based on the `WindowMode`.
-windowCss :: Application.WindowMode -> CSS
+windowCss :: App.WindowMode -> CSS
 windowCss = case _ of
-  Application.Fixed size -> fix size
-  Application.Stretch -> stretched
-  Application.Fullscreen -> full
+  App.Fixed size -> fix size
+  App.Stretch -> stretched
+  App.Fullscreen -> full
   where
   common = do
     CSS.key (CSS.fromString "outline") "none"
 
-  fix size = do
-    Dimensions.toSizeCss size
+  fix { width, height } = do
+    CSS.width $ CSS.px width
+    CSS.height $ CSS.px height
     common
 
   stretched = do
@@ -89,3 +96,12 @@ windowCss = case _ of
     CSS.transform $ CSS.translate (CSS.pct $ -50.0) (CSS.pct $ -50.0)
     common
 
+-- | Convert a `width` and `height` to HTML properties.
+toSizeProps
+  :: forall i r s
+   . { | Geo.Size Number s }
+  -> Array (IProp (width :: CSSPixel, height :: CSSPixel | r) i)
+toSizeProps { width, height } =
+  [ HP.width $ round width
+  , HP.height $ round height
+  ]

@@ -8,7 +8,7 @@ import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application as GApp
 import Gesso.Canvas as GCan
-import Gesso.Dimensions as GDims
+import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.Interactions.Events as GEv
 import Gesso.Time as GTime
@@ -36,24 +36,24 @@ canvasInput =
         , render = render
         , update = update
         }
-  , viewBox: GDims.p1080
+  , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
   , interactions: GInt.default { keyboard = [ keyDown, keyUp ], mouse = [ mouseDown ] }
   }
 
 mouseDown :: GInt.Interaction GEv.MouseEvent State
 mouseDown = GInt.Interaction GEv.onMouseDown go
   where
-  go :: GEv.MouseEvent -> GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
+  go :: GEv.MouseEvent -> GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
   go event _ _ state = pure $
     let
-      point = GDims.fromMouseEvent event
+      point = GInt.fromMouseEvent event
     in
-      Just state { x = GDims.getX point, y = GDims.getY point }
+      Just state { x = point.x, y = point.y }
 
 keyDown :: GInt.Interaction GEv.KeyboardEvent State
 keyDown = GInt.Interaction GEv.onKeyDown go
   where
-  go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
+  go :: GEv.KeyboardEvent -> GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
   go event _ _ state = pure $ case KEv.key event of
     "ArrowUp" -> Just state { keys { up = true } }
     "ArrowDown" -> Just state { keys { down = true } }
@@ -64,7 +64,7 @@ keyDown = GInt.Interaction GEv.onKeyDown go
 keyUp :: GInt.Interaction GEv.KeyboardEvent State
 keyUp = GInt.Interaction GEv.onKeyUp go
   where
-  go :: GEv.KeyboardEvent -> GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
+  go :: GEv.KeyboardEvent -> GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
   go event _ _ state = pure $ case KEv.key event of
     "ArrowUp" -> Just state { keys { up = false } }
     "ArrowDown" -> Just state { keys { down = false } }
@@ -72,8 +72,8 @@ keyUp = GInt.Interaction GEv.onKeyUp go
     "ArrowRight" -> Just state { keys { right = false } }
     _ -> Nothing
 
-update :: GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
-update _ scale state@{ x, y, radius, keys: { up, down, left, right } } = pure $
+update :: GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
+update _ { canvas } state@{ x, y, radius, keys: { up, down, left, right } } = pure $
   Just
     state
       { x = updateP x radius xMin xMax vx
@@ -82,15 +82,15 @@ update _ scale state@{ x, y, radius, keys: { up, down, left, right } } = pure $
   where
   vx = getV left right
 
-  xMin = GDims.getX scale.screen
+  xMin = canvas.x
 
-  xMax = xMin + GDims.getWidth scale.screen
+  xMax = xMin + canvas.width
 
   vy = getV up down
 
-  yMin = GDims.getY scale.screen
+  yMin = canvas.y
 
-  yMax = yMin + GDims.getHeight scale.screen
+  yMax = yMin + canvas.height
 
 getV :: Boolean -> Boolean -> Number
 getV neg pos = case neg of
@@ -107,9 +107,9 @@ updateP p r min max v
   | p - r + v < min = min + r
   | otherwise = p + v
 
-render :: Canvas.Context2D -> GTime.Delta -> GDims.Scaler -> GLerp.Lerp State -> Effect Unit
-render context _ scale { new: { x, y, radius } } = do
-  Canvas.clearRect context (scale.toRectangle scale.screen)
+render :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp State -> Effect Unit
+render context _ { canvas } { new: { x, y, radius } } = do
+  Canvas.clearRect context canvas.rect
   Canvas.setFillStyle context "red"
   Canvas.fillPath context do
     Canvas.arc context { x, y, radius, start: 0.0, end: 2.0 * pi, useCounterClockwise: false }

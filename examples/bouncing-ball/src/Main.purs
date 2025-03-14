@@ -8,7 +8,7 @@ import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application as GApp
 import Gesso.Canvas as GCan
-import Gesso.Dimensions as GDims
+import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
@@ -33,23 +33,23 @@ canvasInput =
         , render = render
         , update = update
         }
-  , viewBox: GDims.p1080
+  , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
   , interactions: GInt.default
   }
 
-update :: GTime.Delta -> GDims.Scaler -> State -> Effect (Maybe State)
-update _ scale { x, vx, y, vy, radius } = pure $
+update :: GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
+update _ { canvas } { x, vx, y, vy, radius } = pure $
   Just { x: x + vx', vx: vx', y: y + vy', vy: vy', radius }
   where
-  xMin = GDims.getX scale.screen
+  xMin = canvas.x
 
-  xMax = xMin + GDims.getWidth scale.screen
+  xMax = xMin + canvas.width
 
   vx' = updateV x radius xMin xMax vx
 
-  yMin = GDims.getY scale.screen
+  yMin = canvas.y
 
-  yMax = yMin + GDims.getHeight scale.screen
+  yMax = yMin + canvas.height
 
   vy' = updateV y radius yMin yMax vy
 
@@ -60,9 +60,9 @@ updateV position radius min max velocity
   | otherwise = velocity
 
 render
-  :: Canvas.Context2D -> GTime.Delta -> GDims.Scaler -> GLerp.Lerp State -> Effect Unit
-render context _ scale { new: { x, y, radius } } = do
-  Canvas.clearRect context (scale.toRectangle scale.screen)
+  :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp State -> Effect Unit
+render context _ { canvas } { new: { x, y, radius } } = do
+  Canvas.clearRect context canvas.rect
   Canvas.setFillStyle context "red"
   Canvas.fillPath context do
     Canvas.arc context { x, y, radius, start: 0.0, end: 2.0 * pi, useCounterClockwise: false }
