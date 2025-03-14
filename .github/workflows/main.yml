@@ -15,7 +15,7 @@ jobs:
     - uses: actions/checkout@v4
     - uses: purescript-contrib/setup-purescript@v3.1.0
       with:
-        spago: "latest"
+        spago: "unstable"
     - uses: actions/cache@v4
       with:
         key: ${{ runner.os }}-spago-${{ hashFiles('**/spago*') }}
