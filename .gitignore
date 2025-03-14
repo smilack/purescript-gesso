@@ -10,3 +10,4 @@
 /.spago
 /.cache
 /dist/
+/examples/*/dist/*.js*
