@@ -25,7 +25,7 @@ jobs:
           output
           examples/*/dist
     - run: spago build
-    - run: build-examples.sh
+    - run: ./build-examples.sh
 
     # Is this necessary?
     # - name: Deploy to GitHub Pages
