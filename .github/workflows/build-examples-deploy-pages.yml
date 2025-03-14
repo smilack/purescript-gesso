@@ -1,4 +1,4 @@
-name: Deploy Jekyll with GitHub Pages dependencies preinstalled
+name: Build Gesso examples and deploy with Jekyll to GitHub Pages
 
 on:
   push:
