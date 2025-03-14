@@ -24,7 +24,7 @@ jobs:
           .spago
           output
           examples/*/dist
-    - run: npm install esbuild
+    - run: npm install -g esbuild
     - run: spago build
     - run: ./build-examples.sh
 
