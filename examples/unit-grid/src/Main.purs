@@ -39,7 +39,7 @@ input =
         { window = GApp.Fullscreen
         , render = render
         }
-  , viewBox: { x: -1.5, y: 1.5, width: 3.0, height: 3.0 }
+  , viewBox: { x: -1.5, y: -1.5, width: 3.0, height: 3.0 }
   , interactions: GInt.default { mouse = [ GInt.mousePosition, mouseDown ] }
   }
 
