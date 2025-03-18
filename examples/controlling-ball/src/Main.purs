@@ -10,7 +10,6 @@ import Gesso.Application as GApp
 import Gesso.Canvas as GCan
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
-import Gesso.Interactions.Events as GEv
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -40,20 +39,20 @@ canvasInput =
   , interactions: GInt.default { keyboard = [ keyDown, keyUp ], mouse = [ mouseDown ] }
   }
 
-mouseDown :: GInt.Interaction GEv.MouseEvent State
-mouseDown = GInt.Interaction GEv.onMouseDown go
+mouseDown :: GInt.Interaction GInt.MouseEvent State
+mouseDown = GInt.onMouseDown go
   where
-  go :: GEv.MouseEvent -> GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
+  go :: GInt.MouseEvent -> GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
   go event _ _ state = pure $
     let
-      point = GInt.fromMouseEvent event
+      point = GGeo.fromMouseEvent event
     in
       Just state { x = point.x, y = point.y }
 
-keyDown :: GInt.Interaction GEv.KeyboardEvent State
-keyDown = GInt.Interaction GEv.onKeyDown go
+keyDown :: GInt.Interaction GInt.KeyboardEvent State
+keyDown = GInt.onKeyDown go
   where
-  go :: GEv.KeyboardEvent -> GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
+  go :: GInt.KeyboardEvent -> GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
   go event _ _ state = pure $ case KEv.key event of
     "ArrowUp" -> Just state { keys { up = true } }
     "ArrowDown" -> Just state { keys { down = true } }
@@ -61,10 +60,10 @@ keyDown = GInt.Interaction GEv.onKeyDown go
     "ArrowRight" -> Just state { keys { right = true } }
     _ -> Nothing
 
-keyUp :: GInt.Interaction GEv.KeyboardEvent State
-keyUp = GInt.Interaction GEv.onKeyUp go
+keyUp :: GInt.Interaction GInt.KeyboardEvent State
+keyUp = GInt.onKeyUp go
   where
-  go :: GEv.KeyboardEvent -> GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
+  go :: GInt.KeyboardEvent -> GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
   go event _ _ state = pure $ case KEv.key event of
     "ArrowUp" -> Just state { keys { up = false } }
     "ArrowDown" -> Just state { keys { down = false } }

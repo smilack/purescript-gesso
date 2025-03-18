@@ -23,8 +23,9 @@ import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as App
 import Gesso.Canvas.Element as GEl
-import Gesso.Geometry as Geo
-import Gesso.Interactions as GI
+import Gesso.Geometry (Rect) as Geo
+import Gesso.Geometry.Internal (Scalers, mkScalers) as Geo
+import Gesso.Interactions.Internal as GI
 import Gesso.Time as T
 import Gesso.Util.Lerp (Versions, History)
 import Graphics.Canvas (Context2D)

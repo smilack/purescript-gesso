@@ -20,7 +20,6 @@ import Gesso.Application as GApp
 import Gesso.Canvas as GC
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
-import Gesso.Interactions.Events as GEv
 import Gesso.Geometry ((>@), (^@), (~>@), (-@))
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
@@ -117,8 +116,8 @@ extractOutput _ _ { old, new: { showGrid, color, pixels, redo } } =
     else
       Nothing
 
-highlightCell :: GInt.Interaction GEv.MouseEvent CanvasState
-highlightCell = GInt.Interaction GEv.onMouseMove getMousePos
+highlightCell :: GInt.Interaction GInt.MouseEvent CanvasState
+highlightCell = GInt.onMouseMove getMousePos
   where
   getMousePos event _ scaler state = pure $
     let
@@ -141,10 +140,10 @@ highlightCell = GInt.Interaction GEv.onMouseMove getMousePos
       else
         Just state { mouseCell = Just { x, y } }
 
-toXY :: GEv.MouseEvent -> GGeo.Scalers -> { x :: Int, y :: Int }
+toXY :: GInt.MouseEvent -> GGeo.Scalers -> { x :: Int, y :: Int }
 toXY event { drawing } =
   let
-    point = GInt.fromMouseEvent event
+    point = GGeo.fromMouseEvent event
 
     x = floor $ point.x >@ drawing
 
@@ -152,11 +151,11 @@ toXY event { drawing } =
   in
     { x, y }
 
-clearHighlight :: GInt.Interaction GEv.MouseEvent CanvasState
-clearHighlight = GInt.Interaction GEv.onMouseOut (\_ _ _ s -> pure $ Just s { mouseCell = Nothing })
+clearHighlight :: GInt.Interaction GInt.MouseEvent CanvasState
+clearHighlight = GInt.onMouseOut (\_ _ _ s -> pure $ Just s { mouseCell = Nothing })
 
-mouseDown :: GInt.Interaction GEv.MouseEvent CanvasState
-mouseDown = GInt.Interaction GEv.onMouseDown startDrawing
+mouseDown :: GInt.Interaction GInt.MouseEvent CanvasState
+mouseDown = GInt.onMouseDown startDrawing
   where
   startDrawing event _ scaler state = pure $
     let
@@ -166,8 +165,8 @@ mouseDown = GInt.Interaction GEv.onMouseDown startDrawing
     in
       Just state { pixels = p : state.pixels, redo = Nil, mouseDown = true }
 
-mouseUp :: GInt.Interaction GEv.MouseEvent CanvasState
-mouseUp = GInt.Interaction GEv.onMouseUp (\_ _ _ s -> pure $ Just s { mouseDown = false })
+mouseUp :: GInt.Interaction GInt.MouseEvent CanvasState
+mouseUp = GInt.onMouseUp (\_ _ _ s -> pure $ Just s { mouseDown = false })
 
 renderApp :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp CanvasState -> Effect Unit
 renderApp context _ { canvas } { new: { mouseCell, showGrid, color, pixels } } = do

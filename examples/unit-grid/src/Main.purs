@@ -11,10 +11,9 @@ import Effect (Effect)
 import Gesso (runGessoAff, awaitBody, run) as G
 import Gesso.Application as GApp
 import Gesso.Canvas (component, Input) as GC
+import Gesso.Geometry ((^@), (>@), (-@), to)
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
-import Gesso.Interactions.Events as GEv
-import Gesso.Geometry ((^@), (>@), (-@), to)
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -40,15 +39,20 @@ input =
         , render = render
         }
   , viewBox: { x: -1.5, y: -1.5, width: 3.0, height: 3.0 }
-  , interactions: GInt.default { mouse = [ GInt.mousePosition, mouseDown ] }
+  , interactions: GInt.default { mouse = [ mousePosition, mouseDown ] }
   }
 
-mouseDown
-  :: forall r
-   . GInt.Interaction GEv.MouseEvent { clicked :: Maybe GGeo.Point | r }
-mouseDown = GInt.Interaction GEv.onMouseDown getMousePos
+mousePosition :: GInt.Interaction GInt.MouseEvent LocalState
+mousePosition = GInt.onMouseMove set
   where
-  getMousePos event _ _ state = pure $ Just state { clicked = Just $ GInt.fromMouseEvent event }
+  set event _ _ state =
+    pure $ Just $ state { mousePos = Just $ GGeo.fromMouseEvent event }
+
+mouseDown :: GInt.Interaction GInt.MouseEvent LocalState
+mouseDown = GInt.onMouseDown set
+  where
+  set event _ _ state =
+    pure $ Just $ state { clicked = Just $ GGeo.fromMouseEvent event }
 
 render :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp LocalState -> Effect Unit
 render context _ { canvas, drawing } { new: { clicked, mousePos } } = do
