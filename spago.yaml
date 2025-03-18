@@ -21,6 +21,7 @@ package:
     - web-dom
     - web-events
     - web-html
+    - web-pointerevents
     - web-touchevents
     - web-uievents
   name: gesso
