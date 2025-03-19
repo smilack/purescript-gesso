@@ -116,7 +116,7 @@ extractOutput _ _ { old, new: { showGrid, color, pixels, redo } } =
     else
       Nothing
 
-highlightCell :: GInt.Interaction GInt.MouseEvent CanvasState
+highlightCell :: GInt.MouseInteraction CanvasState
 highlightCell = GInt.onMouseMove getMousePos
   where
   getMousePos event _ scaler state = pure $
@@ -151,10 +151,10 @@ toXY event { drawing } =
   in
     { x, y }
 
-clearHighlight :: GInt.Interaction GInt.MouseEvent CanvasState
+clearHighlight :: GInt.MouseInteraction CanvasState
 clearHighlight = GInt.onMouseOut (\_ _ _ s -> pure $ Just s { mouseCell = Nothing })
 
-mouseDown :: GInt.Interaction GInt.MouseEvent CanvasState
+mouseDown :: GInt.MouseInteraction CanvasState
 mouseDown = GInt.onMouseDown startDrawing
   where
   startDrawing event _ scaler state = pure $
@@ -165,7 +165,7 @@ mouseDown = GInt.onMouseDown startDrawing
     in
       Just state { pixels = p : state.pixels, redo = Nil, mouseDown = true }
 
-mouseUp :: GInt.Interaction GInt.MouseEvent CanvasState
+mouseUp :: GInt.MouseInteraction CanvasState
 mouseUp = GInt.onMouseUp (\_ _ _ s -> pure $ Just s { mouseDown = false })
 
 renderApp :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp CanvasState -> Effect Unit

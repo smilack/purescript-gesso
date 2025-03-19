@@ -7,11 +7,20 @@
 -- | The [`Interactions`](#t:Interactions) type is a record of arrays of
 -- | interactions for each event type.
 module Gesso.Interactions
-  ( default
+  ( ClipboardInteraction
+  , DragInteraction
+  , EventInteraction
+  , FocusInteraction
+  , KeyboardInteraction
+  , MouseInteraction
+  , PointerInteraction
+  , TouchInteraction
+  , WheelInteraction
+  , default
   , module Exports
   ) where
 
-import Gesso.Interactions.Internal (Interactions)
+import Gesso.Interactions.Internal (Interactions, Interaction)
 import Gesso.Interactions.Internal (ClipboardEvent, DragEvent, Event, FocusEvent, Handler, Interaction, Interactions, KeyboardEvent, MouseEvent, PointerEvent, TouchEvent, WheelEvent) as Exports
 import Gesso.Interactions.Events (onAuxClick, onBlur, onClick, onCopy, onCut, onDoubleClick, onDrag, onDragEnd, onDragEnter, onDragExit, onDragLeave, onDragOver, onDragStart, onDrop, onFocus, onFocusIn, onFocusOut, onInput, onKeyDown, onKeyUp, onMouseDown, onMouseEnter, onMouseLeave, onMouseMove, onMouseOut, onMouseOver, onMouseUp, onPaste, onTouchCancel, onTouchEnd, onTouchEnter, onTouchLeave, onTouchMove, onTouchStart, onTransitionEnd, onWheel) as Exports
 
@@ -33,3 +42,21 @@ default =
   , wheel: []
   , pointer: []
   }
+
+type ClipboardInteraction s = Interaction Exports.ClipboardEvent s
+
+type DragInteraction s = Interaction Exports.DragEvent s
+
+type EventInteraction s = Interaction Exports.Event s
+
+type FocusInteraction s = Interaction Exports.FocusEvent s
+
+type KeyboardInteraction s = Interaction Exports.KeyboardEvent s
+
+type MouseInteraction s = Interaction Exports.MouseEvent s
+
+type PointerInteraction s = Interaction Exports.PointerEvent s
+
+type TouchInteraction s = Interaction Exports.TouchEvent s
+
+type WheelInteraction s = Interaction Exports.WheelEvent s

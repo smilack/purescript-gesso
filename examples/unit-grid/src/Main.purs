@@ -42,13 +42,13 @@ input =
   , interactions: GInt.default { mouse = [ mousePosition, mouseDown ] }
   }
 
-mousePosition :: GInt.Interaction GInt.MouseEvent LocalState
+mousePosition :: GInt.MouseInteraction LocalState
 mousePosition = GInt.onMouseMove set
   where
   set event _ _ state =
     pure $ Just $ state { mousePos = Just $ GGeo.fromMouseEvent event }
 
-mouseDown :: GInt.Interaction GInt.MouseEvent LocalState
+mouseDown :: GInt.MouseInteraction LocalState
 mouseDown = GInt.onMouseDown set
   where
   set event _ _ state =
