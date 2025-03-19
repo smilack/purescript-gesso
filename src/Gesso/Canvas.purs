@@ -2,8 +2,7 @@
 -- | calling requestAnimationFrame, attaching events, and running render and
 -- | update functions.
 module Gesso.Canvas
-  ( Input
-  , Query(..)
+  ( Query(..)
   , Slot
   , Output(..)
   , _gessoCanvas
@@ -54,10 +53,18 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |
 -- | - `name` is the name of the application, which doubles as the HTML `id` for
 -- |   the canvas element.
--- | - `app` is an `AppSpec`.
 -- | - `localState` is the state of the application.
 -- | - `viewBox` is the position and dimensions of the drawing area.
--- | - `interactions` is the events attached to the canvas element.
+-- | - `window` defines how the screen element should size and position itself.
+-- | - `behavior` contains functions that make the application do things.
+-- |   - `render` draws on the component every animation frame.
+-- |   - `update` runs on each animation frame, just before `render`.
+-- |   - `fixed` runs at a set interval of time.
+-- |   - `interactions` are events attached to the canvas element.
+-- |   - `output` defines how (or if) the component should send information out to
+-- |     the host application.
+-- |   - `input` defines how the component's state should change in response to
+-- |     receiving input from the host application.
 -- | - `dom`: DOM-related fields available after initialization:
 -- |   - `clientRect` is the actual position and dimensions of the canvas
 -- |     element.
@@ -73,22 +80,29 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |     to pause or resume running timers.
 -- |   - `emitter` is a subscription to a listener/emitter pair used to send
 -- |     Actions from `requestAnimationFrame` callbacks to the component.
--- | - `pendingUpdates` is a list of interactions and Query inputs waiting to be
--- |   applied.
 -- | - `timers` contains two timestamps, which are both set to a default value
 -- |   when the component is initialized:
 -- |   - `frame` is the timestamp of the most recently fired animation frame.
 -- |   - `fixed` is used for accurately spacing fixed-rate updates and it's
 -- |     updated after every batch of updates.
+-- | - `pendingUpdates` is a list of interactions and Query inputs waiting to be
+-- |   applied.
 -- | - `rafId` is the ID of the most recently requested animation frame. It's
 -- |   set when `requestAnimationFrame` is called and cleared when the animation
 -- |   frame callback runs.
 type State localState appInput appOutput =
   { name :: String
-  , app :: App.AppSpec localState appInput appOutput
   , localState :: localState
   , viewBox :: Geo.Rect
-  , interactions :: GI.Interactions localState
+  , window :: App.WindowMode
+  , behavior ::
+      { render :: App.RenderFunction localState
+      , update :: App.UpdateFunction localState
+      , fixed :: App.FixedUpdate localState
+      , interactions :: GI.Interactions localState
+      , output :: App.OutputProducer localState appOutput
+      , input :: App.InputReceiver localState appInput
+      }
   , dom ::
       Maybe
         { clientRect :: Geo.Rect
@@ -132,31 +146,6 @@ newtype Output appOutput = Output appOutput
 -- | `Application.AppSpec`.
 data Query appInput a = Input appInput a
 
--- | The input provided when the Canvas component is created. Because, of these
--- | fields, the only one that should be changed from outside the component is
--- | `localState`, the component has no `receive` defined in its `EvalSpec` (see
--- | [`component`](#v:component)'s use of `defaultEval`) so that this input is
--- | only read once.
--- |
--- | Instead, for outside changes to `localState`, an `input` function can be
--- | provided in the `AppSpec`, and the `input` function will have access to the
--- | same arguments as a regular update function.
--- |
--- | - `name` is the name of the application, which doubles as the HTML `id` for
--- |   the canvas element.
--- | - `app` is the Application Spec.
--- | - `localState` is the initial local state for the application.
--- | - `viewBox` is the desired dimensions for the drawing surface.
--- | - `interactions` is the events which will be attached to the
--- |    canvas element.
-type Input localState appInput appOutput =
-  { name :: String
-  , app :: App.AppSpec localState appInput appOutput
-  , localState :: localState
-  , viewBox :: Geo.Rect
-  , interactions :: GI.Interactions localState
-  }
-
 -- | Definition of the Canvas component. `render` is memoized so that it only
 -- | re-renders when the dimensions of the canvas element change.
 component
@@ -164,13 +153,13 @@ component
    . MonadAff m
   => H.Component
        (Query appInput)
-       (Input localState appInput appOutput)
+       (App.AppSpec localState appInput appOutput)
        (Output appOutput)
        m
 component =
   H.mkComponent
     { initialState
-    , render: HH.memoized (eq `on` (_.dom >>> map _.clientRect)) render
+    , render: HH.memoized (eq `on` (_.dom >>> map _.clientRect)) renderComponent
     , eval:
         H.mkEval
           $ H.defaultEval
@@ -187,14 +176,14 @@ component =
 -- | empty.
 initialState
   :: forall localState appInput appOutput
-   . Input localState appInput appOutput
+   . App.AppSpec localState appInput appOutput
   -> State localState appInput appOutput
-initialState { name, app, localState, viewBox, interactions } =
+initialState { name, window, initialState: localState, viewBox, behavior } =
   { name
-  , app
   , localState
   , viewBox
-  , interactions
+  , window
+  , behavior
   , dom: Nothing
   , subscriptions: Nothing
   , timers: Nothing
@@ -206,12 +195,12 @@ initialState { name, app, localState, viewBox, interactions } =
 -- | different from the CSS width and height. The CSS controls the area that the
 -- | element takes up on the page, while the HTML attributes control the
 -- | coordinate system of the drawing area.
-render
+renderComponent
   :: forall localState appInput appOutput slots m
    . State localState appInput appOutput
   -> H.ComponentHTML (Action localState) slots m
-render { name, dom, app, interactions } =
-  HH.canvas $ [ id name, GEl.style app.window, tabIndex 0 ]
+renderComponent { name, dom, window, behavior: { interactions } } =
+  HH.canvas $ [ id name, GEl.style window, tabIndex 0 ]
     <> GI.toProps QueueUpdate interactions
     <> maybe [] GEl.toSizeProps (dom <#> _.clientRect)
 
@@ -260,16 +249,16 @@ handleAction = case _ of
   FirstTick notify -> H.liftEffect $ getFirstFrame notify
 
   Tick notify lastFrame -> do
-    { localState, app, pendingUpdates } <- H.get
+    { localState, behavior: { fixed, update, render }, pendingUpdates } <- H.get
 
     results <- runMaybeT do
-      { fixed } <- MaybeT $ H.gets _.timers
+      timers <- MaybeT $ H.gets _.timers
       { context, scalers } <- MaybeT $ H.gets _.dom
 
       lift $ H.liftEffect do
         -- schedule fixed updates
-        let { function, interval } = app.fixed
-        { last, items } <- T.stampInterval fixed function interval
+        let { function, interval } = fixed
+        { last, items } <- T.stampInterval timers.fixed function interval
         let updateQueue = T.sort (items <> pendingUpdates)
 
         -- run pending + queued updates
@@ -292,7 +281,8 @@ handleAction = case _ of
           context
           scalers
           stateHistory
-          app
+          update
+          render
           notify
 
         pure
@@ -403,30 +393,39 @@ getFirstFrame = requestAnimationFrame (const $ pure unit)
 -- | the beginning of this tick to the app's output function to determine
 -- | whether to send I/O.
 queueAnimationFrame
-  :: forall localState appInput appOutput
+  :: forall localState
    . T.Last
   -> (T.Now -> Number)
   -> Context2D
   -> Geo.Scalers
   -> History localState
-  -> App.AppSpec localState appInput appOutput
+  -> App.UpdateFunction localState
+  -> App.RenderFunction localState
   -> (Action localState -> Effect Unit)
   -> Effect Unit
-queueAnimationFrame lastTime toIntRatio context scalers stateHistory app notify =
+queueAnimationFrame
+  lastTime
+  toIntervalRatio
+  context
+  scalers
+  stateHistory
+  update
+  render
+  notify =
   requestAnimationFrame rafCallback notify
   where
   rafCallback :: T.Now -> Effect Unit
   rafCallback timestamp = do
     let delta = T.delta timestamp lastTime
 
-    history <- tryUpdate scalers (app.update delta) (pure stateHistory)
+    history <- tryUpdate scalers (update delta) (pure stateHistory)
 
     when history.changed
       $ notify
       $ StateUpdated delta scalers { old: history.original, new: history.new }
 
-    app.render context delta scalers
-      { old: history.old, new: history.new, t: toIntRatio timestamp }
+    render context delta scalers
+      { old: history.old, new: history.new, t: toIntervalRatio timestamp }
 
 -- | Run an update function, using a current state if available, or an older one
 -- | if not. When folding over a list of update functions, this makes it easier
@@ -528,7 +527,7 @@ saveNewState
        m
        Unit
 saveNewState delta scalers stateVersions = do
-  { app: { output } } <- H.get
+  { output } <- H.gets _.behavior
   H.modify_ (_ { localState = stateVersions.new })
   mOutput <- liftEffect $ output delta scalers stateVersions
   traverse_ (H.raise <<< Output) mOutput
@@ -547,6 +546,6 @@ handleQuery
        m
        (Maybe a)
 handleQuery (Input inData a) = do
-  { app: { input } } <- H.get
+  { input } <- H.gets _.behavior
   handleAction $ QueueUpdate $ input inData
   pure (Just a)
