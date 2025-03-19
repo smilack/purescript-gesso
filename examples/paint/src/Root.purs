@@ -26,7 +26,7 @@ data Action
   | Undo
   | Redo
   | ToggleGrid
-  | GotOutput (GC.Output CanvasIO)
+  | GotOutput (GC.CanvasOutput CanvasIO)
 
 component
   :: forall q i o m
@@ -115,7 +115,7 @@ render state =
 
 send :: forall o m. MonadAff m => CanvasIO -> H.HalogenM CanvasIO Action Slots o m Unit
 send state = do
-  H.tell GC._gessoCanvas unit $ GC.Input $ toIO state
+  H.tell GC._gessoCanvas unit $ GC.CanvasInput $ toIO state
   pure unit
 
 handleAction
@@ -125,7 +125,7 @@ handleAction
   -> H.HalogenM CanvasIO Action Slots o m Unit
 handleAction = case _ of
   ToggleGrid -> (H.modify \s -> s { showGrid = not s.showGrid } :: CanvasIO) >>= send
-  GotOutput (GC.Output output') -> H.put output'
+  GotOutput (GC.CanvasOutput output') -> H.put output'
   ButtonClicked (CB.Clicked color') -> H.modify (_ { color = color' }) >>= send
   Undo -> do
     state <- H.get

@@ -18,9 +18,9 @@ import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as GApp
 import Gesso.Canvas as GC
+import Gesso.Geometry ((>@), (^@), (~>@), (-@))
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
-import Gesso.Geometry ((>@), (^@), (~>@), (-@))
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -57,7 +57,7 @@ type Slot s = (gessoCanvas :: GC.Slot CanvasIO CanvasIO Unit | s)
 component
   :: forall action slots m
    . MonadAff m
-  => (GC.Output CanvasIO -> action)
+  => (GC.CanvasOutput CanvasIO -> action)
   -> HH.ComponentHTML action (Slot slots) m
 component action =
   HH.slot GC._gessoCanvas unit GC.component canvasInput action
@@ -78,19 +78,18 @@ localState =
     , mouseDown: false
     }
 
-canvasInput :: GC.Input CanvasState CanvasIO CanvasIO
+canvasInput :: GApp.AppSpec CanvasState CanvasIO CanvasIO
 canvasInput =
   { name: "canvas"
-  , localState
-  , app:
-      GApp.defaultApp
-        { window = GApp.Fixed { width: 600.0, height: 600.0 }
-        , render = renderApp
-        , output = extractOutput
-        , input = convertState
-        }
+  , initialState: localState
+  , window: GApp.Fixed { width: 600.0, height: 600.0 }
   , viewBox: { x: 0.0, y: 0.0, width: 32.0, height: 32.0 }
-  , interactions: GInt.default { mouse = [ highlightCell, clearHighlight, mouseDown, mouseUp ] }
+  , behavior: GApp.defaultBehavior
+      { render = renderApp
+      , output = extractOutput
+      , input = convertState
+      , interactions { mouse = [ highlightCell, clearHighlight, mouseDown, mouseUp ] }
+      }
   }
 
 convertState

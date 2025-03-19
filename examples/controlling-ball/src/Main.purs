@@ -7,7 +7,6 @@ import Data.Number (pi)
 import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application as GApp
-import Gesso.Canvas as GCan
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.Time as GTime
@@ -25,18 +24,17 @@ type State = { x :: Number, y :: Number, radius :: Number, keys :: Keys }
 
 type Keys = { up :: Boolean, down :: Boolean, left :: Boolean, right :: Boolean }
 
-canvasInput :: forall i o. GCan.Input State i o
+canvasInput :: forall i o. GApp.AppSpec State i o
 canvasInput =
   { name: "controlling-ball"
-  , localState: { x: 100.0, y: 100.0, radius: 25.0, keys: { up: false, down: false, left: false, right: false } }
-  , app:
-      GApp.defaultApp
-        { window = GApp.Fullscreen
-        , render = render
-        , update = update
-        }
+  , initialState: { x: 100.0, y: 100.0, radius: 25.0, keys: { up: false, down: false, left: false, right: false } }
   , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
-  , interactions: GInt.default { keyboard = [ keyDown, keyUp ], mouse = [ mouseDown ] }
+  , window: GApp.Fullscreen
+  , behavior: GApp.defaultBehavior
+      { render = render
+      , update = update
+      , interactions { keyboard = [ keyDown, keyUp ], mouse = [ mouseDown ] }
+      }
   }
 
 mouseDown :: GInt.MouseInteraction State

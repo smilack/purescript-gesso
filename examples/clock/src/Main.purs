@@ -12,10 +12,9 @@ import Effect (Effect)
 import Effect.Now (nowTime) as Now
 import Gesso (runGessoAff, awaitBody, run) as G
 import Gesso.Application as GApp
-import Gesso.Canvas (component, Input) as GC
-import Gesso.Geometry as GGeo
-import Gesso.Interactions as GInt
+import Gesso.Canvas (component) as GC
 import Gesso.Geometry ((-@), (~>@))
+import Gesso.Geometry as GGeo
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -29,17 +28,13 @@ main =
 -- localState is unit because it's an input for run and needs to be
 --   passed in. The rest can be open because we never need to use them
 --   unless we call query or set the OutputMode to OutputFn
-input :: forall i o. GC.Input Unit i o
+input :: forall i o. GApp.AppSpec Unit i o
 input =
   { name: "test-app"
-  , localState: unit
-  , app:
-      GApp.defaultApp
-        { window = GApp.Fullscreen
-        , render = render
-        }
+  , initialState: unit
+  , window: GApp.Fullscreen
   , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
-  , interactions: GInt.default
+  , behavior: GApp.defaultBehavior { render = render }
   }
 
 render :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp Unit -> Effect Unit

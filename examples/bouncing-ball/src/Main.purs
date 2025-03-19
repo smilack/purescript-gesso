@@ -7,9 +7,7 @@ import Data.Number (pi)
 import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application as GApp
-import Gesso.Canvas as GCan
 import Gesso.Geometry as GGeo
-import Gesso.Interactions as GInt
 import Gesso.Time as GTime
 import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
@@ -23,18 +21,16 @@ main =
 type State =
   { x :: Number, vx :: Number, y :: Number, vy :: Number, radius :: Number }
 
-canvasInput :: forall i o. GCan.Input State i o
+canvasInput :: forall i o. GApp.AppSpec State i o
 canvasInput =
   { name: "bouncing-ball"
-  , localState: { x: 0.0, vx: 1.0, y: 0.0, vy: 1.0, radius: 25.0 }
-  , app:
-      GApp.defaultApp
-        { window = GApp.Fullscreen
-        , render = render
-        , update = update
-        }
+  , initialState: { x: 0.0, vx: 1.0, y: 0.0, vy: 1.0, radius: 25.0 }
   , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
-  , interactions: GInt.default
+  , window: GApp.Fullscreen
+  , behavior: GApp.defaultBehavior
+      { render = render
+      , update = update
+      }
   }
 
 update :: GTime.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)
