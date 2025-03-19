@@ -85,7 +85,7 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |   frame callback runs.
 type State localState appInput appOutput =
   { name :: String
-  , app :: App.AppSpec Context2D localState appInput appOutput
+  , app :: App.AppSpec localState appInput appOutput
   , localState :: localState
   , viewBox :: Geo.Rect
   , interactions :: GI.Interactions localState
@@ -151,7 +151,7 @@ data Query appInput a = Input appInput a
 -- |    canvas element.
 type Input localState appInput appOutput =
   { name :: String
-  , app :: App.AppSpec Context2D localState appInput appOutput
+  , app :: App.AppSpec localState appInput appOutput
   , localState :: localState
   , viewBox :: Geo.Rect
   , interactions :: GI.Interactions localState
@@ -409,7 +409,7 @@ queueAnimationFrame
   -> Context2D
   -> Geo.Scalers
   -> History localState
-  -> App.AppSpec Context2D localState appInput appOutput
+  -> App.AppSpec localState appInput appOutput
   -> (Action localState -> Effect Unit)
   -> Effect Unit
 queueAnimationFrame lastTime toIntRatio context scalers stateHistory app notify =

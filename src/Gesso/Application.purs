@@ -19,6 +19,7 @@ import Effect (Effect)
 import Gesso.Geometry as Geo
 import Gesso.Util.Lerp (Versions, Lerp)
 import Gesso.Time as T
+import Graphics.Canvas (Context2D)
 
 -- | `AppSpec` holds information about the setup and behavior of a Gesso
 -- | component.
@@ -30,9 +31,9 @@ import Gesso.Time as T
 -- |   the host application.
 -- | - `input` defines how the component's state should change in response to
 -- |   receiving input from the host application.
-type AppSpec context local input output =
+type AppSpec local input output =
   { window :: WindowMode
-  , render :: RenderFunction context local
+  , render :: RenderFunction local
   , fixed :: FixedUpdate local
   , update :: UpdateFunction local
   , output :: OutputProducer local output
@@ -42,8 +43,8 @@ type AppSpec context local input output =
 -- | A default `AppSpec` which can be modified piecemeal like Halogen's
 -- | `EvalSpec`. It does nothing on its own.
 defaultApp
-  :: forall context local input output
-   . AppSpec context local input output
+  :: forall local input output
+   . AppSpec local input output
 defaultApp =
   { window: Fixed Geo.sizeless
   , render: \_ _ _ _ -> pure unit
@@ -70,7 +71,7 @@ data WindowMode
 
 -- | A function that draws on the component. It knows the following:
 -- |
--- | - `context` is the drawing context of canvas element, like `Context2D`
+-- | - `Context2D` is the drawing context of the canvas element
 -- | - `Delta` is a record containing current and previous timestamps and the
 -- |   time elapsed since the previous frame.
 -- | - `Scalers` is a record containing scaling information for transforming
@@ -80,8 +81,8 @@ data WindowMode
 -- |
 -- | The render function may run any operations in `Effect`, not just functions
 -- | related to drawing on the canvas.
-type RenderFunction context local =
-  context -> T.Delta -> Geo.Scalers -> Lerp local -> Effect Unit
+type RenderFunction local =
+  Context2D -> T.Delta -> Geo.Scalers -> Lerp local -> Effect Unit
 
 -- | An function that may update the application state. It runs on every frame,
 -- | before the render function. It knows the following:
