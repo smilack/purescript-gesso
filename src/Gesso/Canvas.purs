@@ -2,9 +2,9 @@
 -- | calling requestAnimationFrame, attaching events, and running render and
 -- | update functions.
 module Gesso.Canvas
-  ( Query(..)
+  ( CanvasInput(..)
+  , CanvasOutput(..)
   , Slot
-  , Output(..)
   , _gessoCanvas
   , component
   ) where
@@ -44,7 +44,7 @@ import Web.HTML.Window (toEventTarget) as Window
 
 -- | The Halogen slot type for Canvas, which is used to include it inside
 -- | another Halogen component.
-type Slot input output slot = H.Slot (Query input) (Output output) slot
+type Slot input output slot = H.Slot (CanvasInput input) (CanvasOutput output) slot
 
 -- | A proxy type for Canvas provided for convenience, for use with Slot.
 _gessoCanvas = Proxy :: Proxy "gessoCanvas"
@@ -140,11 +140,11 @@ data Action localState
 
 -- | The component's output type is defined by the `OutputProducer` in the
 -- | `Application.AppSpec`.
-newtype Output appOutput = Output appOutput
+newtype CanvasOutput appOutput = CanvasOutput appOutput
 
 -- | The component's input type is defined by the `InputReceiver` in the
 -- | `Application.AppSpec`.
-data Query appInput a = Input appInput a
+data CanvasInput appInput a = CanvasInput appInput a
 
 -- | Definition of the Canvas component. `render` is memoized so that it only
 -- | re-renders when the dimensions of the canvas element change.
@@ -152,9 +152,9 @@ component
   :: forall localState appInput appOutput m
    . MonadAff m
   => H.Component
-       (Query appInput)
+       (CanvasInput appInput)
        (App.AppSpec localState appInput appOutput)
-       (Output appOutput)
+       (CanvasOutput appOutput)
        m
 component =
   H.mkComponent
@@ -231,7 +231,7 @@ handleAction
        (State localState appInput appOutput)
        (Action localState)
        slots
-       (Output appOutput)
+       (CanvasOutput appOutput)
        m
        Unit
 handleAction = case _ of
@@ -523,29 +523,29 @@ saveNewState
        (State localState appInput appOutput)
        (Action localState)
        slots
-       (Output appOutput)
+       (CanvasOutput appOutput)
        m
        Unit
 saveNewState delta scalers stateVersions = do
   { output } <- H.gets _.behavior
   H.modify_ (_ { localState = stateVersions.new })
   mOutput <- liftEffect $ output delta scalers stateVersions
-  traverse_ (H.raise <<< Output) mOutput
+  traverse_ (H.raise <<< CanvasOutput) mOutput
 
 -- | Receiving input from the host application. Convert it into an `Update` and
 -- | call `handleAction` to add it to the update queue.
 handleQuery
   :: forall localState appInput appOutput slots a m
    . MonadAff m
-  => Query appInput a
+  => CanvasInput appInput a
   -> H.HalogenM
        (State localState appInput appOutput)
        (Action localState)
        slots
-       (Output appOutput)
+       (CanvasOutput appOutput)
        m
        (Maybe a)
-handleQuery (Input inData a) = do
+handleQuery (CanvasInput inData a) = do
   { input } <- H.gets _.behavior
   handleAction $ QueueUpdate $ input inData
   pure (Just a)

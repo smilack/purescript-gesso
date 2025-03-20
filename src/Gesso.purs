@@ -51,8 +51,8 @@ canvas
   :: forall localState appInput appOutput m
    . MonadAff m
   => H.Component
-       (GCan.Query appInput)
+       (GCan.CanvasInput appInput)
        (GApp.AppSpec localState appInput appOutput)
-       (GCan.Output appOutput)
+       (GCan.CanvasOutput appOutput)
        m
 canvas = GCan.component
