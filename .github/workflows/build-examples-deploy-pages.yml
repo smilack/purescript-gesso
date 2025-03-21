@@ -56,6 +56,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    # Don't deploy the new documentation if this is just a PR
+    if: ${{ github.event_name != 'pull_request' }}
     needs: build
     steps:
       - name: Deploy to GitHub Pages
