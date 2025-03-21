@@ -34,6 +34,16 @@
 
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
+
+     <!-- navigation -->
+      <nav id="gesso_nav">
+       <ul>
+        <li><a class="readme_link" href="{% link README.md %}">Readme</a></li>
+        <li><a href="{% link docs/README.md %}">Documentation</a></li>
+        <li><a href="{% link examples/README.md %}">Examples</a></li>
+       </ul>
+      </nav>
+      
       <section id="main_content" class="inner">
         {{ content }}
       </section>
