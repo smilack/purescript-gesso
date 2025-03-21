@@ -7,10 +7,8 @@ import Data.Maybe (Maybe(..))
 import Data.Number (abs, pi)
 import Effect (Effect)
 import Gesso as Gesso
-import Gesso.Application (defaultApp, WindowMode(..))
-import Gesso.Canvas (Input)
+import Gesso.Application (AppSpec, defaultBehavior, WindowMode(..))
 import Gesso.Geometry as GGeo
-import Gesso.Interactions as Interactions
 import Gesso.Time (Delta, hz) as Time
 import Gesso.Util.Lerp (Lerp, lerp)
 import Graphics.Canvas as Canvas
@@ -33,17 +31,16 @@ type State = { ball :: Ball, seconds :: Number }
 initialState :: State
 initialState = { ball: { x: 75.0, y: 100.0, vx: 0.3, r: 50.0 }, seconds: 0.0 }
 
-canvasInput :: forall i o. Input State i o
+canvasInput :: forall i o. AppSpec State i o
 canvasInput =
   { name: "interpolation"
-  , localState: initialState
-  , app: defaultApp
-      { window = Fullscreen
-      , render = render
+  , initialState
+  , window: Fullscreen
+  , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
+  , behavior: defaultBehavior
+      { render = render
       , fixed = { interval: Time.hz 20.0, function: fixedUpdate }
       }
-  , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
-  , interactions: Interactions.default
   }
 
 fixedUpdate :: Time.Delta -> GGeo.Scalers -> State -> Effect (Maybe State)

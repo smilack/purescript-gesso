@@ -1,57 +1,72 @@
 -- | `Application` houses functions and configuration that are shared between
 -- | all Gesso applications, regardless of the rendering component.
 module Gesso.Application
-  ( AppSpec
-  , FixedUpdate
-  , InputReceiver
-  , OutputProducer
-  , RenderFunction
-  , TimestampedUpdate
-  , UpdateFunction
+  ( AppBehavior
+  , AppSpec
   , WindowMode(..)
-  , defaultApp
+  , defaultBehavior
+  , module Exports
   ) where
 
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Effect (Effect)
-import Gesso.Geometry as Geo
-import Gesso.Util.Lerp (Versions, Lerp)
-import Gesso.Time as T
+import Gesso.Application.Behavior (FixedUpdate, InputReceiver, OutputProducer, RenderFunction, UpdateFunction)
+import Gesso.Application.Behavior (FixedUpdate, InputReceiver, OutputProducer, RenderFunction, TimestampedUpdate, UpdateFunction) as Exports
+import Gesso.Geometry (Area, Rect)
+import Gesso.Interactions (Interactions)
+import Gesso.Interactions (default) as Interactions
+import Gesso.Time (never)
 
 -- | `AppSpec` holds information about the setup and behavior of a Gesso
 -- | component.
 -- |
+-- | - `name` is the name of the application, which doubles as the HTML `id` for
+-- |   the canvas element.
+-- | - `initialState` is the initial local state for the application.
+-- | - `viewBox` is the desired dimensions for the drawing area.
 -- | - `window` defines how the screen element should size and position itself.
+-- | - `behavior` contains functions that control i/o, updates, and rendering.
+type AppSpec state input output =
+  { name :: String
+  , initialState :: state
+  , viewBox :: Rect
+  , window :: WindowMode
+  , behavior :: AppBehavior state input output
+  }
+
+-- | `AppBehavior` holds the functions that make an application run.
+-- |
 -- | - `render` draws on the component every animation frame.
 -- | - `update` runs on each animation frame, just before `render`.
+-- | - `fixed` runs at a set interval of time.
+-- | - `interactions` are events which will be attached to the canvas element.
 -- | - `output` defines how (or if) the component should send information out to
 -- |   the host application.
 -- | - `input` defines how the component's state should change in response to
 -- |   receiving input from the host application.
-type AppSpec context local input output =
-  { window :: WindowMode
-  , render :: RenderFunction context local
-  , fixed :: FixedUpdate local
-  , update :: UpdateFunction local
-  , output :: OutputProducer local output
-  , input :: InputReceiver local input
+type AppBehavior state input output =
+  { render :: RenderFunction state
+  , update :: UpdateFunction state
+  , fixed :: FixedUpdate state
+  , interactions :: Interactions state
+  , output :: OutputProducer state output
+  , input :: InputReceiver state input
   }
 
--- | A default `AppSpec` which can be modified piecemeal like Halogen's
+-- | A default `AppBehavior` which can be modified piecemeal like Halogen's
 -- | `EvalSpec`. It does nothing on its own.
-defaultApp
-  :: forall context local input output
-   . AppSpec context local input output
-defaultApp =
-  { window: Fixed Geo.sizeless
-  , render: \_ _ _ _ -> pure unit
+defaultBehavior
+  :: forall state input output
+   . AppBehavior state input output
+defaultBehavior =
+  { render: \_ _ _ _ -> pure unit
+  , update: \_ _ _ -> pure Nothing
   , fixed:
-      { interval: T.never
+      { interval: never
       , function: \_ _ _ -> pure Nothing
       }
-  , update: \_ _ _ -> pure Nothing
+  , interactions: Interactions.default
   , output: \_ _ _ -> pure Nothing
   , input: \_ _ _ _ -> pure Nothing
   }
@@ -64,60 +79,6 @@ defaultApp =
 -- | - `FullScreen` takes up the entire page from the top left corner to the
 -- |   bottom right.
 data WindowMode
-  = Fixed Geo.Area
+  = Fixed Area
   | Stretch
   | Fullscreen
-
--- | A function that draws on the component. It knows the following:
--- |
--- | - `context` is the drawing context of canvas element, like `Context2D`
--- | - `Delta` is a record containing current and previous timestamps and the
--- |   time elapsed since the previous frame.
--- | - `Scalers` is a record containing scaling information for transforming
--- |   coordinates between the drawing and the canvas.
--- | - `local` is the local state of the application, with `Lerp` being the two
--- |   most recent states and the time progress between them.
--- |
--- | The render function may run any operations in `Effect`, not just functions
--- | related to drawing on the canvas.
-type RenderFunction context local =
-  context -> T.Delta -> Geo.Scalers -> Lerp local -> Effect Unit
-
--- | An function that may update the application state. It runs on every frame,
--- | before the render function. It knows the following:
--- |
--- | - `Delta` is a record containing current and previous timestamps and the
--- |   time elapsed since the previous frame.
--- | - `Scalers` is a record containing scaling information for transforming
--- |   coordinates between the drawing and the canvas.
--- | - `local` is the local state of the application
--- |
--- | The update function may return a new local state if changes are necessary
--- | (or `Nothing` if not).
--- |
--- | This type is also used by Interaction handlers and when receiving input
--- | from a host application.
-type UpdateFunction local =
-  T.Delta -> TimestampedUpdate local
-
--- | A partially applied `UpdateFunction` that already has the `Delta` record.
-type TimestampedUpdate local =
-  Geo.Scalers -> local -> Effect (Maybe local)
-
--- | An update function that occurs at a fixed, regular interval, rather than on
--- | every animation frame, which may vary.
-type FixedUpdate local =
-  { interval :: T.Interval
-  , function :: UpdateFunction local
-  }
-
--- | An input receiver is a variant of an update function that can receive
--- | information from the component's parent and produce an update function
--- | in response.
-type InputReceiver local input = input -> UpdateFunction local
-
--- | When the local state of an application changes, an output producer compares
--- | the old and new local states and may send output to the component's parent
--- | based on the difference.
-type OutputProducer local output =
-  T.Delta -> Geo.Scalers -> Versions local -> Effect (Maybe output)

@@ -10,7 +10,7 @@ import Data.Number (tau)
 import Effect (Effect)
 import Gesso (runGessoAff, awaitBody, run) as G
 import Gesso.Application as GApp
-import Gesso.Canvas (component, Input) as GC
+import Gesso.Canvas (component) as GC
 import Gesso.Geometry ((^@), (>@), (-@), to)
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
@@ -29,17 +29,17 @@ type LocalState =
   , clicked :: Maybe GGeo.Point
   }
 
-input :: forall i o. GC.Input LocalState i o
+input :: forall i o. GApp.AppSpec LocalState i o
 input =
   { name: "test-app"
-  , localState: { mousePos: Nothing, clicked: Nothing }
-  , app:
-      GApp.defaultApp
-        { window = GApp.Fullscreen
-        , render = render
-        }
+  , initialState: { mousePos: Nothing, clicked: Nothing }
+  , window: GApp.Fullscreen
   , viewBox: { x: -1.5, y: -1.5, width: 3.0, height: 3.0 }
-  , interactions: GInt.default { mouse = [ mousePosition, mouseDown ] }
+  , behavior:
+      GApp.defaultBehavior
+        { render = render
+        , interactions { mouse = [ mousePosition, mouseDown ] }
+        }
   }
 
 mousePosition :: GInt.MouseInteraction LocalState

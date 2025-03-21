@@ -21,6 +21,7 @@ import Prelude
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
+import Gesso.Application as GApp
 import Gesso.Canvas as GCan
 import Halogen as H
 import Halogen.Aff (awaitBody, awaitLoad, selectElement) as Halogen.Aff
@@ -50,8 +51,8 @@ canvas
   :: forall localState appInput appOutput m
    . MonadAff m
   => H.Component
-       (GCan.Query appInput)
-       (GCan.Input localState appInput appOutput)
-       (GCan.Output appOutput)
+       (GCan.CanvasInput appInput)
+       (GApp.AppSpec localState appInput appOutput)
+       (GCan.CanvasOutput appOutput)
        m
 canvas = GCan.component

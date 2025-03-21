@@ -10,7 +10,7 @@ module Gesso.Interactions.Internal
 import Prelude
 
 import DOM.HTML.Indexed (HTMLcanvas)
-import Gesso.Application (UpdateFunction) as App
+import Gesso.Application.Behavior (UpdateFunction) as App
 import Halogen.HTML.Properties (IProp)
 import Web.Clipboard.ClipboardEvent (ClipboardEvent) as Exports
 import Web.Event.Internal.Types (Event) as Exports
