@@ -1,20 +1,24 @@
 # Gesso Documentation
 
-- [Getting Started](#getting-started) - Step-by-step projects for Gesso newcomers
-- [How do I...?](#how-do-i) - Q&A about more obscure features
-- [Reference Guide](#reference-guide) - Detailed look at types and functions
+## Quick-Start
 
-## Getting Started
+The [Quick-Start Guide](quickstart.md) walks you through the process of setting up and compiling your first Gesso application.
 
-The [Quick-Start Guide](quick-start.md) will walk you through the process of setting up and compiling your first Gesso application. It covers:
+## Important Modules
 
-* Installing Gesso with [Spago](https://github.com/purescript/spago)
-* Necessary imports
-* How to write your `main` function
-* Basic Gesso component configuration
-* Running your application with Parcel
+These modules contain the vast majority of what you need to know to use Gesso effectively:
 
-These examples have in-depth explanations of various features:
+- [Gesso](./gesso.md)
+- [Application](./application.md)
+- [Geometry](./geometry.md)
+- [Interactions](./interactions.md)
+- [Canvas](./canvas.md)
+- [Time](./time.md)
+- `Versions`/`Lerp`
+
+## Examples
+
+These small programs show various features. See the [main Examples page](../examples/README.md) for more information on building an running the examples.
 
 1. [Hello World](../examples/hello/README.md)
 
@@ -31,21 +35,3 @@ These examples have in-depth explanations of various features:
 4. [Paint App Tutorial](../examples/paint/README.md)
    
    A simple drawing app with undo and redo features. Introduces using a Gesso component in a Halogen application and component I/O with Halogen queries.
-
-## How do I...?
-
-***Coming Soon***
-
-These how-to guides address specific questions a developer might have after spending some time working with Gesso.
-
-* How do I render fonts consistently at different sizes?
-
-* How do I know what part of the canvas is visible?
-
-## Reference Guide
-
-***Coming Soon***
-
-* I/O
-* Interactions
-
