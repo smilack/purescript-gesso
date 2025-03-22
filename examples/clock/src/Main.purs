@@ -14,8 +14,8 @@ import Gesso (launch) as G
 import Gesso.Application as GApp
 import Gesso.Geometry ((-@), (~>@))
 import Gesso.Geometry as GGeo
+import Gesso.State as GSt
 import Gesso.Time as GTime
-import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
@@ -33,7 +33,7 @@ input =
   , behavior: GApp.defaultBehavior { render = render }
   }
 
-render :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp Unit -> Effect Unit
+render :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GSt.States Unit -> Effect Unit
 render context _ { canvas, drawing } _ = do
   -- Clear background
   Canvas.setFillStyle context "white"

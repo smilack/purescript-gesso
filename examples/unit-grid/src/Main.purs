@@ -14,7 +14,7 @@ import Gesso.Geometry ((^@), (>@), (-@), to)
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.Time as GTime
-import Gesso.Util.Lerp as GLerp
+import Gesso.State as GSt
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
@@ -50,8 +50,8 @@ mouseDown = GInt.onMouseDown set
   set event _ _ state =
     pure $ Just $ state { clicked = Just $ GGeo.fromMouseEvent event }
 
-render :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp LocalState -> Effect Unit
-render context _ { canvas, drawing } { new: { clicked, mousePos } } = do
+render :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GSt.States LocalState -> Effect Unit
+render context _ { canvas, drawing } { current: { clicked, mousePos } } = do
   clearBackground
   drawAxes
   drawGridLines

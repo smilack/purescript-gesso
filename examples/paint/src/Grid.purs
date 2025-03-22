@@ -21,8 +21,8 @@ import Gesso.Canvas as GC
 import Gesso.Geometry ((>@), (^@), (~>@), (-@))
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
+import Gesso.State as GSt
 import Gesso.Time as GTime
-import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
 import Halogen.HTML as HH
 import Record (merge) as Record
@@ -103,7 +103,7 @@ convertState { showGrid, color, pixels, redo } _ _ = pure
   <<< Just
   <<< _ { showGrid = showGrid, color = color, pixels = pixels, redo = redo }
 
-extractOutput :: GTime.Delta -> GGeo.Scalers -> GLerp.Versions CanvasState -> Effect (Maybe CanvasIO)
+extractOutput :: GTime.Delta -> GGeo.Scalers -> GSt.Compare CanvasState -> Effect (Maybe CanvasIO)
 extractOutput _ _ { old, new: { showGrid, color, pixels, redo } } =
   pure $
     if
@@ -167,8 +167,8 @@ mouseDown = GInt.onMouseDown startDrawing
 mouseUp :: GInt.MouseInteraction CanvasState
 mouseUp = GInt.onMouseUp (\_ _ _ s -> pure $ Just s { mouseDown = false })
 
-renderApp :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp CanvasState -> Effect Unit
-renderApp context _ { canvas } { new: { mouseCell, showGrid, color, pixels } } = do
+renderApp :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GSt.States CanvasState -> Effect Unit
+renderApp context _ { canvas } { current: { mouseCell, showGrid, color, pixels } } = do
   clearBackground
   drawOutline
   when showGrid drawGrid

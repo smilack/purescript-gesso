@@ -25,8 +25,8 @@ import Gesso.Canvas.Element as GEl
 import Gesso.Geometry (Rect) as Geo
 import Gesso.Geometry.Internal (Scalers, mkScalers) as Geo
 import Gesso.Interactions.Internal as GI
+import Gesso.State (Compare, History)
 import Gesso.Time as T
-import Gesso.Util.Lerp (Versions, History)
 import Graphics.Canvas (Context2D)
 import Halogen (liftEffect)
 import Halogen as H
@@ -133,7 +133,7 @@ data Action localState
   | FirstTick (Action localState -> Effect Unit)
   | Tick (Action localState -> Effect Unit) T.Last
   | Finalize
-  | StateUpdated T.Delta Geo.Scalers (Versions localState)
+  | StateUpdated T.Delta Geo.Scalers (Compare localState)
   | QueueUpdate (App.UpdateFunction localState)
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
@@ -425,7 +425,10 @@ queueAnimationFrame
       $ StateUpdated delta scalers { old: history.original, new: history.new }
 
     render context delta scalers
-      { old: history.old, new: history.new, t: toIntervalRatio timestamp }
+      { previous: history.old
+      , current: history.new
+      , t: toIntervalRatio timestamp
+      }
 
 -- | Run an update function, using a current state if available, or an older one
 -- | if not. When folding over a list of update functions, this makes it easier
@@ -518,7 +521,7 @@ saveNewState
    . MonadAff m
   => T.Delta
   -> Geo.Scalers
-  -> Versions localState
+  -> Compare localState
   -> H.HalogenM
        (State localState appInput appOutput)
        (Action localState)

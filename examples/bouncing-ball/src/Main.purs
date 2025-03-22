@@ -8,8 +8,8 @@ import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application as GApp
 import Gesso.Geometry as GGeo
+import Gesso.State as GSt
 import Gesso.Time as GTime
-import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
@@ -53,8 +53,8 @@ updateV position radius min max velocity
   | otherwise = velocity
 
 render
-  :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GLerp.Lerp State -> Effect Unit
-render context _ { canvas } { new: { x, y, radius } } = do
+  :: Canvas.Context2D -> GTime.Delta -> GGeo.Scalers -> GSt.States State -> Effect Unit
+render context _ { canvas } { current: { x, y, radius } } = do
   Canvas.clearRect context canvas.rect
   Canvas.setFillStyle context "red"
   Canvas.fillPath context do

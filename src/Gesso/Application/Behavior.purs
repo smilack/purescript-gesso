@@ -12,8 +12,8 @@ import Prelude
 import Data.Maybe (Maybe)
 import Effect (Effect)
 import Gesso.Geometry (Scalers)
+import Gesso.State (Compare, States)
 import Gesso.Time (Delta, Interval)
-import Gesso.Util.Lerp (Versions, Lerp)
 import Graphics.Canvas (Context2D)
 
 -- | A function that draws on the component. It knows the following:
@@ -23,13 +23,14 @@ import Graphics.Canvas (Context2D)
 -- |   time elapsed since the previous frame.
 -- | - `Scalers` is a record containing scaling information for transforming
 -- |   coordinates between the drawing and the canvas.
--- | - `local` is the local state of the application, with `Lerp` being the two
--- |   most recent states and the time progress between them.
+-- | - `local` is the local state of the application, with `States` containing
+-- |   the two most recent states and the time progress between them (on the
+-- |   interval `[0, 1]`).
 -- |
 -- | The render function may run any operations in `Effect`, not just functions
 -- | related to drawing on the canvas.
 type RenderFunction local =
-  Context2D -> Delta -> Scalers -> Lerp local -> Effect Unit
+  Context2D -> Delta -> Scalers -> States local -> Effect Unit
 
 -- | An function that may update the application state. It runs on every frame,
 -- | before the render function. It knows the following:
@@ -68,4 +69,4 @@ type InputReceiver local input = input -> UpdateFunction local
 -- | the old and new local states and may send output to the component's parent
 -- | based on the difference.
 type OutputProducer local output =
-  Delta -> Scalers -> Versions local -> Effect (Maybe output)
+  Delta -> Scalers -> Compare local -> Effect (Maybe output)

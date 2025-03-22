@@ -9,8 +9,8 @@ import Effect (Effect)
 import Gesso as Gesso
 import Gesso.Application (AppSpec, defaultBehavior, WindowMode(..))
 import Gesso.Geometry as GGeo
+import Gesso.State (States, lerp)
 import Gesso.Time (Delta, hz) as Time
-import Gesso.Util.Lerp (Lerp, lerp)
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
@@ -63,9 +63,9 @@ render
   :: Canvas.Context2D
   -> Time.Delta
   -> GGeo.Scalers
-  -> Lerp State
+  -> States State
   -> Effect Unit
-render context _ _ { old, new: { ball, seconds }, t } = do
+render context _ _ { previous, current: { ball, seconds }, t } = do
   Canvas.setLineWidth context 10.0
   Canvas.setStrokeStyle context color
   Canvas.strokePath context do
@@ -80,8 +80,8 @@ render context _ _ { old, new: { ball, seconds }, t } = do
   where
   { x, y, color } = case parity $ trunc $ seconds of
     Even ->
-      { x: lerp { t, old: old.ball.x, new: ball.x }
-      , y: lerp { t, old: old.ball.y, new: ball.y }
+      { x: lerp { t, previous: previous.ball.x, current: ball.x }
+      , y: lerp { t, previous: previous.ball.y, current: ball.y }
       , color: "black"
       }
     Odd ->
