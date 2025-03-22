@@ -28,7 +28,7 @@ module Main where
 import Prelude
 
 import Effect (Effect)
-import Gesso (awaitBody, canvas, run, runGessoAff)
+import Gesso (launch)
 import Gesso.Application (AppSpec, WindowMode(..), defaultBehavior)
 import Gesso.Geometry (null)
 import Graphics.Canvas (fillText)
@@ -51,9 +51,7 @@ appSpec =
 ## 5. Add `main` function
 ```purescript
 main :: Effect Unit
-main = runGessoAff do
-  body <- awaitBody
-  run canvas appSpec body
+main = launch appSpec
 ```
 
 ## 6. Build project
