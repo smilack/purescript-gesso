@@ -25,5 +25,5 @@ package:
     - web-uievents
   name: gesso-example-interpolation
   bundle:
-    module: Example.Interpolation.Main
+    module: Gesso.Example.Interpolation
     outfile: "dist/example.js"

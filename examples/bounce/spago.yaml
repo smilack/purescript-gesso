@@ -13,6 +13,7 @@ package:
     - integers
     - lists
     - maybe
+    - numbers
     - prelude
     - safe-coerce
     - tuples
@@ -22,7 +23,7 @@ package:
     - web-html
     - web-touchevents
     - web-uievents
-  name: gesso-example-hello
+  name: gesso-example-bounce
   bundle:
-    module: Gesso.Example.Hello
+    module: Gesso.Example.Bounce
     outfile: "dist/example.js"

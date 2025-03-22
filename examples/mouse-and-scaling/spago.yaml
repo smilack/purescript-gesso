@@ -2,6 +2,7 @@ package:
   dependencies:
     - gesso
     - aff
+    - arrays
     - canvas
     - console
     - css
@@ -13,6 +14,7 @@ package:
     - integers
     - lists
     - maybe
+    - numbers
     - prelude
     - safe-coerce
     - tuples
@@ -22,7 +24,7 @@ package:
     - web-html
     - web-touchevents
     - web-uievents
-  name: gesso-example-hello
+  name: gesso-example-mouse-and-scaling
   bundle:
-    module: Gesso.Example.Hello
+    module: Gesso.Example.MouseAndScaling
     outfile: "dist/example.js"

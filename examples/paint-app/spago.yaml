@@ -2,6 +2,7 @@ package:
   dependencies:
     - gesso
     - aff
+    - arrays
     - canvas
     - console
     - css
@@ -14,6 +15,7 @@ package:
     - lists
     - maybe
     - prelude
+    - record
     - safe-coerce
     - tuples
     - web-clipboard
@@ -22,7 +24,7 @@ package:
     - web-html
     - web-touchevents
     - web-uievents
-  name: gesso-example-hello
+  name: gesso-example-paint-app
   bundle:
-    module: Gesso.Example.Hello
+    module: Gesso.Example.PaintApp
     outfile: "dist/example.js"
