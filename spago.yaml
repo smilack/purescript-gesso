@@ -1,4 +1,6 @@
 package:
+  name: gesso
+  description: "A Canvas element wrapper for Halogen and standalone PureScript applications"
   dependencies:
     - aff
     - canvas
@@ -24,7 +26,12 @@ package:
     - web-pointerevents
     - web-touchevents
     - web-uievents
-  name: gesso
+  publish:
+    version: 0.3.0
+    license: MIT
+    location:
+      githubOwner: smilack
+      githubRepo: purescript-gesso
 workspace:
   packageSet:
     registry: 62.2.6
