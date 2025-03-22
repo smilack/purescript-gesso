@@ -13,10 +13,7 @@ import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
-main =
-  Gesso.runGessoAff do
-    body <- Gesso.awaitBody
-    Gesso.run Gesso.canvas canvasInput body
+main = Gesso.launch canvasInput
 
 type State =
   { x :: Number, vx :: Number, y :: Number, vy :: Number, radius :: Number }

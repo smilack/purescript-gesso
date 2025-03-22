@@ -15,10 +15,7 @@ import Graphics.Canvas as Canvas
 import Web.UIEvent.KeyboardEvent as KEv
 
 main :: Effect Unit
-main =
-  Gesso.runGessoAff do
-    body <- Gesso.awaitBody
-    Gesso.run Gesso.canvas canvasInput body
+main = Gesso.launch canvasInput
 
 type State = { x :: Number, y :: Number, radius :: Number, keys :: Keys }
 

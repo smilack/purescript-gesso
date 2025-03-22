@@ -7,13 +7,10 @@ import Gesso.Geometry as Gesso.Geometry
 import Gesso.Time as Gesso.Time
 import Gesso.Util.Lerp as Gesso.Util.Lerp
 import Graphics.Canvas as Graphics.Canvas
-import Prelude (Unit, unit, bind)
+import Prelude (Unit, unit)
 
 main :: Effect Unit
-main =
-  Gesso.runGessoAff do
-    body <- Gesso.awaitBody
-    Gesso.run Gesso.canvas canvasInput body
+main = Gesso.launch canvasInput
 
 -- Gesso.Canvas.Input's type variables are:
 --   - local state (state held in canvas and given to update/render)

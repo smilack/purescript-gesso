@@ -10,9 +10,8 @@ import Data.Number (cos, sin, pi, tau)
 import Data.Time as Time
 import Effect (Effect)
 import Effect.Now (nowTime) as Now
-import Gesso (runGessoAff, awaitBody, run) as G
+import Gesso (launch) as G
 import Gesso.Application as GApp
-import Gesso.Canvas (component) as GC
 import Gesso.Geometry ((-@), (~>@))
 import Gesso.Geometry as GGeo
 import Gesso.Time as GTime
@@ -20,10 +19,7 @@ import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
-main =
-  G.runGessoAff do
-    body <- G.awaitBody
-    G.run GC.component input body
+main = G.launch input
 
 -- localState is unit because it's an input for run and needs to be
 --   passed in. The rest can be open because we never need to use them

@@ -14,10 +14,7 @@ import Gesso.Util.Lerp (Lerp, lerp)
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
-main =
-  Gesso.runGessoAff do
-    body <- Gesso.awaitBody
-    Gesso.run Gesso.canvas canvasInput body
+main = Gesso.launch canvasInput
 
 type Ball =
   { x :: Number

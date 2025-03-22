@@ -1,58 +1,75 @@
 -- | This is the main entry point for Gesso applications and contains functions
--- | for running `Aff` values. For a Halogen application where Gesso is the
--- | root component, typical usage of this module would be:
--- |
+-- | for running `Aff` values. For a full-page Halogen application where Gesso
+-- | is the root component, typical usage of this module would be:
+-- | ```purescript
+-- | main :: Effect Unit
+-- | main = Gesso.launch appSpec
+-- | ```
+-- | Or it could be confined to an element on the page, for example:
+-- | ```purescript
+-- | main :: Effect Unit
+-- | main = Gesso.launchIn "#some-element-id" appSpec
+-- | ```
+-- | If it's necessary to perform other `Aff` actions, the `run` function is
+-- | available.
 -- | ```purescript
 -- | runGessoAff do
 -- |   body <- awaitBody
--- |   run canvas canvasInput body
+-- |   Gesso.run appSpec body
 -- | ```
--- |
--- | See [`Gesso.Canvas.Input`](Gesso.Canvas.html#t:Input) for the type of
--- | `canvasInput`.
+-- | When Gesso is a subcomponent of another Halogen component, run Halogen
+-- | normally and include Gesso with a `Slot`.
 module Gesso
-  ( runGessoAff
+  ( launch
+  , launchIn
+  , module Exports
   , run
-  , canvas
-  , module Halogen.Aff
+  , runGessoAff
   ) where
 
 import Prelude
+
+import Data.Maybe (maybe)
 import Effect (Effect)
-import Effect.Aff (Aff)
-import Effect.Aff.Class (class MonadAff)
+import Effect.Aff (Aff, error, throwError)
 import Gesso.Application as GApp
 import Gesso.Canvas as GCan
-import Halogen as H
-import Halogen.Aff (awaitBody, awaitLoad, selectElement) as Halogen.Aff
-import Halogen.Aff as HAff
+import Halogen.Aff (awaitBody, awaitLoad, selectElement) as Exports
+import Halogen.Aff (awaitLoad, runHalogenAff, selectElement) as HAff
 import Halogen.VDom.Driver (runUI)
+import Web.DOM.ParentNode (QuerySelector(..))
+import Web.DOM.ParentNode (QuerySelector(..)) as Exports
 import Web.HTML.HTMLElement (HTMLElement)
 
--- | Run a Gesso `Aff` value such as the one produced by `run`
+-- | Launch a Halogen application in the page body with the Gesso canvas as the
+-- | root component.
+launch :: forall state i o. GApp.AppSpec state i o -> Effect Unit
+launch = launchIn "body"
+
+-- | Launch a Halogen application in a given element with the Gesso canvas as
+-- | the root component. The String argument should be a valid query selector
+-- | for some element on the page.
+launchIn :: forall state i o. String -> GApp.AppSpec state i o -> Effect Unit
+launchIn selector input = runGessoAff do
+  HAff.awaitLoad
+  target <- HAff.selectElement (QuerySelector selector)
+  element <- maybe err pure target
+  run input element
+  where
+  err = throwError $ error $ "Could not find " <> selector
+
+-- | Run an `Aff` value such as the one produced by `run`. Alias for
+-- | `Halogen.Aff.runHalogenAff`.
 runGessoAff :: forall x. Aff x -> Effect Unit
 runGessoAff = HAff.runHalogenAff
 
--- | Create a Gesso component, such as [`canvas`](#v:canvas), as a top-level
--- | Halogen component in the provided element.
+-- | An `Aff` which starts a Halogen application in the provided element, using
+-- | a Gesso component with the given spec as the top-level component.
 run
-  :: forall input q o
-   . H.Component q input o Aff
-  -> input
+  :: forall state i o
+   . GApp.AppSpec state i o
   -> HTMLElement
   -> Aff Unit
-run component input element = do
-  _ <- runUI component input element
+run spec element = do
+  _ <- runUI GCan.component spec element
   pure unit
-
--- | The Gesso Canvas component. Wraps HTML Canvas and provides an interface for
--- | state, updates, and rendering.
-canvas
-  :: forall localState appInput appOutput m
-   . MonadAff m
-  => H.Component
-       (GCan.CanvasInput appInput)
-       (GApp.AppSpec localState appInput appOutput)
-       (GCan.CanvasOutput appOutput)
-       m
-canvas = GCan.component

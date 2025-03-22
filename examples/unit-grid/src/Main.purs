@@ -8,9 +8,8 @@ import Data.Int (toNumber, floor, round)
 import Data.Maybe (Maybe(..))
 import Data.Number (tau)
 import Effect (Effect)
-import Gesso (runGessoAff, awaitBody, run) as G
+import Gesso (launch) as Gesso
 import Gesso.Application as GApp
-import Gesso.Canvas (component) as GC
 import Gesso.Geometry ((^@), (>@), (-@), to)
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
@@ -19,10 +18,7 @@ import Gesso.Util.Lerp as GLerp
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
-main =
-  G.runGessoAff do
-    body <- G.awaitBody
-    G.run GC.component input body
+main = Gesso.launch input
 
 type LocalState =
   { mousePos :: Maybe GGeo.Point
