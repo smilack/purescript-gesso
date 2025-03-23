@@ -2,9 +2,7 @@ name: Build Gesso examples and deploy with Jekyll to GitHub Pages
 
 on:
   push:
-    branches: ["master"]
   pull_request:
-    branches: ["master"]
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -56,8 +54,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    # Don't deploy the new documentation if this is just a PR
-    if: ${{ github.event_name != 'pull_request' }}
+    # Only deploy the new documentation if this event changed master
+    if: ${{ github.event_name == 'push' && github.ref == 'master' }}
     needs: build
     steps:
       - name: Deploy to GitHub Pages
