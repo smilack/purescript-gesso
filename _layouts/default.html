@@ -38,9 +38,9 @@
      <!-- navigation -->
       <nav id="gesso_nav">
        <ul>
-        <li><a class="readme_link" href="{% link {{ README.md | relative_url }} %}">Readme</a></li>
-        <li><a href="{% link {{ docs/README.md | relative_url }} %}">Documentation</a></li>
-        <li><a href="{% link {{ examples/README.md | relative_url }} %}">Examples</a></li>
+        <li><a class="readme_link" href="{{ site.baseurl }}{% link README.md %}">Readme</a></li>
+        <li><a href="{{ site.baseurl }}{% link docs/README.md %}">Documentation</a></li>
+        <li><a href="{{ site.baseurl }}{% link examples/README.md %}">Examples</a></li>
        </ul>
       </nav>
       
