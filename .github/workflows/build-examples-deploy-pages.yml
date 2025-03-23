@@ -41,7 +41,7 @@ jobs:
             examples/*/dist
       - run: npm install -g esbuild
       - run: spago build
-      - run: ./build-examples.sh
+      - run: ./bundle-examples.sh
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
