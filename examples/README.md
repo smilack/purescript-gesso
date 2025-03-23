@@ -1,37 +1,56 @@
 # Gesso Examples
 
-This folder contains several complete examples of Gesso programs that show how to use the various options.
+This folder contains several examples of Gesso programs that show how to use the various options.
 
-## Compiling Examples
+## See them now
 
-Clone the Gesso repository to your computer. In the root of the repository, install the dependencies (`spago` and `purescript`) with:
+Each example's readme has a link to a pre-compiled version you can view without downloading anything.
+
+## Compiling the examples
+
+### Prerequisites
+
+- [PureScript compiler](https://github.com/purescript/purescript)
+- [Spago](https://github.com/purescript/spago#installation)
+- [esbuild](https://esbuild.github.io/getting-started/)
+
+The easiest way to get set up is to install them all globally with `npm`:
 
 ```
-npm install
+npm install -g purescript
+npm install -g spago@next
+npm install -g esbuild
 ```
 
-Then, you can build each example (or all of them) with npm scripts:
+### Building
+
+Clone the Gesso repository to your computer. You can build the library and all examples with `spago build`, or specify a single example, e.g.:
 
 ```
-npm run example-all
-
-npm run example-hello
-npm run example-bouncing-ball
-npm run example-controlling-ball
-npm run example-clock
-npm run example-unit-grid
-npm run example-paint
+spago build -p gesso-example-hello
 ```
 
-This creates an `example.js` file in the example's `dist` folder. Open `examples/{name}/dist/index.html` in your browser to see the example running.
+### Bundling
+
+To run the examples locally, they have to be bundled. You can bundle a single example:
+
+```
+spago bundle --source-maps -p gesso-example-hello
+```
+
+or use the `bundle-examples.sh` script, which runs this command for every example package.
+
+### Running
+
+An `index.html` file is provided for each example in its `dist` folder. For example, after bundling the `hello` example, you can open up `examples/hello/dist/index.html` in your browser to run it.
 
 ## Examples Available
 
-See each example's `README` for more detail and an explanation of its implementation:
+See each example's `README` for more detail. Here's a quick description of each:
 
-- [Hello](hello) is the most minimal example that renders anything
-- [Clock](clock) is a more complex drawing using the scaling functions that renders the current system time as an analog clock
-- [Unit Grid](unit-grid) adds mouse events to show where the user clicked on a grid
-- [Paint](paint) is a Halogen application with an embedded Gesso component. It uses Halogen queries to communicate between the Gesso component and parent component.
-- [Bouncing Ball](bouncing-ball) - a circle that moves around the drawing and bounces off the edges.
-- [Controlling the Ball](controlling-ball) - move the circle with the mouse or arrow keys.
+- [Hello](hello): is the most barebones Gesso program. Exactly what you need to get a canvas to draw on, and nothing more.
+- [Bounce](bounce): a circle that moves around the canvas and bounces off the edges.
+- [Keyboard](keyboard): move a square around the canvas using the arrow keys.
+- [Mouse And Scaling](mouse-and-scaling): a graph that shows the coordinates of a mouse click. Scales coordinates between page and drawing.
+- [Analog Clock](analog-clock): a more complex drawing. Uses coordinate scaling functions and non-canvas `Effect`.
+- [Paint App](paint-app): a Halogen application with an embedded Gesso component.

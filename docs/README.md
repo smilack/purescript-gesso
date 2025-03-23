@@ -4,9 +4,20 @@
 
 The [Quick-Start Guide](quickstart.md) walks you through the process of setting up and compiling your first Gesso application.
 
-## Important Modules
+## Writing a Gesso program
 
-These modules contain the vast majority of what you need to know to use Gesso effectively:
+[Writing a Gesso program](writing.md) covers:
+
+- The ways to launch a Gesso application
+- All the fields of the application spec
+- The two kinds of update function
+- Event handlers
+- Halogen component I/O
+- All of the data available in rendering, update, event, and i/o functions
+
+## Module Reference
+
+These modules contain the vast majority of what you need to know to use Gesso effectively. Each page discusses the important types and concepts, but the most detailed information will be in the documentation on Pursuit.
 
 - [Gesso](./gesso.md)
 - [Application](./application.md)
@@ -14,24 +25,15 @@ These modules contain the vast majority of what you need to know to use Gesso ef
 - [Interactions](./interactions.md)
 - [Canvas](./canvas.md)
 - [Time](./time.md)
-- `Versions`/`Lerp`
+- [State](./state.md)
 
 ## Examples
 
 These small programs show various features. See the [main Examples page](../examples/README.md) for more information on building an running the examples.
 
-1. [Hello World](../examples/hello/README.md)
-
-   The simplest Gesso component - shows what you need to do to put something on the screen.
-
-2. [Bouncing Ball Tutorial](../examples/bouncing-ball/README.md)
-   
-   Make a circle move around the screen. Introduces drawing and maintaining and updating state.
-
-3. [Controlling the Ball Tutorial](../examples/controlling-ball/README.md)
-   
-   Control the ball using the arrow keys or mouse. Introduces event handling.
-
-4. [Paint App Tutorial](../examples/paint/README.md)
-   
-   A simple drawing app with undo and redo features. Introduces using a Gesso component in a Halogen application and component I/O with Halogen queries.
+- [Hello](hello): is the most barebones Gesso program. Exactly what you need to get a canvas to draw on, and nothing more.
+- [Bounce](bounce): a circle that moves around the canvas and bounces off the edges.
+- [Keyboard](keyboard): move a square around the canvas using the arrow keys.
+- [Mouse And Scaling](mouse-and-scaling): a graph that shows the coordinates of a mouse click. Scales coordinates between page and drawing.
+- [Analog Clock](analog-clock): a more complex drawing. Uses coordinate scaling functions and non-canvas `Effect`.
+- [Paint App](paint-app): a Halogen application with an embedded Gesso component.
