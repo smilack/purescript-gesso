@@ -55,7 +55,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     # Only deploy the new documentation if this event changed master
-    if: ${{ github.event_name == 'push' && github.ref == 'master' }}
+    if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
     needs: build
     steps:
       - name: Deploy to GitHub Pages
