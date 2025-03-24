@@ -1,4 +1,4 @@
-# Writing a Gesso program
+# Gesso Manual
 
 ## 1. Launching
 
@@ -265,7 +265,7 @@ type Scalers =
   }
 ```
 
-`scale` is a constant scaling factor: the width of the view box divided by the width of the canvas.
+`scale` is a constant scaling factor: the amount that the view box has been scaled up or down to fit within the canvas.
 
 `canvas` and `drawing` are:
 
@@ -290,7 +290,7 @@ The `x`/`y`/`width`/`height` fields are the same as the `rect` field, but repeat
 
 In `drawing`, these fields are identical to the view box. In `canvas`, `x` and `y` are zero and `width` and `height` are the dimensions of the canvas.
 
-`scaling` contains functions for scaling *to* the coordinates of the records name. It's not recommended to call the scaling functions directly. Instead use these functions from `Geometry`:
+`scaling` contains functions for scaling *to* the coordinates of the record's name. It's not recommended to call the scaling functions directly. Instead, use these functions from `Geometry`:
 
 ```purescript
 xTo :: Number -> Scaler -> Number
@@ -298,6 +298,8 @@ yTo :: Number -> Scaler -> Number
 lengthTo :: Number -> Scaler -> Number
 to :: forall rl r. RowToList r rl => Scalable rl r Number => {| r } -> Scaler -> {| r }
 ```
+
+#### Single values
 
 `xTo`, `yTo`, and `lengthTo` operate on single values. For example, if you have a circle with radius `1.0` in your view box at coordinate `(2.0, 3.0)`, you could convert those values to canvas coordinates like this:
 
@@ -309,11 +311,12 @@ r' = 1.0 `lengthTo` canvas
 
 (What makes `lengthTo` different from the others is that lengths don't need to account for page margins).
 
-The `to` function is provided to greatly simplify this process (and its inverse `from`, which may be more convenient occasionally):
+#### Records
+
+The `to` function is provided to greatly simplify scaling multiple values:
 
 ```purescript
 circle' = { x: 2.0, y: 3.0, r: 1.0 } `to` canvas
-circle' = canvas `from` { x: 2.0, y: 3.0, r: 1.0 }
 ```
 
 Its type signature is so abstract because it can operate on any record and automatically convert many different fields. Currently, it will convert any of these fields if they have type `Number`:
@@ -323,6 +326,37 @@ Its type signature is so abstract because it can operate on any record and autom
 | `xTo` | `x`, `x1`, `x2` |
 | `yTo` | `y`, `y1`, `y2` |
 | `lengthTo` | `width`, `w`, `height`, `h`, `radius`, `r`, `length`, `len`, `l` |
+
+#### Inverses
+
+`to`, `xTo`, `yTo`, and `lengthTo` have `from` counterparts with flipped arguments, e.g.:
+
+```purescript
+xTo :: Number -> Scaler -> Number
+
+xFrom :: Scaler -> Number -> Number
+xFrom = flip xTo
+```
+
+This can be more convenient sometimes, depending on code formatting, or when composing functions.
+
+#### Operators
+
+The scaling functions have infix operators as well:
+
+| | `to` | `from` |
+|-|-|-|
+| all | `*~>` | `<~*` |
+| `x` | `-~>` | `<~-` |
+| `y` | `|~>` | `<~|` |
+| `length` | `/~>` | `<~/` |
+
+For example:
+
+```purescript
+x' = 2.0 -~> canvas
+circle' = canvas <~* { x: 2.0, y: 3.0, r: 1.0 }
+```
 
 ### Other
 

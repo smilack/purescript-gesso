@@ -18,7 +18,7 @@ import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
 import Gesso.Application as GApp
 import Gesso.Canvas as GC
-import Gesso.Geometry ((>@), (^@), (~>@), (-@))
+import Gesso.Geometry ((-~>), (|~>), (*~>), (/~>))
 import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.State as GSt
@@ -150,9 +150,9 @@ toXY event { drawing } =
   let
     point = GGeo.fromMouseEvent event
 
-    x = floor $ point.x >@ drawing
+    x = floor $ point.x -~> drawing
 
-    y = floor $ point.y ^@ drawing
+    y = floor $ point.y |~> drawing
   in
     { x, y }
 
@@ -195,7 +195,7 @@ renderApp context _ { canvas } { current } = do
 
   drawOutline :: Effect Unit
   drawOutline = do
-    Canvas.setLineWidth context $ 0.05 -@ canvas
+    Canvas.setLineWidth context $ 0.05 /~> canvas
     Canvas.setStrokeStyle context "#888"
     Canvas.strokeRect context canvas.rect
 
@@ -207,10 +207,10 @@ renderApp context _ { canvas } { current } = do
   drawGridLine :: Int -> Effect Unit
   drawGridLine i = do
     Canvas.strokePath context do
-      Canvas.moveTo context (n >@ canvas) (0.0 ^@ canvas)
-      Canvas.lineTo context (n >@ canvas) (32.0 ^@ canvas)
-      Canvas.moveTo context (0.0 >@ canvas) (n ^@ canvas)
-      Canvas.lineTo context (32.0 >@ canvas) (n ^@ canvas)
+      Canvas.moveTo context (n -~> canvas) (0.0 |~> canvas)
+      Canvas.lineTo context (n -~> canvas) (32.0 |~> canvas)
+      Canvas.moveTo context (0.0 -~> canvas) (n |~> canvas)
+      Canvas.lineTo context (32.0 -~> canvas) (n |~> canvas)
     where
     n = toNumber i
 
@@ -224,4 +224,4 @@ renderApp context _ { canvas } { current } = do
   drawPixel (Pixel { x, y, color: c }) = do
     Canvas.setFillStyle context c
     Canvas.fillRect context $
-      { x: toNumber x, y: toNumber y, width: 1.0, height: 1.0 } ~>@ canvas
+      { x: toNumber x, y: toNumber y, width: 1.0, height: 1.0 } *~> canvas

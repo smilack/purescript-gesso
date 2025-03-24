@@ -1,18 +1,24 @@
 module Gesso.Geometry.Scaler
-  ( (>@)
-  , (@<~)
-  , (^@)
-  , (~>@)
-  , (-@)
+  ( (*~>)
+  , (-~>)
+  , (/~>)
+  , (<~*)
+  , (<~-)
+  , (<~/)
+  , (<~|)
+  , (|~>)
   , Scaler
   , ScalingFunctions
   , class Scalable
   , from
+  , lengthFrom
   , lengthTo
   , mkScaler
   , scale
   , to
+  , xFrom
   , xTo
+  , yFrom
   , yTo
   ) where
 
@@ -79,17 +85,32 @@ from = flip to
 xTo :: Number -> Scaler -> Number
 xTo n { scaling: { x } } = x n
 
+xFrom :: Scaler -> Number -> Number
+xFrom = flip xTo
+
 yTo :: Number -> Scaler -> Number
 yTo n { scaling: { y } } = y n
+
+yFrom :: Scaler -> Number -> Number
+yFrom = flip yTo
 
 lengthTo :: Number -> Scaler -> Number
 lengthTo n { scaling: { length } } = length n
 
-infix 2 to as ~>@
-infix 2 from as @<~
-infix 2 xTo as >@
-infix 2 yTo as ^@
-infix 2 lengthTo as -@
+lengthFrom :: Scaler -> Number -> Number
+lengthFrom = flip lengthTo
+
+infix 2 to as *~>
+infix 2 from as <~*
+
+infix 2 xTo as -~>
+infix 2 xFrom as <~-
+
+infix 2 yTo as |~>
+infix 2 yFrom as <~|
+
+infix 2 lengthTo as /~>
+infix 2 lengthFrom as <~/
 
 -- ┌─────────────────┐
 -- │ Scaler creation │
