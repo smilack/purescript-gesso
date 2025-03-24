@@ -44,7 +44,7 @@ or use the `bundle-examples.sh` script, which runs this command for every exampl
 
 An `index.html` file is provided for each example in its `dist` folder. For example, after bundling the `hello` example, you can open up `examples/hello/dist/index.html` in your browser to run it.
 
-## Examples Available
+## Examples available
 
 See each example's `README` for more detail. Here's a quick description of each:
 

@@ -4,28 +4,19 @@
 
 The [Quick-Start Guide](quickstart.md) walks you through the process of setting up and compiling your first Gesso application.
 
-## Writing a Gesso program
+## Gesso Manual
 
-[Writing a Gesso program](writing.md) covers:
+[The Gesso Manual](manual.md) covers the vast majority of what you need to know to use Gesso effectively:
 
 - The ways to launch a Gesso application
 - All the fields of the application spec
-- The two kinds of update function
+- The kinds of update functions
 - Event handlers
-- Halogen component I/O
+- Coordinate scaling
 - All of the data available in rendering, update, event, and i/o functions
+- Halogen component I/O
 
-## Module Reference
-
-These modules contain the vast majority of what you need to know to use Gesso effectively. Each page discusses the important types and concepts, but the most detailed information will be in the documentation on Pursuit.
-
-- [Gesso](./gesso.md)
-- [Application](./application.md)
-- [Geometry](./geometry.md)
-- [Interactions](./interactions.md)
-- [Canvas](./canvas.md)
-- [Time](./time.md)
-- [State](./state.md)
+Details on usage of specific functions can be found on [Pursuit](TODO).
 
 ## Examples
 
