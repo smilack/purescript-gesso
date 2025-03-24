@@ -1,4 +1,4 @@
-module Gesso.Example.AnalogClock where
+module Gesso.Example.AnalogClock (main) where
 
 import Prelude
 

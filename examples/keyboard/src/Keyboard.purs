@@ -1,4 +1,4 @@
-module Gesso.Example.Keyboard where
+module Gesso.Example.Keyboard (main) where
 
 import Prelude
 

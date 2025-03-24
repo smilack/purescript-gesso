@@ -1,4 +1,4 @@
-module Gesso.Example.MouseAndScaling where
+module Gesso.Example.MouseAndScaling (main) where
 
 import Prelude
 

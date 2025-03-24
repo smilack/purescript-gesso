@@ -1,4 +1,4 @@
-module Gesso.Example.PaintApp.Root where
+module Gesso.Example.PaintApp.Root (component) where
 
 import Prelude
 

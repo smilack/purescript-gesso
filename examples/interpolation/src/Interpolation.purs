@@ -1,4 +1,4 @@
-module Gesso.Example.Interpolation where
+module Gesso.Example.Interpolation (main) where
 
 import Prelude
 

@@ -1,4 +1,9 @@
-module Gesso.Example.PaintApp.ColorButton where
+module Gesso.Example.PaintApp.ColorButton
+  ( Slot
+  , Output(..)
+  , _colorButton
+  , component
+  ) where
 
 import Prelude
 import Data.Maybe (Maybe(..))

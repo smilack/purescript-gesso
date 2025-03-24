@@ -1,4 +1,4 @@
-module Gesso.Example.Hello where
+module Gesso.Example.Hello (main) where
 
 import Effect (Effect)
 import Gesso (launch)

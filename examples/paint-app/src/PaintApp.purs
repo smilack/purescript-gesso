@@ -1,4 +1,4 @@
-module Gesso.Example.PaintApp where
+module Gesso.Example.PaintApp (main) where
 
 import Prelude
 import Effect (Effect)
