@@ -44,7 +44,8 @@ import Web.HTML.Window (toEventTarget) as Window
 
 -- | A Halogen slot type for the Canvas component, which is used to include it
 -- | inside another Halogen component.
-type Slot input output slot = H.Slot (CanvasInput input) (CanvasOutput output) slot
+type Slot input output slot =
+  H.Slot (CanvasInput input) (CanvasOutput output) slot
 
 -- | A proxy type for Canvas for use with `Slot`.
 _gessoCanvas = Proxy :: Proxy "gessoCanvas"
@@ -61,8 +62,8 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |   - `update` runs on each animation frame, just before `render`.
 -- |   - `fixed` runs at a set interval of time.
 -- |   - `interactions` are events attached to the canvas element.
--- |   - `output` defines how (or if) the component should send information out to
--- |     the host application.
+-- |   - `output` defines how (or if) the component should send information out
+-- |     to the host application.
 -- |   - `input` defines how the component's state should change in response to
 -- |     receiving input from the host application.
 -- | - `dom`: DOM-related fields available after initialization:
@@ -90,18 +91,18 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- | - `rafId` is the ID of the most recently requested animation frame. It's
 -- |   set when `requestAnimationFrame` is called and cleared when the animation
 -- |   frame callback runs.
-type State localState appInput appOutput =
+type State state input output =
   { name :: String
-  , localState :: localState
+  , localState :: state
   , viewBox :: Geo.Rect
   , window :: App.WindowMode
   , behavior ::
-      { render :: App.RenderFunction localState
-      , update :: App.UpdateFunction localState
-      , fixed :: App.FixedUpdate localState
-      , interactions :: GI.Interactions localState
-      , output :: App.OutputProducer localState appOutput
-      , input :: App.InputReceiver localState appInput
+      { render :: App.RenderFunction state
+      , update :: App.UpdateFunction state
+      , fixed :: App.FixedUpdate state
+      , interactions :: GI.Interactions state
+      , output :: App.OutputProducer state output
+      , input :: App.InputReceiver state input
       }
   , dom ::
       Maybe
@@ -121,44 +122,44 @@ type State localState appInput appOutput =
         { frame :: T.Last
         , fixed :: T.Last
         }
-  , pendingUpdates :: List (T.Stamped (App.TimestampedUpdate localState))
+  , pendingUpdates :: List (T.Stamped (App.TimestampedUpdate state))
   , rafId :: Maybe T.RequestAnimationFrameId
   }
 
 -- | See `handleAction`
-data Action localState
+data Action state
   = Initialize
   | HandleResize
   | HandleVisibilityChange
-  | FirstTick (Action localState -> Effect Unit)
-  | Tick (Action localState -> Effect Unit) T.Last
+  | FirstTick (Action state -> Effect Unit)
+  | Tick (Action state -> Effect Unit) T.Last
   | Finalize
-  | StateUpdated T.Delta Geo.Scalers (Compare localState)
-  | QueueUpdate (App.UpdateFunction localState)
+  | StateUpdated T.Delta Geo.Scalers (Compare state)
+  | QueueUpdate (App.UpdateFunction state)
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
 
 -- | Used to wrap Output to a parent Halogen component. The component's output
 -- | type is defined by the `OutputProducer` in the
 -- | [`Gesso.Application.AppSpec`](Gesso.Application.html#t:AppSpec).
-newtype CanvasOutput appOutput = CanvasOutput appOutput
+newtype CanvasOutput ouput = CanvasOutput ouput
 
 -- | Used to wrap Queries from a parent Halogen component. The component's input
 -- | type is defined by the `InputReceiver` in the
 -- | [`Gesso.Application.AppSpec`](Gesso.Application.html#t:AppSpec).
-data CanvasInput appInput a = CanvasInput appInput a
+data CanvasInput input a = CanvasInput input a
 
 -- | Definition of the Canvas component. Can be used to slot the canvas into a
 -- | parent Halogen component.
 -- `render` is memoized so that it only re-renders when the dimensions of the
 -- canvas element change.
 component
-  :: forall localState appInput appOutput m
+  :: forall state input output m
    . MonadAff m
   => H.Component
-       (CanvasInput appInput)
-       (App.AppSpec localState appInput appOutput)
-       (CanvasOutput appOutput)
+       (CanvasInput input)
+       (App.AppSpec state input output)
+       (CanvasOutput output)
        m
 component =
   H.mkComponent
@@ -175,13 +176,12 @@ component =
     }
 
 -- | Get initial state for Canvas. Most values are copied directly from the
--- | input. The rest require Effects and are created in
--- | [`initialize`](#v:initialize), except for the update queues, which start
--- | empty.
+-- | input. The rest require Effects and are created in `initialize`, except for
+-- | the update queues, which start empty.
 initialState
-  :: forall localState appInput appOutput
-   . App.AppSpec localState appInput appOutput
-  -> State localState appInput appOutput
+  :: forall state input output
+   . App.AppSpec state input output
+  -> State state input output
 initialState { name, window, initialState: localState, viewBox, behavior } =
   { name
   , localState
@@ -200,9 +200,9 @@ initialState { name, window, initialState: localState, viewBox, behavior } =
 -- | element takes up on the page, while the HTML attributes control the
 -- | coordinate system of the drawing area.
 renderComponent
-  :: forall localState appInput appOutput slots m
-   . State localState appInput appOutput
-  -> H.ComponentHTML (Action localState) slots m
+  :: forall state input output slots m
+   . State state input output
+  -> H.ComponentHTML (Action state) slots m
 renderComponent { name, dom, window, behavior: { interactions } } =
   HH.canvas $ [ id name, GEl.style window, tabIndex 0 ]
     <> GI.toProps QueueUpdate interactions
@@ -212,8 +212,8 @@ renderComponent { name, dom, window, behavior: { interactions } } =
 -- |   `FirstTick` to request the first animation frame.
 -- | - `HandleResize`: Window resized, get new client rect and recalculate
 -- |   `scaler` functions.
--- | - `HandleVisibilityChange`: Window visibility has changed; pause or resume
--- |   running timers.
+-- | - (TODO) `HandleVisibilityChange`: Window visibility has changed; pause or
+-- |   resume running timers.
 -- | - `FirstTick`: Request an animation frame that only checks the time and
 -- |   then starts the `Tick` loop, so that `Tick` can start out knowing the
 -- |   frame timing.
@@ -228,14 +228,11 @@ renderComponent { name, dom, window, behavior: { interactions } } =
 -- | - `FrameRequested`: An animation frame has been requested, save its ID.
 -- | - `FrameFired`: The requested animation frame has fired, forget its ID.
 handleAction
-  :: forall localState appInput appOutput slots m
+  :: forall state input output slots m
    . MonadAff m
-  => Action localState
-  -> H.HalogenM
-       (State localState appInput appOutput)
-       (Action localState)
-       slots
-       (CanvasOutput appOutput)
+  => Action state
+  -> H.HalogenM (State state input output) (Action state) slots
+       (CanvasOutput output)
        m
        Unit
 handleAction = case _ of
@@ -319,15 +316,10 @@ handleAction = case _ of
 -- | `Context2D` and `clientRect`. Create scaling functions based on the
 -- | `viewBox` and `clientRect`.
 initialize
-  :: forall localState appInput appOutput slots output m
+  :: forall state input output slots o m
    . MonadAff m
-  => H.HalogenM
-       (State localState appInput appOutput)
-       (Action localState)
-       slots
-       output
-       m
-       (Action localState -> Effect Unit)
+  => H.HalogenM (State state input output) (Action state) slots o m
+       (Action state -> Effect Unit)
 initialize = do
   { notify, subscriptions } <- mkSubs
   timers <- H.liftEffect mkTimers
@@ -367,9 +359,9 @@ initialize = do
 -- |    then call the provided callback function.
 -- | 3. After running the callback, tell the component to start the next Tick.
 requestAnimationFrame
-  :: forall localState
+  :: forall state
    . (T.Now -> Effect Unit)
-  -> (Action localState -> Effect Unit)
+  -> (Action state -> Effect Unit)
   -> Effect Unit
 requestAnimationFrame callback notify =
   window
@@ -386,8 +378,8 @@ requestAnimationFrame callback notify =
 -- | Request one animation frame in order to get a timestamp to start counting
 -- | from.
 getFirstFrame
-  :: forall localState
-   . (Action localState -> Effect Unit)
+  :: forall state
+   . (Action state -> Effect Unit)
   -> Effect Unit
 getFirstFrame = requestAnimationFrame (const $ pure unit)
 
@@ -397,15 +389,15 @@ getFirstFrame = requestAnimationFrame (const $ pure unit)
 -- | the beginning of this tick to the app's output function to determine
 -- | whether to send I/O.
 queueAnimationFrame
-  :: forall localState
+  :: forall state
    . T.Last
   -> (T.Now -> Number)
   -> Context2D
   -> Geo.Scalers
-  -> History localState
-  -> App.UpdateFunction localState
-  -> App.RenderFunction localState
-  -> (Action localState -> Effect Unit)
+  -> History state
+  -> App.UpdateFunction state
+  -> App.RenderFunction state
+  -> (Action state -> Effect Unit)
   -> Effect Unit
 queueAnimationFrame
   lastTime
@@ -439,11 +431,11 @@ queueAnimationFrame
 -- | to track whether the state has changed while also continuing to pass on the
 -- | most current state.
 tryUpdate
-  :: forall localState
+  :: forall state
    . Geo.Scalers
-  -> (Geo.Scalers -> localState -> Effect (Maybe localState))
-  -> Effect (History localState)
-  -> Effect (History localState)
+  -> (Geo.Scalers -> state -> Effect (Maybe state))
+  -> Effect (History state)
+  -> Effect (History state)
 tryUpdate scalers update state = do
   { original, new } <- state
   update scalers new >>= case _ of
@@ -453,9 +445,9 @@ tryUpdate scalers update state = do
 -- | Get a new `clientRect` for the `canvas` element and create new scalers for
 -- | it, saving both to the component state.
 updateClientRect
-  :: forall localState appInput appOutput action slots output m
+  :: forall state input output action slots o m
    . MonadAff m
-  => H.HalogenM (State localState appInput appOutput) action slots output m Unit
+  => H.HalogenM (State state input output) action slots o m Unit
 updateClientRect = do
   dom' <- H.liftEffect <<< updateDom =<< H.get
   H.modify_ (_ { dom = dom' })
@@ -469,9 +461,9 @@ updateClientRect = do
 
 -- | Unsubscribe from window resize events and paired listener/emitter.
 unsubscribe
-  :: forall localState appInput appOutput action slots output m
+  :: forall state input output action slots o m
    . MonadAff m
-  => H.HalogenM (State localState appInput appOutput) action slots output m Unit
+  => H.HalogenM (State state input output) action slots o m Unit
 unsubscribe =
   H.gets _.subscriptions
     >>= traverse_ \subs -> do
@@ -481,14 +473,9 @@ unsubscribe =
 -- | Subscribe to window resize events and fire the `HandleResize` `Action` when
 -- | they occur.
 subscribeResize
-  :: forall localState appInput appOutput slots output m
+  :: forall state input output slots o m
    . MonadAff m
-  => H.HalogenM
-       (State localState appInput appOutput)
-       (Action localState)
-       slots
-       output
-       m
+  => H.HalogenM (State state input output) (Action state) slots o m
        H.SubscriptionId
 subscribeResize = do
   wnd <- H.liftEffect window
@@ -501,14 +488,9 @@ subscribeResize = do
 -- | Subscribe to document visibility events and fire the
 -- | `HandleVisibilityChange` `Action` when they occur.
 subscribeVisibility
-  :: forall localState appInput appOutput slots output m
+  :: forall state input output slots o m
    . MonadAff m
-  => H.HalogenM
-       (State localState appInput appOutput)
-       (Action localState)
-       slots
-       output
-       m
+  => H.HalogenM (State state input output) (Action state) slots o m
        H.SubscriptionId
 subscribeVisibility = do
   doc <- H.liftEffect $ document =<< window
@@ -521,16 +503,13 @@ subscribeVisibility = do
 -- | Save the updated local state of the application. Compare the old and new
 -- | states in the `OutputProducer` function and send output, if necessary.
 saveNewState
-  :: forall localState appInput appOutput slots m
+  :: forall state input output slots m
    . MonadAff m
   => T.Delta
   -> Geo.Scalers
-  -> Compare localState
-  -> H.HalogenM
-       (State localState appInput appOutput)
-       (Action localState)
-       slots
-       (CanvasOutput appOutput)
+  -> Compare state
+  -> H.HalogenM (State state input output) (Action state) slots
+       (CanvasOutput output)
        m
        Unit
 saveNewState delta scalers stateVersions = do
@@ -542,14 +521,14 @@ saveNewState delta scalers stateVersions = do
 -- | Receiving input from the host application. Convert it into an `Update` and
 -- | call `handleAction` to add it to the update queue.
 handleQuery
-  :: forall localState appInput appOutput slots a m
+  :: forall state input output slots a m
    . MonadAff m
-  => CanvasInput appInput a
+  => CanvasInput input a
   -> H.HalogenM
-       (State localState appInput appOutput)
-       (Action localState)
+       (State state input output)
+       (Action state)
        slots
-       (CanvasOutput appOutput)
+       (CanvasOutput output)
        m
        (Maybe a)
 handleQuery (CanvasInput inData a) = do

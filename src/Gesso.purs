@@ -43,12 +43,19 @@ import Web.DOM.ParentNode (QuerySelector(..)) as Exports
 import Web.HTML.HTMLElement (HTMLElement)
 
 -- | Launch a Gesso application in the page body.
-launch :: forall state i o. GApp.AppSpec state i o -> Effect Unit
+launch
+  :: forall state input ouput
+   . GApp.AppSpec state input ouput
+  -> Effect Unit
 launch = launchIn "body"
 
 -- | Launch a Gesso application in a given element. The String argument should
 -- | be a valid query selector for some element on the page.
-launchIn :: forall state i o. String -> GApp.AppSpec state i o -> Effect Unit
+launchIn
+  :: forall state input ouput
+   . String
+  -> GApp.AppSpec state input ouput
+  -> Effect Unit
 launchIn selector input = runGessoAff do
   HAff.awaitLoad
   target <- HAff.selectElement (QuerySelector selector)
@@ -66,8 +73,8 @@ runGessoAff = HAff.runHalogenAff
 -- | when performing other `Aff` effects at the same time as running the
 -- | application.
 run
-  :: forall state i o
-   . GApp.AppSpec state i o
+  :: forall state input ouput
+   . GApp.AppSpec state input ouput
   -> HTMLElement
   -> Aff Unit
 run spec element = do

@@ -30,7 +30,7 @@ import Gesso.Interactions.Events (onAuxClick, onBlur, onClick, onCopy, onCut, on
 -- | ```
 -- | Interactions.default { keyboard = [ handleKeyDown ] }
 -- | ```
-default :: forall localState. Interactions localState
+default :: forall state. Interactions state
 default =
   { base: []
   , clipboard: []
@@ -43,20 +43,20 @@ default =
   , pointer: []
   }
 
-type ClipboardInteraction s = Interaction Exports.ClipboardEvent s
+type ClipboardInteraction state = Interaction Exports.ClipboardEvent state
 
-type DragInteraction s = Interaction Exports.DragEvent s
+type DragInteraction state = Interaction Exports.DragEvent state
 
-type EventInteraction s = Interaction Exports.Event s
+type EventInteraction state = Interaction Exports.Event state
 
-type FocusInteraction s = Interaction Exports.FocusEvent s
+type FocusInteraction state = Interaction Exports.FocusEvent state
 
-type KeyboardInteraction s = Interaction Exports.KeyboardEvent s
+type KeyboardInteraction state = Interaction Exports.KeyboardEvent state
 
-type MouseInteraction s = Interaction Exports.MouseEvent s
+type MouseInteraction state = Interaction Exports.MouseEvent state
 
-type PointerInteraction s = Interaction Exports.PointerEvent s
+type PointerInteraction state = Interaction Exports.PointerEvent state
 
-type TouchInteraction s = Interaction Exports.TouchEvent s
+type TouchInteraction state = Interaction Exports.TouchEvent state
 
-type WheelInteraction s = Interaction Exports.WheelEvent s
+type WheelInteraction state = Interaction Exports.WheelEvent state

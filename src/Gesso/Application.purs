@@ -22,7 +22,7 @@ import Gesso.Time (never)
 -- |
 -- | - `name` is the name of the application, which doubles as the HTML `id` for
 -- |   the canvas element.
--- | - `initialState` is the initial local state for the application.
+-- | - `initialState` is the initial state for the application.
 -- | - `viewBox` is the desired dimensions for the drawing area.
 -- | - `window` defines how the screen element should size and position itself.
 -- | - `behavior` contains functions that control i/o, updates, and rendering.

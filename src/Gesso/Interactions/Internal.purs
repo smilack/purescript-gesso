@@ -44,28 +44,28 @@ type EventProp event i = (event -> i) -> IProp HTMLcanvas i
 
 -- | An event handler is a variant of an update function, which receives an
 -- | event and produces an update function in response.
-type Handler event localState = event -> App.UpdateFunction localState
+type Handler event state = event -> App.UpdateFunction state
 
 -- | An Interaction is a combination event listener and handler which is turned
 -- | into an HTML property and attached to a Gesso canvas. They can be
 -- | constructed with the "`on`" functions (`onMouseMove`, `onKeyDown`, etc.)
-data Interaction event localState =
-  Interaction (forall i. EventProp event i) (Handler event localState)
+data Interaction event state =
+  Interaction (forall i. EventProp event i) (Handler event state)
 
 -- | `Interactions` is a record containing arrays of interactions for each type
 -- | of event that Canvas supports. It's used in
 -- | [`Gesso.Application.AppBehavior`](Gesso.Application.html#t:AppBehavior)
 -- | to add event handlers to a component.
-type Interactions localState =
-  { base :: Array (Interaction Exports.Event localState)
-  , clipboard :: Array (Interaction Exports.ClipboardEvent localState)
-  , focus :: Array (Interaction Exports.FocusEvent localState)
-  , keyboard :: Array (Interaction Exports.KeyboardEvent localState)
-  , touch :: Array (Interaction Exports.TouchEvent localState)
-  , drag :: Array (Interaction Exports.DragEvent localState)
-  , mouse :: Array (Interaction Exports.MouseEvent localState)
-  , wheel :: Array (Interaction Exports.WheelEvent localState)
-  , pointer :: Array (Interaction Exports.PointerEvent localState)
+type Interactions state =
+  { base :: Array (Interaction Exports.Event state)
+  , clipboard :: Array (Interaction Exports.ClipboardEvent state)
+  , focus :: Array (Interaction Exports.FocusEvent state)
+  , keyboard :: Array (Interaction Exports.KeyboardEvent state)
+  , touch :: Array (Interaction Exports.TouchEvent state)
+  , drag :: Array (Interaction Exports.DragEvent state)
+  , mouse :: Array (Interaction Exports.MouseEvent state)
+  , wheel :: Array (Interaction Exports.WheelEvent state)
+  , pointer :: Array (Interaction Exports.PointerEvent state)
   }
 
 -- | Convert an `Interactions` record to an array of HTML properties. The return
@@ -73,9 +73,9 @@ type Interactions localState =
 -- | and should be whatever `Action` type the component has, like `QueueUpdate`
 -- | in Canvas.
 toProps
-  :: forall localState i
-   . (App.UpdateFunction localState -> i)
-  -> Interactions localState
+  :: forall state i
+   . (App.UpdateFunction state -> i)
+  -> Interactions state
   -> Array (IProp HTMLcanvas i)
 toProps
   toCallback
@@ -89,6 +89,6 @@ toProps
     <> map toProp mouse
     <> map toProp wheel
   where
-  toProp :: forall e. Interaction e localState -> IProp HTMLcanvas i
+  toProp :: forall e. Interaction e state -> IProp HTMLcanvas i
   toProp (Interaction onEvent handler) =
     onEvent $ toCallback <<< handler
