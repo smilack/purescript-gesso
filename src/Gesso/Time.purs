@@ -1,4 +1,4 @@
--- | Timestamps, time deltas, and `requestAnimationFrame`
+-- | Timestamps, time deltas, intervals, and `requestAnimationFrame`
 module Gesso.Time
   ( Delta
   , Interval
@@ -6,6 +6,7 @@ module Gesso.Time
   , Now
   , RequestAnimationFrameId
   , Stamped
+  , StampedBatch
   , cancelAnimationFrame
   , delta
   , elapse
@@ -45,7 +46,7 @@ foreign import _requestAnimationFrame
 -- | argument to the callback function.
 -- |
 -- | Provided because `requestAnimationFrame` in `Web.HTML.Window` only accepts
--- | an `Effect Unit` instead of a function of `Number -> Effect Unit`.
+-- | an `Effect Unit` instead of a `Number -> Effect Unit`.
 requestAnimationFrame
   :: (Now -> Effect Unit)
   -> Window
@@ -95,14 +96,14 @@ started = elapse <$> _now
 -- | [`stampInterval`](#v:stampInterval).
 type Stamped a = { time :: Number, item :: a }
 
+-- | Sort a list of `Stamped` records ascending chronologically.
 sort :: forall a. List (Stamped a) -> List (Stamped a)
 sort = sortBy (compare `on` _.time)
 
 -- | For a `last` timestamp and a function `f :: Delta -> a` (such as
--- | `UpdateFunction s :: Delta -> TimestampedUpdate s` in
--- | [`Application`](Gesso.Application.html#t:UpdateFunction)), create a
--- | `Delta` between `last` and now, apply the delta to `f`, and return the
--- | current time and the result of `f delta`.
+-- | [`Gesso.Application.Behavior.UpdateFunction`](Gesso.Application.Behavior.html#t:UpdateFunction), create a
+-- | `Delta` between `last` and the current time, apply the delta to `f`, and
+-- | return a record containing the current time and the result of `f delta`.
 stamp :: forall a. Last -> (Delta -> a) -> Effect (Stamped a)
 stamp last f = do
   n@(Now t) <- _now
@@ -110,7 +111,8 @@ stamp last f = do
   pure { time: t, item: f d }
 
 -- | A interval of time, in milliseconds, to space out repeating an action, or
--- | `Never` perform the action.
+-- | `Never` perform the action. Constructed with [`hz`](#v:hz) or
+-- | [`never`](#v:never).
 data Interval
   = Interval Number
   | Never
@@ -153,12 +155,12 @@ type StampedBatch a =
 emptyBatch :: forall a. Effect (StampedBatch a)
 emptyBatch = { last: _, items: Nil } <$> elapse <$> _now
 
--- | Repeatedly timestamp a function at a given interval, starting at the last
--- | time plus the interval, as long as the timestamp is not after the current
+-- | Repeatedly timestamp a function at a given interval, starting at the `last`
+-- | time plus the interval, as long as the timestamp does not pass the current
 -- | time.
 -- |
--- | The `last` value returned should be saved by the caller to pass in as the
--- | `last` argument for the next call to `stampInterval`.
+-- | The `last` value in the returned record should be saved by the caller to
+-- | pass in as the `last` argument for the next call to `stampInterval`.
 stampInterval
   :: forall a
    . Last

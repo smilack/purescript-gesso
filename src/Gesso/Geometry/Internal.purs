@@ -5,12 +5,24 @@ import Prelude
 import Gesso.Geometry.Dimensions (Rect, largestContainedArea)
 import Gesso.Geometry.Scaler (Scaler, mkScaler)
 
+-- | Data and functions for converting between the coordinate systems of the
+-- | canvas element on the page and the view box of the application/drawing.
+-- |
+-- | `scale` is the amount that the view box has been scaled up or down to fit
+-- | within the canvas element.
+-- |
+-- | `canvas` and `drawing` contain the dimensions of the named space and
+-- | functions for converting coordinates to itself.
 type Scalers =
   { scale :: Number
   , canvas :: Scaler
   , drawing :: Scaler
   }
 
+-- | Create a `Scalers` record based on the view box of the application and the
+-- | client rect ([`Gesso.Canvas.Element.getCanvasClientRect`](Gesso.Canvas.Element.html#v:getCanvasClientRect),
+-- | [MDN: DOMRect](https://developer.mozilla.org/en-US/docs/Web/API/DOMRect))
+-- | of the canvas.
 mkScalers :: Rect -> Rect -> Scalers
 mkScalers viewBox clientRect =
   { scale: k

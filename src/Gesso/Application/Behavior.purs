@@ -54,7 +54,7 @@ type TimestampedUpdate local =
   Scalers -> local -> Effect (Maybe local)
 
 -- | An update function that occurs at a fixed, regular interval, rather than on
--- | every animation frame, which may vary.
+-- | every animation frame.
 type FixedUpdate local =
   { interval :: Interval
   , function :: UpdateFunction local

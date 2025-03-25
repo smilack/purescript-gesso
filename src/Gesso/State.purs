@@ -1,3 +1,5 @@
+-- | Types used when dealing with multiple versions of the same thing - most
+-- | often, the application state.
 module Gesso.State
   ( Compare
   , History
@@ -7,9 +9,9 @@ module Gesso.State
 
 import Prelude
 
--- | Two different versions of the same thing. The old and new versions are
--- | probably not immediately sequential - there may have been many versions
--- | between `old` and `new`.
+-- | Two different versions of the same thing. Used when the old and new
+-- | versions are probably not immediately sequential - there may have been many
+-- | versions between `old` and `new`.
 type Compare a = { old :: a, new :: a }
 
 -- | A record for keeping track of changes to a value which may change many

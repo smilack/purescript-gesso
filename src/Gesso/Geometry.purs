@@ -13,6 +13,8 @@ import Gesso.Geometry.Scaler ((*~>), (-~>), (/~>), (<~*), (<~-), (<~/), (<~|), (
 import Web.UIEvent.MouseEvent (MouseEvent)
 import Web.UIEvent.MouseEvent (pageX, pageY) as MouseEvent
 
+-- | Extract `x` and `y` coordinates from a `MouseEvent` using the
+-- | [`pageX` and `pageY` properties](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/pageX)
 fromMouseEvent :: MouseEvent -> Point
 fromMouseEvent event =
   { x: toNumber $ MouseEvent.pageX event

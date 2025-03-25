@@ -1,8 +1,8 @@
 -- | Interactions are a wrapper for HTML events that allow specifying event
--- | types and handlers which are attached to the drawing screen when it
--- | renders. Interactions are an input to the Canvas component, and will
--- | typically be specified as an update of the [`default`](#v:default) record,
--- | similar to `mkEval` and `defaultEval` in Halogen.
+-- | types and handlers which are attached to the canvas when it's created.
+-- | Interactions are part of the `AppSpec` and will typically be specified as
+-- | an update of the [`default`](#v:default) record, similar to `mkEval` and
+-- | `defaultEval` in Halogen.
 -- |
 -- | The [`Interactions`](#t:Interactions) type is a record of arrays of
 -- | interactions for each event type.

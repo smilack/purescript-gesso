@@ -1,5 +1,5 @@
 -- | Gesso Canvas is a Halogen component that handles creating a canvas element,
--- | calling requestAnimationFrame, attaching events, and running render and
+-- | calling `requestAnimationFrame`, attaching events, and running render and
 -- | update functions.
 module Gesso.Canvas
   ( CanvasInput(..)
@@ -42,11 +42,11 @@ import Web.HTML.HTMLDocument.VisibilityState (VisibilityState(..)) as Document
 import Web.HTML.Window (document)
 import Web.HTML.Window (toEventTarget) as Window
 
--- | The Halogen slot type for Canvas, which is used to include it inside
--- | another Halogen component.
+-- | A Halogen slot type for the Canvas component, which is used to include it
+-- | inside another Halogen component.
 type Slot input output slot = H.Slot (CanvasInput input) (CanvasOutput output) slot
 
--- | A proxy type for Canvas provided for convenience, for use with Slot.
+-- | A proxy type for Canvas for use with `Slot`.
 _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 
 -- | The internal state of the Canvas component
@@ -125,7 +125,7 @@ type State localState appInput appOutput =
   , rafId :: Maybe T.RequestAnimationFrameId
   }
 
--- | See [`handleAction`](#v:handleAction)
+-- | See `handleAction`
 data Action localState
   = Initialize
   | HandleResize
@@ -138,16 +138,20 @@ data Action localState
   | FrameRequested T.RequestAnimationFrameId
   | FrameFired
 
--- | The component's output type is defined by the `OutputProducer` in the
--- | `Application.AppSpec`.
+-- | Used to wrap Output to a parent Halogen component. The component's output
+-- | type is defined by the `OutputProducer` in the
+-- | [`Gesso.Application.AppSpec`](Gesso.Application.html#t:AppSpec).
 newtype CanvasOutput appOutput = CanvasOutput appOutput
 
--- | The component's input type is defined by the `InputReceiver` in the
--- | `Application.AppSpec`.
+-- | Used to wrap Queries from a parent Halogen component. The component's input
+-- | type is defined by the `InputReceiver` in the
+-- | [`Gesso.Application.AppSpec`](Gesso.Application.html#t:AppSpec).
 data CanvasInput appInput a = CanvasInput appInput a
 
--- | Definition of the Canvas component. `render` is memoized so that it only
--- | re-renders when the dimensions of the canvas element change.
+-- | Definition of the Canvas component. Can be used to slot the canvas into a
+-- | parent Halogen component.
+-- `render` is memoized so that it only re-renders when the dimensions of the
+-- canvas element change.
 component
   :: forall localState appInput appOutput m
    . MonadAff m

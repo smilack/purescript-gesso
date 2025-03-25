@@ -1,5 +1,4 @@
--- | `Application` houses functions and configuration that are shared between
--- | all Gesso applications, regardless of the rendering component.
+-- | Functions and configuration necessary to start a Gesso application.
 module Gesso.Application
   ( AppBehavior
   , AppSpec
@@ -42,9 +41,9 @@ type AppSpec state input output =
 -- | - `fixed` runs at a set interval of time.
 -- | - `interactions` are events which will be attached to the canvas element.
 -- | - `output` defines how (or if) the component should send information out to
--- |   the host application.
+-- |   a parent component.
 -- | - `input` defines how the component's state should change in response to
--- |   receiving input from the host application.
+-- |   receiving input from a parent component.
 type AppBehavior state input output =
   { render :: RenderFunction state
   , update :: UpdateFunction state

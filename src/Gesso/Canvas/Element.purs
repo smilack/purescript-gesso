@@ -1,3 +1,5 @@
+-- | Internal helper functions that the Canvas component uses to style and
+-- | position itself and access the canvas's drawing context.
 module Gesso.Canvas.Element
   ( Canvas
   , getCanvasByAppName
@@ -58,6 +60,7 @@ fromDOMRect { left, top, width, height } = { x: left, y: top, width, height }
 getContextByAppName :: String -> Effect (Maybe Context2D)
 getContextByAppName name = getCanvasElementById name >>= traverse getContext2D
 
+-- | Get size and positioning CSS based on the app's window mode.
 style :: forall r i. App.WindowMode -> IProp (style :: String | r) i
 style =
   attr (AttrName "style")
