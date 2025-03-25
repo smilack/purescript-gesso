@@ -7,6 +7,7 @@ This folder contains several examples of Gesso programs that show how to use the
 - [Keyboard](keyboard): move a square around the canvas using the arrow keys.
 - [Mouse And Scaling](mouse-and-scaling): a graph that shows the coordinates of a mouse click. Scales coordinates between page and drawing.
 - [Analog Clock](analog-clock): a more complex drawing. Uses coordinate scaling functions and non-canvas `Effect`s.
+- [Interpolation](interpolation): fixed-rate update functions and interpolating state for rendering.
 - [Paint App](paint-app): a Halogen application with an embedded Gesso component.
 
 Each example's readme has more details and a link to a pre-compiled version you can run online without downloading anything.

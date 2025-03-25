@@ -48,6 +48,6 @@ Canvas.fillRect context $
 
 ## Output
 
-[See this example in action](https://smilack.github.io/purescript-gesso/examples/paint/dist/)
+[See this example in action](https://smilack.github.io/purescript-gesso/examples/paint-app/dist/)
 
 ![A small drawing application. On the left, there are four buttons to pick a shade of gray to draw with. On the right, there are undo and redo buttons and a list of colors and coordinates showing the order that pixels were given a color. At the bottom, a checkbox with the label "Show Grid" is checked. In the middle, a canvas divided into a 32 by 32 grid has the word "example" written on it in various shades of gray.](paint-app.png)
