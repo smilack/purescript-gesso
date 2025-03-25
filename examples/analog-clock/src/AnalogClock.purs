@@ -23,7 +23,7 @@ main = Gesso.launch
   { name: "analog-clock"
   , initialState: unit
   , window: GApp.Fullscreen
-  , viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }
+  , viewBox: { x: 0.0, y: 0.0, width: 1100.0, height: 1100.0 }
   , behavior: GApp.defaultBehavior { render = render }
   }
 

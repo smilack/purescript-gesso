@@ -253,7 +253,13 @@ null = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
 
 ### `Scaler` and `Scalers`
 
-Because the size of a user's screen or browser window is unpredictable, it's useful to set a view box in the `AppSpec` so that drawing coordinates can be consistent. However, this means that it's necessary to convert from drawing coordinates to canvas coordinates in order to paint the canvas, and to convert from canvas to drawing to process mouse or touch events. In addition, because the view box scales while remaining centered, there may be a margin to account for - horizontally or vertically.
+Because the size of a user's screen or browser window is unpredictable, it's useful to set a view box in the `AppSpec` so that drawing coordinates can be consistent. However, this means that it's necessary to convert from drawing coordinates to canvas coordinates in order to paint the canvas, and to convert from canvas to drawing to process mouse or touch events. In addition, because the view box scales by preserving its aspect ratio while remaining centered, there may be a margin to account for - horizontally or vertically.
+
+> [!IMPORTANT]
+> The `viewBox` record determines two things:
+> 1. the scale and position of the drawing coordinates relative to the canvas coordinates
+> 2. the area of the drawing that must always be visible
+> The drawing coordinate system extends infinitely, which means that canvas coordinates outside the view box can still be converted to valid drawing coordinates. Drawings in the margins may be visible, but drawings are only *guaranteed* to be visible if they fall within the view box.
 
 The `Scalers` record contains data and functions to simplify all of these conversions.
 
@@ -298,6 +304,9 @@ yTo :: Number -> Scaler -> Number
 lengthTo :: Number -> Scaler -> Number
 to :: forall rl r. RowToList r rl => Scalable rl r Number => {| r } -> Scaler -> {| r }
 ```
+
+> [!TIP]
+> The `Scalers` record is automatically rebuilt whenever the browser window is resized.
 
 #### Single values
 

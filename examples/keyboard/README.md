@@ -1,23 +1,37 @@
-# Controlling the Ball
+# Keyboard
 
-Controlling the Ball builds on the [Bouncing Ball example](../bouncing-ball/README.md), adding keyboard and mouse events.
+This example uses keyboard events to move a blue square around the page. Control the square with the arrow keys.
 
-The imports in this example are still qualified, but aliased, unlike in the first tutorial. For example, `Gesso.Canvas` is now `GCan`.
+### Interactions
 
-## Output
+This example modifies the default interactions record in `Gesso.Application.defaultBehavior` by adding two keyboard event handlers:
 
-[See this example in action](https://smilack.github.io/purescript-gesso/examples/controlling-ball/dist/)
+```purescript
+, behavior: GApp.defaultBehavior
+    { render = render
+    , update = update
+    , interactions { keyboard = [ keyDown, keyUp ] }
+    }
+```
 
-![Controlling ball example output](output.gif)
+The event handlers have type `Gesso.Interactions.KeyboardInteraction State`. They're constructed using `on` functions from `Gesso.Interactions`. They both listen for key events, and update the state when an arrow key is pressed or released:
 
-## The Code
+```purescript
+keyDown :: GInt.KeyboardInteraction State
+keyDown = GInt.onKeyDown $ setKey true
 
-The complete source for this example is located at [/examples/controlling-ball/src/Main.purs](https://github.com/smilack/purescript-gesso/blob/master/examples/controlling-ball/src/Main.purs).
+keyUp :: GInt.KeyboardInteraction State
+keyUp = GInt.onKeyUp $ setKey false
 
-### 1. Different State
+setKey :: Boolean -> KeyboardEvent -> Delta -> Scalers -> State -> Effect (Maybe State)
+setKey val event _ _ state = pure $ case KEv.key event of
+  "ArrowUp" -> Just state { keys { up = val } }
+  "ArrowDown" -> Just state { keys { down = val } }
+  "ArrowLeft" -> Just state { keys { left = val } }
+  "ArrowRight" -> Just state { keys { right = val } }
+  _ -> Nothing
+```
 
-### 2. Mouse Events
+## Sample output
 
-### 3. Keyboard Events
-
-### 4. Fixing `update`
+[See this example in action](https://smilack.github.io/purescript-gesso/examples/keyboard/dist/)

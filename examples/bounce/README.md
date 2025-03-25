@@ -1,189 +1,43 @@
-# Bouncing Ball
+# Bounce
 
-Bouncing Ball builds on the [Hello World example](../hello/README.md), adding animation and local state.
+This example adds animation and state to an application. A red circle moves across the page, changing direction when it hits an edge.
 
-The imports in this example are still qualified, but aliased, unlike in the first tutorial. For example, `Gesso.Canvas` is now `GCan`.
+### `update`
 
-## Output
-
-[See this example in action](https://smilack.github.io/purescript-gesso/examples/bouncing-ball/dist/)
-
-![Bouncing ball example output](output.gif)
-
-## The Code
-
-The complete source for this example is located at [/examples/bouncing-ball/src/Main.purs](https://github.com/smilack/purescript-gesso/blob/master/examples/bouncing-ball/src/Main.purs).
-
-### 1. Adding State
-
-The first change we will make is to create a type for our state. This needs to keep track of where the ball is (`x` and `y` coordinates of the center) and what direction it's going (`vx` and `vy`). We will also put the size of the ball (`radius`) here too.
+The update function moves the circle and may change its velocity depending on its position. It uses the `x`, `y`, `width`, and `height` properties of the `canvas` scaler to check the bounds of the canvas:
 
 ```purescript
-type State =
-  { x :: Number
-  , vx :: Number
-  , y :: Number
-  , vy :: Number
-  , radius :: Number
+update :: Delta -> Scalers -> State -> Effect (Maybe State)
+update _ { canvas } { x, vx, y, vy } = pure $ Just $
+  { x: x + vx'
+  , vx: vx'
+  , y: y + vy'
+  , vy: vy'
   }
-```
-
-To tell Gesso about the state, we will fill in the first type variable of the `Gesso.Canvas.Input` type and include our initial state in the `canvasInput` record:
-
-```purescript
-canvasInput :: forall i o. GCan.Input State i o
-canvasInput =
-  { name: "bouncing-ball"
-  , localState: { x: 0.0, vx: 1.0, y: 0.0, vy: 1.0, radius: 25.0 }
-```
-
-The rest of our `canvasInput` is the same as the Hello World example, except for one more change in the `defaultApp` overrides: `update = GApp.pureUpdate update`
-
-```purescript
-  , app:
-      GApp.defaultApp
-        { window = GApp.fullscreen
-        , render = render
-        , update = GApp.pureUpdate update
-        }
-  , viewBox: GDims.p1080
-  , interactions: GInt.default
-  }
-```
-
-`GApp.pureUpdate` tells Gesso that our update function is pure - it doesn't have any side effects. If we needed to use `Effect`, we could use `GApp.effectUpdate` instead.
-
-### 2. Updating
-
-Our update function checks whether, at the current velocity, the ball would hit a wall, and if so, reverses the velocity.
-
-```purescript
-update :: GTime.Delta -> GDims.Scaler -> State -> Maybe State
-update _ scale { x, vx, y, vy, radius } = Just { x: x + vx', vx: vx', y: y + vy', vy: vy', radius }
   where
-  xMin = GDims.getX scale.screen
-
-  xMax = xMin + GDims.getWidth scale.screen
-
-  vx' = updateV x radius xMin xMax vx
-
-  yMin = GDims.getY scale.screen
-
-  yMax = yMin + GDims.getHeight scale.screen
-
-  vy' = updateV y radius yMin yMax vy
-
-updateV :: Number -> Number -> Number -> Number -> Number -> Number
-updateV t r min max vt
-  | t + r + vt > max = -1.0
-  | t - r + vt < min = 1.0
-  | otherwise = vt
+  vx' = updateV x canvas.x (canvas.x + canvas.width) vx
+  vy' = updateV y canvas.y (canvas.y + canvas.height) vy
 ```
 
-Starting from the top, `update` takes a `Delta`, a `Scaler`, and the current `State`, and returns a `Maybe State`:
+This update is a pure function, but update functions run in `Effect`, so the new state is wrapped in `pure`.
 
-* `Delta` is a record that contains the current time and the time since the last frame. In this example, we're pretending every frame takes the same amount of time, so we're ignoring it.
-* `Scaler` contains a bunch of functions for converting our coordinate system to and from the actual coordinates of the canvas - they might differ because of the way the canvas stretches with the window size.
+To signal whether the state has changed, the new state is wrapped in a `Maybe` value with the `Just` constructor. If the function returned `Nothing` instead, this would tell Gesso to keep the state the same.
+
+> [!IMPORTANT]
+> The `Maybe` wrapper is important because the state type can be anything, and there are many types that can't be compared for equality.
+
+### Rendering
+
+The `render` function uses the `rect` property of the `canvas` scaler to clear the visible portion of the canvas:
 
 ```purescript
-update :: GTime.Delta -> GDims.Scaler -> State -> Maybe State
-update _ scale { x, vx, y, vy, radius } =
+render :: Context2D -> Delta -> Scalers -> States State -> Effect Unit
+render context _ { canvas } { current: { x, y } } = do
+  Canvas.clearRect context canvas.rect
 ```
 
-We return a *`Maybe`* `State` to tell Gesso whether the state needs to change: `Just something` if there are changes or `Nothing` if not. In this case we're always going to make changes, so our return value is:
+## Sample output
 
-```purescript
-  Just { x: x + vx', vx: vx', y: y + vy', vy: vy', radius }
-```
+[See this example in action](https://smilack.github.io/purescript-gesso/examples/bounce/dist/)
 
-The apostrophes in `vx'` and `vy'` are pronounced "prime" and signify an updated version of a value. We calculate these in the `where` clause below. So, we're adding the new velocity to the old position to get the new position (since `distance = velocity * time`, but we're pretending all frames take the same time, we treat `time` as if it's `1`).
-
-```purescript
-  where
-  xMin = GDims.getX scale.screen
-
-  xMax = xMin + GDims.getWidth scale.screen
-```
-
-`scale.screen` is a `Gesso.Dimensions.ClientRect` which has a size and position. The `getX` and `getWidth` modules give use those values. This means `xMin` is the left edge of the screen and `xMax` is the left edge plus the whole width - meaning the right edge.
-
-Lets jump down to `updateV` next:
-
-```purescript
-updateV :: Number -> Number -> Number -> Number -> Number -> Number
-updateV position radius min max velocity
-```
-
-This function takes the position and radius of the ball, the minimum and maximum screen coordinates, and the current velocity.
-
-If the current velocity would cause the ball to go past the maximum edge, make the velocity negative.
-
-```purescript
-  | position + radius + velocity > max = -1.0
-```
-
-If the current velocity would cause the ball to go past the minimum edge, make the velocity positive.
-
-```purescript
-  | position - radius + velocity < min = 1.0
-```
-
-Otherwise, don't change the velocity.
-
-```purescript
-  | otherwise = velocity
-```
-
-Back in `update`, we call `updateV` with the x-position, radius, left edge, right edge, and x-velocity in order to get the new x-velocity:
-
-```purescript
-  vx' = updateV x radius xMin xMax vx
-```
-
-That's the `vx'` we added to `x` in the return value of `update`. Next, we do the same thing again with the y-position and velocity:
-
-```purescript
-  yMin = GDims.getY scale.screen
-
-  yMax = yMin + GDims.getHeight scale.screen
-
-  vy' = updateV y radius yMin yMax vy
-```
-
-### 3. Rendering
-
-```purescript
-render :: State -> GTime.Delta -> GDims.Scaler -> Canvas.Context2D -> Effect Unit
-render { x, y, radius } _ scale context = do
-  Canvas.clearRect context (scale.toRectangle scale.screen)
-  Canvas.setFillStyle context "red"
-  Canvas.fillPath context do
-    Canvas.arc context { x, y, radius, start: 0.0, end: 2.0 * pi, useCounterClockwise: false }
-```
-
-Our render function also gets the `Delta`, `Scaler`, and `State`, but rendering happens after updating, so we'll be rendering the changes we just made in `update`. The `Context2D` is the Canvas's drawing surface and is an argument to `Canvas` functions.
-
-First, we clear the Canvas so we don't leave a red trail:
-
-```purescript
-  Canvas.clearRect context (scale.toRectangle scale.screen)
-```
-
-Then, we set the fill color to red (Canvas has separate colors for *fill* and *stroke* - if we wanted an outline, we'd set that separately):
-
-```purescript
-  Canvas.setFillStyle context "red"
-```
-
-Circles are a little weird in `Context2D`. We have to start a path, draw an arc on the path, then color in the path. `fillPath` takes care of the first and last step.
-
-The arguments to `arc` are the x and y coordinates of the center, the radius of the arc, and the start and end angles of the arc in radians. Without going into too much detail, a full circle starts at 0 and ends at 2π.
-
-```purescript
-  Canvas.fillPath context do
-    Canvas.arc context { x, y, radius, start: 0.0, end: 2.0 * pi, useCounterClockwise: false }
-```
-
-## Next Steps
-
-The next example, [Controlling the Ball](../controlling-ball/README.md), introduces keyboard and mouse events.
+![A red circle inside a large rectangle. The circle moves in a straight line until it reaches an edge of the rectangle, then bounces off, changing direction.](bounce.gif)
