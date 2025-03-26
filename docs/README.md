@@ -27,4 +27,5 @@ These small programs show various features. See the [main Examples page](../exam
 - [Keyboard](keyboard): move a square around the canvas using the arrow keys.
 - [Mouse And Scaling](mouse-and-scaling): a graph that shows the coordinates of a mouse click. Scales coordinates between page and drawing.
 - [Analog Clock](analog-clock): a more complex drawing. Uses coordinate scaling functions and non-canvas `Effect`.
+- [Interpolation](interpolation): fixed-rate update functions and interpolating state for rendering.
 - [Paint App](paint-app): a Halogen application with an embedded Gesso component.
