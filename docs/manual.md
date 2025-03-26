@@ -1,15 +1,45 @@
-# Gesso Manual
+# The Gesso Manual
 
-## 1. Launching
+### Contents
 
-The `Gesso` module ([`src/Gesso.purs`](../src/Gesso.purs)) contains functions for launching a Gesso application. Launching a Gesso application always requires an `AppSpec`, which will be [covered later](#2-appspec).
+1. [Launching a Gesso Application](#launching-a-gesso-application)
+   1. [`launch` and `launchIn`](#launch-and-launchin)
+   2. [`runGessoAff`](#rungessoaff)
+2. [`AppSpec` Record](#appspec-record)
+   1. [Basic `AppSpec` Fields](#basic-appspec-fields)
+   2. [Canvas Dimensions](#canvas-dimensions)
+3. [`AppBehavior` Record](#appbehavior-record)
+   1. [Rendering Functions](#rendering-functions)
+   2. [Update Functions and Events](#update-functions-and-events)
+   3. [Per-Frame vs Fixed-Rate Updates](#per-frame-vs-fixed-rate-updates)
+   4. [Interactions](#interactions)
+   5. [Component Input and Output](#component-input-and-output)
+   6. [Update Timing](#update-timing)
+4. [`Geometry` Module](#geometry-module)
+   1. [Size and Positioning Types](#size-and-positioning-types)
+   2. [`Scaler` and `Scalers` Records](#scaler-and-scalers-records)
+   3. [Calling Scaling Functions](#calling-scaling-functions)
+      1. [Scaling a Single Value](#scaling-a-single-value)
+      2. [Scaling a Record](#scaling-a-record)
+      3. [Flipped Scaling Functions](#flipped-scaling-functions)
+      4. [Scaling Function Operators](#scaling-function-operators)
+   4. [Other Geometry Functions](#other-geometry-functions)
+5. [Gesso as a Halogen Component](#gesso-as-a-halogen-component)
+   1. [Halogen Component Input (Queries)](#halogen-component-input-queries)
+   2. [Halogen Component Output](#halogen-component-output)
+
+# Launching a Gesso Application
+
+The `Gesso` module contains functions for launching a standalone Gesso application. Launching a Gesso application always requires an [`AppSpec` record](#appspec-record).
 
 > [!TIP]
-> If the Gesso component is going to be part of a larger Halogen application, this module isn't necessary. In that case, the `Canvas` module's `Slot` type will be used instead.
+> If the Gesso component is going to be part of a larger Halogen application, this module isn't necessary. See [Gesso as a Halogen Component](#gesso-as-a-halogen-component).
 
-### `launch` and `launchIn`
+## `launch` and `launchIn`
 
 These are the simplest options, designed for applications which require no `Aff` effects other than Gesso.
+
+`launch` is perfect for applications with nothing else on the page. Gesso attaches directly to the page body:
 
 ```purescript
 launch :: forall state i o. AppSpec state i o -> Effect Unit
@@ -18,7 +48,7 @@ main :: Effect Unit
 main = launch appSpec
 ```
 
-`launch` is perfect for applications with nothing else on the page. Gesso attaches directly to the page body.
+`launchIn` is best for pages with some static content. It takes a `String` as an argument, which is treated as a query selector to find an element on the page to attach to:
 
 ```purescript
 launchIn :: forall state i o. String -> AppSpec state i o -> Effect Unit
@@ -27,9 +57,7 @@ main :: Effect Unit
 main = launchIn "#some-element-id" appSpec
 ```
 
-`launchIn` is best for pages with some static content. It takes a `String` as an argument, which is treated as a query selector to find an element on the page to attach to.
-
-### `runGessoAff`
+## `runGessoAff`
 
 `runGessoAff` is an alias for `runHalogenAff`. It's the most flexible way to launch Gesso because it allows running other `Aff` effects while setting up Gesso. For example, this is roughly what `launch` does:
 
@@ -45,9 +73,9 @@ main = runHalogenAff do
   pure unit
 ```
 
-## 2. `AppSpec`
+# `AppSpec` Record
 
-In `Gesso.Application` ([`src/Gesso/Application.purs`](../src/Gesso/Application.purs)), the `AppSpec` and `AppBehavior` types contain everything that make an application work.
+In `Gesso.Application`, the `AppSpec` and `AppBehavior` types contain everything that makes an application work.
 
 ```purescript
 type AppSpec state input output =
@@ -59,29 +87,29 @@ type AppSpec state input output =
   }
 ```
 
-### Basics
+## Basic `AppSpec` Fields
 
 The `state` type is the state of your application and can be anything you want, for example, a large complicated record, a single integer, or just `unit` if you don't need to track state at all
 
-The `input` and `output` types are only used for communication with a parent component in a Halogen application, which is covered later.
+The `input` and `output` types are only used for communication with a parent component in a Halogen application. See [Gesso as a Halogen Component](#gesso-as-a-halogen-component).
 
 The `name` field will be used as the `id` attribute for the canvas element.
 
 > [!WARNING]
 > If you plan to target the element with any CSS or JavaScript outside of what Gesso normally does, then it's best to make `name` a valid CSS identifier. Otherwise, it doesn't matter much.
 
-### Canvas dimensions
+## Canvas Dimensions
 
-`viewBox` is a [`Geometry.Rect`](#row-and-record-types) that determines the coordinate system of the drawing. It is analagous to the `viewBox` attribute on an SVG - neither is tied to the actual size of the element on the page. This simplifies the drawing process when the screen size is unpredictable and subject to change.
+`viewBox` is a `Rect` ([Size and Positioning Types](#size-and-positioning-types)) that determines the coordinate system of the drawing. It is analagous to the `viewBox` attribute on an SVG — neither is tied to the actual size of the element on the page. This simplifies the drawing process when the screen size is unpredictable and subject to change.
 
 `window` determines the space that the canvas element takes up:
 - `Fixed` creates an element with an exact size.
 - `Stretch` causes the element to fill its parent.
 - `FullScreen` takes up the entire page from the top left corner to the bottom right.
 
-The `viewBox` scales automatically to fit within the canvas element while remaining centered. Unless the view box and drawing have the exact same aspect ratio, this leaves a margin in the canvas outside of the view box on one axis. (That is, it behaves like SVG's `preserveAspectRatio="xMidYMid meet"`.)
+The `viewBox` scales automatically to fit within the canvas element while remaining centered. Unless the view box and drawing have the exact same aspect ratio, this leaves a margin in the canvas outside of the view box on one axis. (That is, it behaves like SVG's `preserveAspectRatio="xMidYMid meet"`)
 
-## `AppBehavior`
+# `AppBehavior` Record
 
 The `AppBehavior` type covers all functions that make an application interact with or respond to the canvas itself, events, other components, and the passage of time.
 
@@ -105,14 +133,14 @@ myAppBehavior = defaultBehavior { render = render, update = update }
 
 All of these functions run in `Effect` and therefore have access to any `Effect`.
 
-There are several very important types in the arguments to these functions. They'll be covered in more detail later, but for a quick rundown:
+There are several important types in the arguments to these functions. They'll be covered in more detail later, but for a quick rundown:
 
 - `Delta`: the timestamps of the current and previous animation frames and the difference between them
 - `Scalers`: information about the sizes of the canvas and the drawing (view box) and functions to convert between the two
 - `States`: two sequential states (the current and previous) and the progress (on the interval `[0, 1]`) from the first to second
-- `Compare`: two states - an old and new - not necessarily sequential
+- `Compare`: two states — an old and new — not necessarily sequential
 
-### Rendering
+## Rendering Functions
 
 ```purescript
 type RenderFunction state = Context2D -> Delta -> Scalers -> States state -> Effect Unit
@@ -124,14 +152,12 @@ The `States` record contains the current and previous states and an interpolatio
 
 However, if there is a fixed-interval update function running at a different rate than the rendering function, the interpolation parameter will be a number in the range `[0, 1]` representing the progress from the previous state to the current. This can be used to smooth animations in some circumstances.
 
-### Updates, component input, and events
+## Update Functions and Events
 
 Because of the overlap between kinds of state-changing functions, they use a few type synonyms to maintain consistency. This is not how they are literally written in the code, but it may be the most clear presentation:
 
 ```purescript
 type UpdateFunction state = Delta -> Scalers -> local -> Effect (Maybe local)
-
-type InputReceiver state input = input -> UpdateFunction state
 
 -- Gesso.Interactions
 type Handler event state = event -> UpdateFunction state
@@ -141,16 +167,16 @@ All kinds of state-changing functions have access to the same `Delta` and `Scale
 
 All of them also return a `Maybe state`, with a `Nothing` value indicating that no change was made.
 
-### `update` vs `fixed`
+### Per-Frame vs Fixed-Rate Updates
 
 `update` is the most basic kind of update function. It runs once per frame immediately before `render`.
 
-`fixed` updates have a time interval in milliseconds (constructed using the `Gesso.Time.hz` function) and an update function. Gesso tracks the last time that the fixed update function ran (`last`). Each frame, if the amount of time since `last` is greater than `interval`, the fixed update is run repeatedly, with timestamps starting at `last + interval` and increasing by `interval`, stopping before `last + i * interval` would pass the current time. See [Game Programming Patterns / Sequencing Patterns / Play catch up](https://gameprogrammingpatterns.com/game-loop.html#play-catch-up).
+`fixed` updates have a time interval in milliseconds (constructed using the `Gesso.Time.hz` function) and an update function. Gesso tracks the last time that the fixed update function ran (`last`). Each frame, if the amount of time since `last` is greater than `interval`, the fixed update is run repeatedly, with timestamps starting at `last + interval` and increasing by `interval`, stopping before `last + i * interval` would pass the current time. (See [GameProgrammingPatterns.com: Sequencing Patterns / Play catch up](https://gameprogrammingpatterns.com/game-loop.html#play-catch-up))
 
-> ![WARNING]
-> There isn't an escape hatch to extend or skip fixed updates if the update function takes longer than `interval` to run. (See issue #24.) Very small intervals or very slow fixed update functions could cause the application to get stuck trying to catch up.
+> [!WARNING]
+> There isn't an escape hatch to extend or skip fixed updates if the update function takes longer than `interval` to run. (Issue #24) Very small intervals or very slow fixed update functions could cause the application to get stuck trying to catch up.
 
-### Interactions
+## Interactions
 
 Interactions are event handlers attached to the canvas. The `interactions` field is a record containing an array for each event type:
 
@@ -207,21 +233,21 @@ getMousePosition event _ _ _ = pure $ Just $ fromMouseEvent event
 
 The default `Interactions` record is already included in the default `AppBehavior` record, so it can be updated at the same time the rest of the `AppSpec` is defined.
 
-### Input and Output
+## Component Input and Output
 
-These functions define component I/O between a Gesso component and a parent component in a Halogen application. See the section on [Halogen Applications](#halogen-applications).
+The `input` and `output` functions control component I/O between a Gesso component and a parent component in a Halogen application. See [Gesso as a Halogen Component](#gesso-as-a-halogen-component).
 
-### Update timing
+## Update Timing
 
 Interactions and component inputs are timestamped as they arrive, and their `Delta` values are based on the difference between this time and the time of the last frame rendering.
 
 On each animation frame, after Gesso determines the timing of any necessary fixed update function calls, interactions, component inputs, and fixed updates are sorted by timestamp before processing.
 
-## 3. Geometry module
+# `Geometry` Module
 
-### Row and Record types
+## Size and Positioning Types
 
-`Geometry` contains three pairs of Row and Record types that may be useful. The Row types are open and have a type parameter:
+`Gesso.Geometry` contains three pairs of Row and Record types that may be useful. The Row types are open and have a type parameter:
 
 ```purescript
 type Position a r = ( x :: a, y :: a | r )
@@ -246,19 +272,25 @@ These are used in a handful of places internally, and some external modules, lik
 There is also a default, empty value for each record:
 
 ```purescript
+origin :: Point
 origin = { x: 0.0, y: 0.0 }
+
+sizeless :: Area
 sizeless = { width: 0.0, height: 0.0 }
+
+null :: Rect
 null = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
 ```
 
-### `Scaler` and `Scalers`
+## `Scaler` and `Scalers` Records
 
-Because the size of a user's screen or browser window is unpredictable, it's useful to set a view box in the `AppSpec` so that drawing coordinates can be consistent. However, this means that it's necessary to convert from drawing coordinates to canvas coordinates in order to paint the canvas, and to convert from canvas to drawing to process mouse or touch events. In addition, because the view box scales by preserving its aspect ratio while remaining centered, there may be a margin to account for - horizontally or vertically.
+Because the size of a user's screen or browser window is unpredictable, it's useful to set a view box in the `AppSpec` so that drawing coordinates can be consistent. However, this means that it's necessary to convert from drawing coordinates to canvas coordinates in order to paint the canvas, and to convert from canvas to drawing to process mouse or touch events. In addition, because the view box scales by preserving its aspect ratio while remaining centered, there may be a margin to account for — horizontally or vertically.
 
 > [!IMPORTANT]
 > The `viewBox` record determines two things:
 > 1. the scale and position of the drawing coordinates relative to the canvas coordinates
 > 2. the area of the drawing that must always be visible
+>
 > The drawing coordinate system extends infinitely, which means that canvas coordinates outside the view box can still be converted to valid drawing coordinates. Drawings in the margins may be visible, but drawings are only *guaranteed* to be visible if they fall within the view box.
 
 The `Scalers` record contains data and functions to simplify all of these conversions.
@@ -296,21 +328,26 @@ The `x`/`y`/`width`/`height` fields are the same as the `rect` field, but repeat
 
 In `drawing`, these fields are identical to the view box. In `canvas`, `x` and `y` are zero and `width` and `height` are the dimensions of the canvas.
 
-`scaling` contains functions for scaling *to* the coordinates of the record's name. It's not recommended to call the scaling functions directly. Instead, use these functions from `Geometry`:
-
-```purescript
-xTo :: Number -> Scaler -> Number
-yTo :: Number -> Scaler -> Number
-lengthTo :: Number -> Scaler -> Number
-to :: forall rl r. RowToList r rl => Scalable rl r Number => {| r } -> Scaler -> {| r }
-```
-
 > [!TIP]
 > The `Scalers` record is automatically rebuilt whenever the browser window is resized.
 
-#### Single values
+## Calling Scaling Functions
 
-`xTo`, `yTo`, and `lengthTo` operate on single values. For example, if you have a circle with radius `1.0` in your view box at coordinate `(2.0, 3.0)`, you could convert those values to canvas coordinates like this:
+The `scaling` field of a `Scaler` contains functions for scaling to the coordinate system with the same name as the record. It's not recommended to call the scaling functions directly. Instead, use these functions from `Geometry`:
+
+```purescript
+xTo :: Number -> Scaler -> Number
+
+yTo :: Number -> Scaler -> Number
+
+lengthTo :: Number -> Scaler -> Number
+
+to :: forall rl r. RowToList r rl => Scalable rl r Number => {| r } -> Scaler -> {| r }
+```
+
+### Scaling a Single Value
+
+`xTo`, `yTo`, and `lengthTo` operate on single values. For example, if you have a circle with radius `1.0` in your view box at coordinates `(2.0, 3.0)`, you could convert those values to canvas coordinates like this:
 
 ```purescript
 x' = 2.0 `xTo` canvas
@@ -318,9 +355,9 @@ y' = 3.0 `yTo` canvas
 r' = 1.0 `lengthTo` canvas
 ```
 
-(What makes `lengthTo` different from the others is that lengths don't need to account for page margins).
+(What makes `lengthTo` different from the others is that lengths don't need to account for page margins.)
 
-#### Records
+### Scaling a Record
 
 The `to` function is provided to greatly simplify scaling multiple values:
 
@@ -336,7 +373,7 @@ Its type signature is so abstract because it can operate on any record and autom
 | `yTo` | `y`, `y1`, `y2` |
 | `lengthTo` | `width`, `w`, `height`, `h`, `radius`, `r`, `length`, `len`, `l` |
 
-#### Inverses
+### Flipped Scaling Functions
 
 `to`, `xTo`, `yTo`, and `lengthTo` have `from` counterparts with flipped arguments, e.g.:
 
@@ -349,7 +386,7 @@ xFrom = flip xTo
 
 This can be more convenient sometimes, depending on code formatting, or when composing functions.
 
-#### Operators
+### Scaling Function Operators
 
 The scaling functions have infix operators as well:
 
@@ -357,7 +394,7 @@ The scaling functions have infix operators as well:
 |-|-|-|
 | all | `*~>` | `<~*` |
 | `x` | `-~>` | `<~-` |
-| `y` | `|~>` | `<~|` |
+| `y` | `\|~>` | `<~\|` |
 | `length` | `/~>` | `<~/` |
 
 For example:
@@ -367,13 +404,13 @@ x' = 2.0 -~> canvas
 circle' = canvas <~* { x: 2.0, y: 3.0, r: 1.0 }
 ```
 
-### Other
+## Other Geometry Functions
 
 Geometry exports a `fromMouseEvent` function that extracts a `Point` (in canvas coordinates) from a `MouseEvent`.
 
-## Halogen Applications
+# Gesso as a Halogen Component
 
-See the [Halogen Guide](https://purescript-halogen.github.io/purescript-halogen/guide/05-Parent-Child-Components.html) for adding a child to a Halogen component.
+See the [Halogen Guide: Parent and Child Components](https://purescript-halogen.github.io/purescript-halogen/guide/05-Parent-Child-Components.html) for adding a child to a Halogen component.
 
 > [!IMPORTANT]
 > Halogen and Gesso use slightly different terminology here.
@@ -411,7 +448,7 @@ type AppBehavior state input output =
   }
 ```
 
-### Input
+## Halogen Component Input (Queries)
 
 `InputReceiver` is an update function that also receives a copy of the input type. Apart from that, it behaves the same as an update or event handler.
 
@@ -421,7 +458,7 @@ type InputReceiver state input = input -> Delta -> Scalers -> state -> Effect (M
 
 It's invoked when a parent component calls `Halogen.tell` targeted at the canvas component.
 
-### Output
+## Halogen Component Output
 
 When an application's state changes, an `OutputProducer` function is called:
 
