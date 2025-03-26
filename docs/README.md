@@ -16,7 +16,7 @@ The [Quick-Start Guide](quickstart.md) walks you through the process of setting 
 - All of the data available in rendering, update, event, and i/o functions
 - Halogen component I/O
 
-Details on usage of specific functions can be found on [Pursuit](TODO).
+Details about specific functions and types can be found on [Pursuit](https://pursuit.purescript.org/packages/purescript-gesso/).
 
 ## Examples
 

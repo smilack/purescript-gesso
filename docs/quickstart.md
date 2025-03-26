@@ -2,26 +2,26 @@
 These are the basic steps to get a brand new Gesso project up and running.
 
 ## 1. Initialize a new PureScript project
-```bash
-$ spago init
+```
+spago init
 ```
 
 ## 2. Install Gesso and purescript-canvas
-```bash
-$ spago install canvas
-$ spago install gesso
+```
+spago install canvas
+spago install gesso
 ```
 
-> [!NOTE]  
+> [!NOTE]
 > If gesso isn't in your package set, add these lines to the `extraPackages` section in `spago.yaml`:
 > ```yaml
 >   extraPackages:
 >     gesso:
 >       git: https://github.com/smilack/purescript-gesso.git
->       ref: master
+>       ref: v1.0.0
 > ```
 
-## 3. Add necessary imports in `Main.purs`
+## 3. Write application in `src/Main.purs`
 ```purescript
 module Main where
 
@@ -32,10 +32,7 @@ import Gesso (launch)
 import Gesso.Application (AppSpec, WindowMode(..), defaultBehavior)
 import Gesso.Geometry (null)
 import Graphics.Canvas (fillText)
-```
 
-## 4. Specify application settings
-```purescript
 appSpec :: forall i o. AppSpec Unit i o
 appSpec =
   { name: "app"
@@ -46,20 +43,12 @@ appSpec =
       { render = \context _ _ _ -> fillText context "hello world" 20.0 20.0
       }
   }
-```
 
-## 5. Add `main` function
-```purescript
 main :: Effect Unit
 main = launch appSpec
 ```
 
-## 6. Build project
-```bash
-$ spago build
-```
-
-## 7. Bundle project
+## 4. Bundle project
 ```bash
 $ spago bundle
 ```
@@ -70,7 +59,7 @@ $ spago bundle
 > $ npm install -g esbuild
 > ```
 
-## 8. Create basic HTML file
+## 5. Create HTML file to run application
 ```html
 <!doctype html>
 <html>
@@ -84,5 +73,5 @@ $ spago bundle
 </html>
 ```
 
-## 9. Open the file in a browser
+## 6. Open the file in a browser
 You should the the words "hello world" in the upper left corner. Next, check out [the examples](../examples/README.md) to see what you can do with Gesso!

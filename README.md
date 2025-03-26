@@ -36,16 +36,20 @@ Or, for more details, see [How does it work?](#how-does-it-work) below or the [d
 
 ## Installation
 
-Gesso isn't in the PureScript Registry yet. To add it to your project, add these lines to the `extraPackages` section in your `spago.yaml`:
+Install with [Spago](https://github.com/purescript/spago#installation):
 
-```yaml
-  extraPackages:
-    gesso:
-      git: https://github.com/smilack/purescript-gesso.git
-      ref: v1.0.0
+```
+spago install gesso
 ```
 
-Then you can run `spago install gesso` as usual.
+> [!NOTE]
+> If gesso isn't in your package set, add these lines to the `extraPackages` section in `spago.yaml`:
+> ```yaml
+>   extraPackages:
+>     gesso:
+>       git: https://github.com/smilack/purescript-gesso.git
+>       ref: v1.0.0
+> ```
 
 ## How does it work?
 
@@ -79,8 +83,9 @@ Then, Gesso:
 ## Documentation
 
 - [Quick-Start Guide](docs/quickstart.md)
-- [The Gesso Manual](manual.md) covers the vast majority of what you need to know to use Gesso effectively
-- There are a variety of [examples](examples/README.md) available to look through
+- [The Gesso Manual](manual.md) covers the vast majority of what you need to know to use Gesso effectively.
+- There are a variety of [examples](examples/README.md) available to look through.
+- Details about specific functions and types can be found on [Pursuit](https://pursuit.purescript.org/packages/purescript-gesso/).
 - If you encounter a bug, the documentation is unclear or incorrect, or you have ideas for improving the API, open an issue.
 - For general help or questions, create a thread on the [PureScript Discourse instance](https://discourse.purescript.org/) or the [PureScript Discord Server](https://purescript.org/chat).
 
