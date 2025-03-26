@@ -5,30 +5,81 @@
         "path": "./",
         "core": {
           "dependencies": [
-            "aff",
-            "canvas",
-            "console",
-            "css",
-            "dom-indexed",
-            "effect",
-            "foldable-traversable",
-            "halogen",
-            "halogen-subscriptions",
-            "integers",
-            "lists",
-            "maybe",
-            "prelude",
-            "record-extra",
-            "safe-coerce",
-            "tuples",
-            "typelevel-prelude",
-            "web-clipboard",
-            "web-dom",
-            "web-events",
-            "web-html",
-            "web-pointerevents",
-            "web-touchevents",
-            "web-uievents"
+            {
+              "aff": ">=8.0.0 <9.0.0"
+            },
+            {
+              "canvas": ">=6.0.0 <7.0.0"
+            },
+            {
+              "css": ">=6.0.0 <7.0.0"
+            },
+            {
+              "dom-indexed": ">=11.0.0 <13.0.0"
+            },
+            {
+              "effect": ">=4.0.0 <5.0.0"
+            },
+            {
+              "foldable-traversable": ">=6.0.0 <7.0.0"
+            },
+            {
+              "halogen": ">=7.0.0 <8.0.0"
+            },
+            {
+              "halogen-subscriptions": ">=2.0.0 <3.0.0"
+            },
+            {
+              "integers": ">=6.0.0 <7.0.0"
+            },
+            {
+              "lists": ">=7.0.0 <8.0.0"
+            },
+            {
+              "maybe": ">=6.0.0 <7.0.0"
+            },
+            {
+              "numbers": ">=9.0.1 <10.0.0"
+            },
+            {
+              "ordered-collections": ">=3.2.0 <4.0.0"
+            },
+            {
+              "prelude": ">=6.0.1 <7.0.0"
+            },
+            {
+              "record": ">=4.0.0 <5.0.0"
+            },
+            {
+              "transformers": ">=6.1.0 <7.0.0"
+            },
+            {
+              "tuples": ">=7.0.0 <8.0.0"
+            },
+            {
+              "typelevel-prelude": ">=7.0.0 <8.0.0"
+            },
+            {
+              "web-clipboard": ">=4.0.0 <7.0.0"
+            },
+            {
+              "web-dom": ">=6.0.0 <7.0.0"
+            },
+            {
+              "web-events": ">=4.0.0 <5.0.0"
+            },
+            {
+              "web-html": ">=4.1.0 <5.0.0"
+            },
+            {
+              "web-pointerevents": ">=1.0.0 <3.0.0"
+            },
+            {
+              "web-touchevents": ">=4.0.0 <5.0.0"
+            },
+            {
+              "web-uievents": ">=5.0.0 <6.0.0"
+            }
           ],
           "build_plan": [
             "aff",
@@ -89,7 +140,6 @@
             "quickcheck-laws",
             "random",
             "record",
-            "record-extra",
             "refs",
             "safe-coerce",
             "st",
@@ -211,7 +261,6 @@
             "quickcheck-laws",
             "random",
             "record",
-            "record-extra",
             "refs",
             "safe-coerce",
             "st",
@@ -329,7 +378,6 @@
             "quickcheck-laws",
             "random",
             "record",
-            "record-extra",
             "refs",
             "safe-coerce",
             "st",
@@ -446,7 +494,6 @@
             "quickcheck-laws",
             "random",
             "record",
-            "record-extra",
             "refs",
             "safe-coerce",
             "st",
@@ -564,7 +611,6 @@
             "quickcheck-laws",
             "random",
             "record",
-            "record-extra",
             "refs",
             "safe-coerce",
             "st",
@@ -682,7 +728,6 @@
             "quickcheck-laws",
             "random",
             "record",
-            "record-extra",
             "refs",
             "safe-coerce",
             "st",
@@ -801,7 +846,6 @@
             "quickcheck-laws",
             "random",
             "record",
-            "record-extra",
             "refs",
             "safe-coerce",
             "st",
@@ -920,7 +964,6 @@
             "quickcheck-laws",
             "random",
             "record",
-            "record-extra",
             "refs",
             "safe-coerce",
             "st",
@@ -2246,20 +2289,6 @@
         "functions",
         "prelude",
         "unsafe-coerce"
-      ]
-    },
-    "record-extra": {
-      "type": "registry",
-      "version": "5.0.1",
-      "integrity": "sha256-7vnREK2fpGJ7exswSeA9UpZFuU+UXRt3SA7AFUldT/Y=",
-      "dependencies": [
-        "arrays",
-        "functions",
-        "lists",
-        "prelude",
-        "record",
-        "tuples",
-        "typelevel-prelude"
       ]
     },
     "refs": {
