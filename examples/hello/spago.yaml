@@ -1,27 +1,9 @@
 package:
   dependencies:
-    - gesso
-    - aff
     - canvas
-    - console
-    - css
-    - dom-indexed
     - effect
-    - foldable-traversable
-    - halogen
-    - halogen-subscriptions
-    - integers
-    - lists
-    - maybe
+    - gesso
     - prelude
-    - safe-coerce
-    - tuples
-    - web-clipboard
-    - web-dom
-    - web-events
-    - web-html
-    - web-touchevents
-    - web-uievents
   name: gesso-example-hello
   bundle:
     module: Gesso.Example.Hello

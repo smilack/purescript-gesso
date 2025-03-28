@@ -1,29 +1,18 @@
 package:
   dependencies:
-    - gesso
     - aff
     - arrays
     - canvas
-    - console
-    - css
     - dom-indexed
     - effect
     - foldable-traversable
+    - gesso
     - halogen
-    - halogen-subscriptions
     - integers
     - lists
     - maybe
     - prelude
     - record
-    - safe-coerce
-    - tuples
-    - web-clipboard
-    - web-dom
-    - web-events
-    - web-html
-    - web-touchevents
-    - web-uievents
   name: gesso-example-paint-app
   bundle:
     module: Gesso.Example.PaintApp

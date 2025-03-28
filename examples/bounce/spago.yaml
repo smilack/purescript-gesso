@@ -1,28 +1,11 @@
 package:
   dependencies:
-    - gesso
-    - aff
     - canvas
-    - console
-    - css
-    - dom-indexed
     - effect
-    - foldable-traversable
-    - halogen
-    - halogen-subscriptions
-    - integers
-    - lists
+    - gesso
     - maybe
     - numbers
     - prelude
-    - safe-coerce
-    - tuples
-    - web-clipboard
-    - web-dom
-    - web-events
-    - web-html
-    - web-touchevents
-    - web-uievents
   name: gesso-example-bounce
   bundle:
     module: Gesso.Example.Bounce
