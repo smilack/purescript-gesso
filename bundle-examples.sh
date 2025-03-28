@@ -6,3 +6,4 @@ spago bundle --source-maps -p gesso-example-hello
 spago bundle --source-maps -p gesso-example-paint-app
 spago bundle --source-maps -p gesso-example-mouse-and-scaling
 spago bundle --source-maps -p gesso-example-interpolation
+spago bundle --source-maps -p gesso-example-timing

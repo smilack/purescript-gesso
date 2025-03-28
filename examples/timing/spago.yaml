@@ -1,0 +1,14 @@
+package:
+  dependencies:
+    - canvas
+    - effect
+    - foldable-traversable
+    - gesso
+    - maybe
+    - numbers
+    - prelude
+    - record
+  name: gesso-example-timing
+  bundle:
+    module: Gesso.Example.Timing
+    outfile: "dist/example.js"
