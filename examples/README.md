@@ -9,6 +9,7 @@ This folder contains several examples of Gesso programs that show how to use the
 - [Analog Clock](analog-clock): a more complex drawing. Uses coordinate scaling functions and non-canvas `Effect`s.
 - [Interpolation](interpolation): fixed-rate update functions and interpolating state for rendering.
 - [Paint App](paint-app): a Halogen application with an embedded Gesso component.
+- [Timing](timing): a graph comparing the `delta` values in fixed and per-frame update functions.
 
 Each example's readme has more details and a link to a pre-compiled version you can run online without downloading anything.
 
