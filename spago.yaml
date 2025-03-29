@@ -1,6 +1,6 @@
 package:
   name: gesso
-  description: "A simple <canvas> adapter for standalone applications and Halogen components"
+  description: "Easily build <canvas> applications in PureScript — Compatible with Halogen"
   dependencies:
     - aff: ">=7.0.0 <9.0.0"
     - canvas: ">=6.0.0 <7.0.0"
