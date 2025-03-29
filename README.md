@@ -1,12 +1,10 @@
 # PureScript Gesso
 
-Gesso is a PureScript library that makes it easy to use `<canvas>` graphics in standalone applications or Halogen components.
+Gesso is a PureScript library that makes it simple to use `<canvas>` graphics in standalone applications or Halogen components.
 
-Gesso (pronounced [['dʒɛsoʊ]](https://en.wikipedia.org/wiki/Help:IPA/English), like **jes**ter and espr**esso**) is named after a primer used to prepare canvas for painting.
+Pronounced like **jes**ter and espr**esso** ([/'dʒɛsoʊ/](https://en.wikipedia.org/wiki/Help:IPA/English)), Gesso is named after a primer used to prepare canvas for painting.
 
-### What does it do?
-
-Gesso is designed to get you drawing on a `<canvas>` element with PureScript as quickly and easily as possible:
+This is all it takes to start drawing on a `<canvas>`:
 
 ```purescript
 module Main where
@@ -14,7 +12,7 @@ module Main where
 import Prelude
 import Effect (Effect)
 import Gesso (launch)
-import Gesso.Application (AppSpec, WindowMode(..), defaultBehavior)
+import Gesso.Application (WindowMode(..), defaultBehavior)
 import Gesso.Geometry (null)
 import Graphics.Canvas (fillText)
 
@@ -25,14 +23,82 @@ main = launch
   , window: Fullscreen
   , viewBox: null
   , behavior: defaultBehavior
-      { render = \context _ _ _ -> fillText context "hello world" 20.0 20.0
-      }
+      { render = \context _ _ _ -> fillText context "hello world" 20.0 20.0 }
   }
 ```
 
-Check out the [Quick-Start Guide](docs/quickstart.md) to get set up right away.
+To get started right away, check out the [Quick-Start Guide](docs/quickstart.md).
 
-Or, for more details, see [How does it work?](#how-does-it-work) below or the [documentation](docs).
+## How does it work?
+
+You tell Gesso:
+
+- Which element to put the canvas in
+
+- The initial state of your application
+
+- The size of the canvas: fullscreen, fixed size, or fill container
+
+- Optionally, a separate viewport for the drawing (like [`svg:viewBox`](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/viewBox))
+
+- Any of these functions:
+
+<table>
+ <tbody>
+  <tr>
+   <td>
+Render
+   </td>
+   <td>
+Draw on the canvas on each animation frame
+   </td>
+  </tr>
+  <tr>
+   <td>
+Update
+   </td>
+   <td>
+Make changes to the application state immediately before rendering
+   </td>
+  </tr>
+  <tr>
+   <td>
+Fixed update
+   </td>
+   <td>
+Make changes to the state at a regular, configurable time interval
+   </td>
+  </tr>
+  <tr>
+   <td>
+Interactions
+   </td>
+   <td>
+Event handlers, like mouse, keyboard, or touch events
+   </td>
+  </tr>
+  <tr>
+   <td>
+Input and output
+   </td>
+   <td>
+Communication with a parent Halogen component
+   </td>
+  </tr>
+ </tbody>
+</table>
+
+Then, Gesso:
+
+Creates a `<canvas>` element, adds it to the page, sets its size and position, attaches event handlers, and starts requesting animation frames to call your rendering function. It tracks your application state and runs your update functions. It can react to queries from other Halogen components and send output when your state changes. It provides timestamps and delta times to all your functions. When using a fixed-rate update, it provides interpolation information to your render function. It provides dimensions for the `<canvas>` and your drawing, and functions for scaling coordinates and sizes between the two, while automatically accounting for changes to the page size.
+
+## Is Gesso a...
+
+### Canvas API?
+No, while Gesso gives you easy access to a `Context2D` object, it's agnostic about the way you interact with it. You could use the basic canvas bindings in [purescript-canvas](https://pursuit.purescript.org/packages/purescript-canvas), another library with higher-level bindings, or your own custom ones. In fact, the original idea for Gesso was to simplify experimenting with custom canvas bindings.
+
+### Game engine?
+No, Gesso does not provide anything like a physics engine, asset pipeline, or audio functions that a complete game engine might include. However, because Gesso renders with `requestAnimationFrame` and supports both per-frame and fixed-interval update functions, you could certainly make a game with Gesso if you wanted to mix and match other libraries or write your own handling for physics, sound, etc.
 
 ## Installation
 
@@ -43,7 +109,7 @@ spago install gesso
 ```
 
 > [!NOTE]
-> If gesso isn't in your package set, add these lines to the `extraPackages` section in `spago.yaml`:
+> Gesso is available starting in package set 63.6.0. If you're using an earlier package set, add these lines to the `extraPackages` section in `spago.yaml`:
 > ```yaml
 >   extraPackages:
 >     gesso:
@@ -51,39 +117,10 @@ spago install gesso
 >       ref: v1.0.0
 > ```
 
-## How does it work?
-
-You provide Gesso with:
-
-- An element to run inside
-- The initial application state
-- A view box — origin, width, and height — like an SVG
-- The canvas size — fullscreen, fixed size, or stretch to fit another element
-- And any or all of these functions:
-  - Render — draw on the canvas, runs on every animation frame
-  - Update — make changes to the application state, runs immediately before rendering
-  - Fixed update — like update, but runs at a regular (configurable) time interval
-  - Interactions — any canvas event handlers, like mouse, keyboard, or touch events
-  - Output and input — communication with a parent Halogen component
-
-Then, Gesso:
-
-- Creates a `<canvas>` element and adds it to the page along with all of your event handlers
-- Begins requesting animation frames
-- Tracks your application state through updates, I/O, and events
-- Provides frame timestamps and deltas to render and update functions
-- Provides functions to scale between view box coordinates and page coordinates
-- Automatically accounts for window resizing
-
-### Is this a...
-
-- **Canvas API?** No, while Gesso gives you easy access to a `Context2D` object, it's agnostic about the way you interact with it. You could use the basic canvas bindings in [purescript-canvas](https://pursuit.purescript.org/packages/purescript-canvas), another library with higher-level bindings, or your own custom ones. In fact, the original idea for Gesso was to simplify experimenting with custom canvas bindings.
-- **Game engine?** No, Gesso does not provide anything like a physics engine, asset pipeline, or audio functions that a complete game engine might include. However, because Gesso renders with `requestAnimationFrame` and supports both per-frame and fixed-interval update functions, you could certainly make a game with Gesso if you wanted to mix and match other libraries or write your own handling for physics, sound, etc.
-
 ## Documentation
 
 - [Quick-Start Guide](docs/quickstart.md)
-- [The Gesso Manual](manual.md) covers the vast majority of what you need to know to use Gesso effectively.
+- [The Gesso Manual](docs/manual.md) covers the vast majority of what you need to know to use Gesso effectively.
 - There are a variety of [examples](examples/README.md) available to look through.
 - Details about specific functions and types can be found on [Pursuit](https://pursuit.purescript.org/packages/purescript-gesso/).
 - If you encounter a bug, the documentation is unclear or incorrect, or you have ideas for improving the API, open an issue.
