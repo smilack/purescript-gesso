@@ -173,50 +173,50 @@ lengthFrom = flip lengthTo
 -- | line' = { x1: 0.0, y1: 0.0, x2: 1.0, y2: 1.0 } *~> canvas
 -- | circle' = { x: 0.0, y: 0.0, r: 1.0 } *~> canvas
 -- | ```
-infix 2 to as *~>
+infixl 2 to as *~>
 
 -- | [`to`](#v:to) with arguments flipped:
 -- | ```purescript
 -- | line' = canvas <~* { x1: 0.0, y1: 0.0, x2: 1.0, y2: 1.0 }
 -- | circle' = canvas <~* { x: 0.0, y: 0.0, r: 1.0 }
 -- | ```
-infix 2 from as <~*
+infixr 2 from as <~*
 
 -- | Convert a single `x` value to the coordinate system of a `Scaler`:
 -- | ```purescript
 -- | x' = x -~> canvas
 -- | ```
-infix 2 xTo as -~>
+infixl 2 xTo as -~>
 
 -- | [`xTo`](#v:xTo) with arguments flipped:
 -- | ```purescript
 -- | x' = canvas <~- x
 -- | ```
-infix 2 xFrom as <~-
+infixr 2 xFrom as <~-
 
 -- | Convert a single `y` value to the coordinate system of a `Scaler`:
 -- | ```purescript
 -- | y' = y |~> canvas
 -- | ```
-infix 2 yTo as |~>
+infixl 2 yTo as |~>
 
 -- | [`yTo`](#v:yTo) with arguments flipped:
 -- | ```purescript
 -- | y' = canvas <~| y
 -- | ```
-infix 2 yFrom as <~|
+infixr 2 yFrom as <~|
 
 -- | Convert a single `length` value to the coordinate system of a `Scaler`:
 -- | ```purescript
 -- | l' = l /~> canvas
 -- | ```
-infix 2 lengthTo as /~>
+infixl 2 lengthTo as /~>
 
 -- | [`lengthTo`](#v:lengthTo) with arguments flipped:
 -- | ```purescript
 -- | l' = canvas <~/ l
 -- | ```
-infix 2 lengthFrom as <~/
+infixr 2 lengthFrom as <~/
 
 -- ┌─────────────────┐
 -- │ Scaler creation │
