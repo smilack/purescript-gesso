@@ -29,7 +29,7 @@ import Data.Map (fromFoldable, lookup) as Map
 import Data.Maybe (Maybe, fromMaybe)
 import Data.Symbol (reflectSymbol, class IsSymbol)
 import Data.Tuple.Nested ((/\))
-import Gesso.Geometry.Dimensions (Position, Rect, Rectangular)
+import Gesso.Geometry.Dimensions (Box, Boxed, Position, Rect, Rectangular)
 import Record (delete, get) as Record
 import Record.Builder (Builder, buildFromScratch, nub)
 import Record.Builder (insert) as Builder
@@ -54,6 +54,9 @@ type ScalingFunctions =
 -- | easier to access them indiviually, and sometimes it's easier to access them
 -- | as a complete `Rect`.
 -- |
+-- | The `left`, `top`, `right`, `bottom`, and `box` fields are also convenience
+-- | accessors for CSS-style positioning.
+-- |
 -- | `scaling` contains functions to scale `x`, `y`, `length`, and entire
 -- | records, but they're more convenient to use with the `to` and `from`
 -- | functions rather than being called directly:
@@ -67,7 +70,7 @@ type ScalingFunctions =
 -- | ```
 type Scaler :: Type
 type Scaler =
-  { | Rectangular Number +
+  { | Rectangular Number + Boxed Number +
       ( scaling ::
           { all ::
               forall rl r
@@ -78,6 +81,7 @@ type Scaler =
           | ScalingFunctions
           }
       , rect :: Rect
+      , box :: Box
       )
   }
 
@@ -233,8 +237,20 @@ mkScaler rect fns =
       , length: fns.length
       , all
       }
+  , box
+  , top: box.top
+  , right: box.right
+  , bottom: box.bottom
+  , left: box.left
   }
   where
+  box =
+    { top: rect.y
+    , right: rect.x + rect.width
+    , bottom: rect.y + rect.height
+    , left: rect.x
+    }
+
   all
     :: forall rl r
      . RowToList r rl
@@ -248,9 +264,13 @@ toMap { x, y, length } = Map.fromFoldable
   [ "x" /\ x
   , "x1" /\ x
   , "x2" /\ x
+  , "right" /\ x
+  , "left" /\ x
   , "y" /\ y
   , "y1" /\ y
   , "y2" /\ y
+  , "top" /\ y
+  , "bottom" /\ y
   , "width" /\ length
   , "w" /\ length
   , "height" /\ length

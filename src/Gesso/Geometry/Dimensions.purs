@@ -1,6 +1,8 @@
 -- | A collection of types and functions for specifying sizes and positions.
 module Gesso.Geometry.Dimensions
   ( Area
+  , Box
+  , Boxed
   , Point
   , Position
   , Rect
@@ -48,6 +50,20 @@ type Rectangular a r = Position a + Size a + r
 -- | A rectangle positioned in space.
 type Rect :: Type
 type Rect = { | Rectangular Number () }
+
+-- | A row with the inset properties of a CSS positioned box.
+type Boxed :: Type -> Row Type -> Row Type
+type Boxed a r =
+  ( top :: a
+  , right :: a
+  , bottom :: a
+  , left :: a
+  | r
+  )
+
+-- | A CSS positioned box.
+type Box :: Type
+type Box = { | Boxed Number () }
 
 -- | Given the sizes of an inner and an outer rectangle, find the largest size
 -- | the inner can be scaled to while still fitting entirely within the outer.
