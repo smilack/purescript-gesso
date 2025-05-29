@@ -1,4 +1,9 @@
-module Gesso.Geometry.Internal (Scalers, mkScalers) where
+module Gesso.Geometry.Internal
+  ( Scalers
+  , ZoneScalers
+  , mkScalers
+  , mkZoneScalers
+  ) where
 
 import Prelude
 
@@ -18,6 +23,41 @@ type Scalers =
   , canvas :: Scaler
   , drawing :: Scaler
   }
+
+-- |
+type ZoneScalers =
+  { scale ::
+      { x :: Number
+      , y :: Number
+      }
+  , a :: Scaler
+  , b :: Scaler
+  }
+
+-- |
+mkZoneScalers :: Rect -> Rect -> ZoneScalers
+mkZoneScalers a b =
+  { scale
+  , a: mkScaler b toA
+  , b: mkScaler a toB
+  }
+  where
+  scale =
+    { x: b.width / a.width
+    , y: b.height / a.height
+    }
+
+  toB =
+    { x: (_ - a.x) >>> mul scale.x >>> add b.x
+    , y: (_ - a.y) >>> mul scale.y >>> add b.y
+    , length: mul scale.x
+    }
+
+  toA =
+    { x: (_ - b.x) >>> (_ / scale.x) >>> add a.x
+    , y: (_ - b.y) >>> (_ / scale.y) >>> add a.y
+    , length: (_ / scale.x)
+    }
 
 -- | Create a `Scalers` record based on the view box of the application and the
 -- | client rect ([`Gesso.Canvas.Element.getCanvasClientRect`](Gesso.Canvas.Element.html#v:getCanvasClientRect),
