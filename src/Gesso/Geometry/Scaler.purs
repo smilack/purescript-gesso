@@ -10,6 +10,7 @@ module Gesso.Geometry.Scaler
   , Scaler
   , ScalingFunctions
   , class Scalable
+  , compose
   , from
   , lengthFrom
   , lengthTo
@@ -221,6 +222,13 @@ infixr 2 lengthFrom as <~/
 -- ┌─────────────────┐
 -- │ Scaler creation │
 -- └─────────────────┘
+
+compose :: Scaler -> Scaler -> Scaler
+compose aToB bToC = mkScaler bToC.rect
+  { x: aToB.scaling.x >>> bToC.scaling.x
+  , y: aToB.scaling.y >>> bToC.scaling.y
+  , length: aToB.scaling.length >>> bToC.scaling.length
+  }
 
 -- | Create a `Scaler` record for a coordinate system using its dimensions and
 -- | `x`, `y`, and `length` scaling functions.
