@@ -12,9 +12,9 @@ module Gesso.Canvas
 import Prelude
 
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
-import Data.Foldable (foldr, for_, traverse_)
+import Data.Foldable (foldl, for_, traverse_)
 import Data.Function (on)
-import Data.List (List, (:))
+import Data.List (List, snoc)
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
 import Data.Traversable (for, traverse)
@@ -271,8 +271,8 @@ handleAction = case _ of
             , changed: false
             }
         stateHistory <-
-          foldr
-            (tryUpdate scalers)
+          foldl
+            (flip $ tryUpdate scalers)
             (pure initialHistory)
             (updateQueue <#> _.item)
 
@@ -303,7 +303,12 @@ handleAction = case _ of
     { pendingUpdates, timers } <- H.get
     for_ timers \{ frame } -> do
       stampedUpdate <- H.liftEffect $ T.stamp frame handlerFn
-      H.modify_ (_ { pendingUpdates = stampedUpdate : pendingUpdates })
+      -- The new update has to be appended to keep the event order correct. When
+      -- events are prepended, events with a specified order (e.g. `keydown`
+      -- must always precede `keyup`*), can get reversed if they have the exact
+      -- same timestamp. (Issue #55)
+      -- * https://w3c.github.io/uievents/#event-type-keydown
+      H.modify_ (_ { pendingUpdates = snoc pendingUpdates stampedUpdate })
 
   StateUpdated delta scalers stateVersions ->
     saveNewState delta scalers stateVersions
