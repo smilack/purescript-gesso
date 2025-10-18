@@ -12,7 +12,7 @@ module Gesso.Canvas
 import Prelude
 
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
-import Data.Foldable (foldr, for_, traverse_)
+import Data.Foldable (foldl, for_, traverse_)
 import Data.Function (on)
 import Data.List (List, (:))
 import Data.List as List
@@ -271,8 +271,8 @@ handleAction = case _ of
             , changed: false
             }
         stateHistory <-
-          foldr
-            (tryUpdate scalers)
+          foldl
+            (flip $ tryUpdate scalers)
             (pure initialHistory)
             (updateQueue <#> _.item)
 
