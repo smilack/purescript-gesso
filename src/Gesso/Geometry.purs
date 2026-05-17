@@ -6,7 +6,7 @@ module Gesso.Geometry
 import Prelude
 
 import Data.Int (toNumber)
-import Gesso.Geometry.Dimensions (Area, Point, Position, Rect, Rectangular, Size, null, origin, sizeless) as Exports
+import Gesso.Geometry.Dimensions (Area, Box, Boxed, Point, Position, Rect, Rectangular, Size, null, origin, sizeless) as Exports
 import Gesso.Geometry.Dimensions (Point)
 import Gesso.Geometry.Internal (Scalers, ZoneScalers, mkZoneScalers) as Exports
 import Gesso.Geometry.Scaler ((*~>), (-~>), (/~>), (<~*), (<~-), (<~/), (<~|), (|~>), Scaler, compose, from, lengthFrom, lengthTo, to, xFrom, xTo, yFrom, yTo) as Exports
