@@ -3,12 +3,18 @@ module Gesso.Geometry.Internal
   , ZoneScalers
   , mkScalers
   , mkZoneScalers
+  , mkReferenceFrame
   ) where
 
 import Prelude
 
 import Gesso.Geometry.Dimensions (Rect, largestContainedArea)
 import Gesso.Geometry.Scaler (Scaler, mkScaler)
+import Prim.Row (class Cons, class Lacks)
+import Prim.RowList (class RowToList, Cons, Nil)
+import Record (get)
+import Record.Builder (buildFromScratch, insert)
+import Type.Prelude (class IsSymbol, Proxy(..))
 
 -- | Data and functions for converting between the coordinate systems of the
 -- | canvas element on the page and the view box of the application/drawing.
@@ -33,6 +39,29 @@ type ZoneScalers =
   , a :: Scaler
   , b :: Scaler
   }
+
+-- | Create a transformation between a region of a Scaler and a new coordinate frame
+mkReferenceFrame
+  :: forall parent child rowIn rowOut parRow
+   . IsSymbol parent
+  => IsSymbol child
+  => Cons parent Rect () rowIn
+  => Cons child Rect () rowIn
+  => Cons parent Scaler () parRow
+  => Cons child Scaler parRow rowOut
+  => Lacks child parRow
+  => RowToList rowIn (Cons child Rect (Cons parent Rect Nil))
+  => RowToList rowOut (Cons child Scaler (Cons parent Scaler Nil))
+  => Record rowIn
+  -> Record rowOut
+mkReferenceFrame a = out
+  where
+  parent = get (Proxy @parent) a
+  child = get (Proxy @child) a
+  { a, b } = mkZoneScalers parent child
+
+  out :: Record rowOut
+  out = buildFromScratch $ insert (Proxy @child) b <<< insert (Proxy @parent) a
 
 -- |
 mkZoneScalers :: Rect -> Rect -> ZoneScalers
