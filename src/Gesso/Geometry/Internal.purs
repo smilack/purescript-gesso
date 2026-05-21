@@ -1,8 +1,7 @@
 module Gesso.Geometry.Internal
   ( Scalers
-  , ZoneScalers
+  , ReferenceFrame
   , mkScalers
-  , mkZoneScalers
   , mkReferenceFrame
   ) where
 
@@ -10,11 +9,6 @@ import Prelude
 
 import Gesso.Geometry.Dimensions (Rect, largestContainedArea)
 import Gesso.Geometry.Scaler (Scaler, mkScaler)
-import Prim.Row (class Cons, class Lacks)
-import Prim.RowList (class RowToList, Cons, Nil)
-import Record (get)
-import Record.Builder (buildFromScratch, insert)
-import Type.Prelude (class IsSymbol, Proxy(..))
 
 -- | Data and functions for converting between the coordinate systems of the
 -- | canvas element on the page and the view box of the application/drawing.
@@ -31,60 +25,32 @@ type Scalers =
   }
 
 -- |
-type ZoneScalers =
-  { scale ::
-      { x :: Number
-      , y :: Number
-      }
-  , a :: Scaler
-  , b :: Scaler
+type ReferenceFrame a =
+  { outer :: a
+  , inner :: a
   }
 
--- | Create a transformation between a region of a Scaler and a new coordinate frame
-mkReferenceFrame
-  :: forall parent child rowIn rowOut parRow
-   . IsSymbol parent
-  => IsSymbol child
-  => Cons parent Rect () rowIn
-  => Cons child Rect () rowIn
-  => Cons parent Scaler () parRow
-  => Cons child Scaler parRow rowOut
-  => Lacks child parRow
-  => RowToList rowIn (Cons child Rect (Cons parent Rect Nil))
-  => RowToList rowOut (Cons child Scaler (Cons parent Scaler Nil))
-  => Record rowIn
-  -> Record rowOut
-mkReferenceFrame a = out
-  where
-  parent = get (Proxy @parent) a
-  child = get (Proxy @child) a
-  { a, b } = mkZoneScalers parent child
-
-  out :: Record rowOut
-  out = buildFromScratch $ insert (Proxy @child) b <<< insert (Proxy @parent) a
-
 -- |
-mkZoneScalers :: Rect -> Rect -> ZoneScalers
-mkZoneScalers a b =
-  { scale
-  , a: mkScaler b toA
-  , b: mkScaler a toB
+mkReferenceFrame :: ReferenceFrame Rect -> ReferenceFrame Scaler
+mkReferenceFrame { outer, inner } =
+  { outer: mkScaler outer toOuter
+  , inner: mkScaler inner toInner
   }
   where
   scale =
-    { x: b.width / a.width
-    , y: b.height / a.height
+    { x: inner.width / outer.width
+    , y: inner.height / outer.height
     }
 
-  toB =
-    { x: (_ - a.x) >>> mul scale.x >>> add b.x
-    , y: (_ - a.y) >>> mul scale.y >>> add b.y
+  toInner =
+    { x: (_ - outer.x) >>> mul scale.x >>> add inner.x
+    , y: (_ - outer.y) >>> mul scale.y >>> add inner.y
     , length: mul scale.x
     }
 
-  toA =
-    { x: (_ - b.x) >>> (_ / scale.x) >>> add a.x
-    , y: (_ - b.y) >>> (_ / scale.y) >>> add a.y
+  toOuter =
+    { x: (_ - inner.x) >>> (_ / scale.x) >>> add outer.x
+    , y: (_ - inner.y) >>> (_ / scale.y) >>> add outer.y
     , length: (_ / scale.x)
     }
 
