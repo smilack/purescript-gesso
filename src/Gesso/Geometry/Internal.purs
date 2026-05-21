@@ -1,13 +1,12 @@
 module Gesso.Geometry.Internal
   ( Scalers
-  , ReferenceFrame
   , mkScalers
   , mkReferenceFrame
   ) where
 
 import Prelude
 
-import Gesso.Geometry.Dimensions (Rect, largestContainedArea)
+import Gesso.Geometry.Dimensions (Rect, largestContainedArea, ReferenceFrame)
 import Gesso.Geometry.Scaler (Scaler, mkScaler)
 
 -- | Data and functions for converting between the coordinate systems of the
@@ -22,12 +21,6 @@ type Scalers =
   { scale :: Number
   , canvas :: Scaler
   , drawing :: Scaler
-  }
-
--- |
-type ReferenceFrame a =
-  { outer :: a
-  , inner :: a
   }
 
 -- |

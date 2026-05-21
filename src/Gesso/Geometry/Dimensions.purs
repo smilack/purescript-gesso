@@ -1,12 +1,16 @@
 -- | A collection of types and functions for specifying sizes and positions.
 module Gesso.Geometry.Dimensions
-  ( Area
+  ( Align
+  , Alignment
+  , Area
   , Box
   , Boxed
   , Point
   , Position
+  , PreserveAspectRatio
   , Rect
   , Rectangular
+  , ReferenceFrame
   , Size
   , largestContainedArea
   , null
@@ -101,3 +105,20 @@ sizeless = { width: 0.0, height: 0.0 }
 -- | A `Rect` with no width or height, located at the origin.
 null :: Rect
 null = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
+
+-- |
+type ReferenceFrame a =
+  { outer :: a
+  , inner :: a
+  }
+
+-- |
+data Alignment = Min | Mid | Max
+
+type Align = { x :: Alignment, y :: Alignment }
+
+data PreserveAspectRatio = None | Meet Align | Slice Align
+
+-- | Adjust the
+-- preserveAspectRatio :: PreserveAspectRatio -> ReferenceFrame Rect -> ReferenceFrame Rect
+-- preserveAspectRatio par { outer, inner } = { outer, inner }
