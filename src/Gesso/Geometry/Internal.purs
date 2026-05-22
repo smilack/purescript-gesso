@@ -2,11 +2,12 @@ module Gesso.Geometry.Internal
   ( Scalers
   , mkScalers
   , mkReferenceFrame
+  , mkReferenceFrameWithRatio
   ) where
 
 import Prelude
 
-import Gesso.Geometry.Dimensions (Rect, largestContainedArea, ReferenceFrame)
+import Gesso.Geometry.Dimensions (Alignment(..), PreserveAspectRatio(..), Rect, ReferenceFrame, largestContainedArea, preserveAspectRatio)
 import Gesso.Geometry.Scaler (Scaler, mkScaler)
 
 -- | Data and functions for converting between the coordinate systems of the
@@ -23,27 +24,32 @@ type Scalers =
   , drawing :: Scaler
   }
 
--- |
 mkReferenceFrame :: ReferenceFrame Rect -> ReferenceFrame Scaler
-mkReferenceFrame { outer, inner } =
+mkReferenceFrame = mkReferenceFrameWithRatio $ Meet { x: Mid, y: Mid }
+
+-- |
+mkReferenceFrameWithRatio :: PreserveAspectRatio -> ReferenceFrame Rect -> ReferenceFrame Scaler
+mkReferenceFrameWithRatio par frame@{ outer, inner } =
   { outer: mkScaler outer toOuter
   , inner: mkScaler inner toInner
   }
   where
+  coveredArea = preserveAspectRatio par frame
+
   scale =
-    { x: inner.width / outer.width
-    , y: inner.height / outer.height
+    { x: inner.width / coveredArea.width
+    , y: inner.height / coveredArea.height
     }
 
   toInner =
-    { x: (_ - outer.x) >>> mul scale.x >>> add inner.x
-    , y: (_ - outer.y) >>> mul scale.y >>> add inner.y
+    { x: (_ - (outer.x + coveredArea.x)) >>> mul scale.x >>> add inner.x
+    , y: (_ - (outer.y + coveredArea.y)) >>> mul scale.y >>> add inner.y
     , length: mul scale.x
     }
 
   toOuter =
-    { x: (_ - inner.x) >>> (_ / scale.x) >>> add outer.x
-    , y: (_ - inner.y) >>> (_ / scale.y) >>> add outer.y
+    { x: (_ - inner.x) >>> (_ / scale.x) >>> add (outer.x + coveredArea.x)
+    , y: (_ - inner.y) >>> (_ / scale.y) >>> add (outer.y + coveredArea.y)
     , length: (_ / scale.x)
     }
 

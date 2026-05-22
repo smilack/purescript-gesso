@@ -1,13 +1,13 @@
 -- | A collection of types and functions for specifying sizes and positions.
 module Gesso.Geometry.Dimensions
   ( Align
-  , Alignment
+  , Alignment(..)
   , Area
   , Box
   , Boxed
   , Point
   , Position
-  , PreserveAspectRatio
+  , PreserveAspectRatio(..)
   , Rect
   , Rectangular
   , ReferenceFrame
@@ -15,11 +15,13 @@ module Gesso.Geometry.Dimensions
   , largestContainedArea
   , null
   , origin
+  , preserveAspectRatio
   , sizeless
   ) where
 
 import Prelude
 
+import Record (union) as Record
 import Type.Row (type (+))
 
 -- | A row representing anything that can have `x` and `y` values.
@@ -94,6 +96,9 @@ largestContainedArea drawing canvas = area
     , width: canvas.height * ratio
     }
 
+mkRect :: Point -> Area -> Rect
+mkRect = Record.union
+
 -- | A `Point` at `(0.0, 0.0)`
 origin :: Point
 origin = { x: 0.0, y: 0.0 }
@@ -104,7 +109,7 @@ sizeless = { width: 0.0, height: 0.0 }
 
 -- | A `Rect` with no width or height, located at the origin.
 null :: Rect
-null = { x: 0.0, y: 0.0, width: 0.0, height: 0.0 }
+null = mkRect origin sizeless
 
 -- |
 type ReferenceFrame a =
@@ -119,6 +124,52 @@ type Align = { x :: Alignment, y :: Alignment }
 
 data PreserveAspectRatio = None | Meet Align | Slice Align
 
--- | Adjust the
--- preserveAspectRatio :: PreserveAspectRatio -> ReferenceFrame Rect -> ReferenceFrame Rect
--- preserveAspectRatio par { outer, inner } = { outer, inner }
+-- | Result x/y area relative to the outer rect
+preserveAspectRatio :: PreserveAspectRatio -> ReferenceFrame Rect -> Rect
+preserveAspectRatio par { outer, inner } = case par of
+  None -> outer { x = 0.0, y = 0.0 }
+  Meet { x, y } ->
+    let
+      area
+        | widthScaled.height <= outer.height = widthScaled
+        | otherwise = heightScaled
+    in
+      calculateRect x y area
+  Slice { x, y } ->
+    let
+      area
+        | widthScaled.height <= outer.height = heightScaled
+        | otherwise = widthScaled
+    in
+      calculateRect x y area
+  where
+  aspectRatio = inner.width / inner.height
+
+  widthScaled =
+    { width: outer.width
+    , height: outer.width / aspectRatio
+    }
+
+  heightScaled =
+    { height: outer.height
+    , width: outer.height * aspectRatio
+    }
+
+  calculateRect x y area =
+    let
+      margin =
+        { width: outer.width - area.width
+        , height: outer.height - area.height
+        }
+      position =
+        { x: case x of
+            Min -> 0.0
+            Mid -> margin.width / 2.0
+            Max -> margin.width
+        , y: case y of
+            Min -> 0.0
+            Mid -> margin.height / 2.0
+            Max -> margin.height
+        }
+    in
+      mkRect position area
