@@ -56,7 +56,8 @@ mkReferenceFrameWithRatio par frame@{ outer, inner } =
 -- | Create a `Scalers` record based on the view box of the application and the
 -- | client rect ([`Gesso.Canvas.Element.getCanvasClientRect`](Gesso.Canvas.Element.html#v:getCanvasClientRect),
 -- | [MDN: DOMRect](https://developer.mozilla.org/en-US/docs/Web/API/DOMRect))
--- | of the canvas.
+-- | of the canvas. This is slightly different from `mkReferenceFrameWithRatio`
+-- | because this needs to clear the position from the client rect.
 mkScalers :: Rect -> Rect -> Scalers
 mkScalers viewBox clientRect =
   { scale: k
