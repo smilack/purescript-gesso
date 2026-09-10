@@ -112,16 +112,20 @@ null :: Rect
 null = mkRect origin sizeless
 
 -- |
+type ReferenceFrame :: Type -> Type
 type ReferenceFrame a =
   { outer :: a
   , inner :: a
   }
 
 -- |
+data Alignment :: Type
 data Alignment = Min | Mid | Max
 
-type Align = { x :: Alignment, y :: Alignment }
+type Align :: Type
+type Align = { | Position Alignment () }
 
+data PreserveAspectRatio :: Type
 data PreserveAspectRatio = None | Meet Align | Slice Align
 
 -- | Result x/y area relative to the outer rect
