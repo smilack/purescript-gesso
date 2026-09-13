@@ -223,6 +223,10 @@ infixr 2 lengthFrom as <~/
 -- │ Scaler creation │
 -- └─────────────────┘
 
+-- This looks overcomplicated (because why call `mkScaler` when it's just four
+-- function compositions?), but composing `aToB.all` with `bToC.all` doesn't
+-- work because of all the weird type constraints. `mkScaler` rebuilds the `all`
+-- function using the other composed functions.
 compose :: Scaler -> Scaler -> Scaler
 compose aToB bToC = mkScaler bToC.rect
   { x: aToB.scaling.x >>> bToC.scaling.x
