@@ -142,7 +142,7 @@ data Action state
 -- | Used to wrap Output to a parent Halogen component. The component's output
 -- | type is defined by the `OutputProducer` in the
 -- | [`Gesso.Application.AppSpec`](Gesso.Application.html#t:AppSpec).
-newtype CanvasOutput ouput = CanvasOutput ouput
+newtype CanvasOutput output = CanvasOutput output
 
 -- | Used to wrap Queries from a parent Halogen component. The component's input
 -- | type is defined by the `InputReceiver` in the

@@ -44,17 +44,17 @@ import Web.HTML.HTMLElement (HTMLElement)
 
 -- | Launch a Gesso application in the page body.
 launch
-  :: forall state input ouput
-   . GApp.AppSpec state input ouput
+  :: forall state input output
+   . GApp.AppSpec state input output
   -> Effect Unit
 launch = launchIn "body"
 
 -- | Launch a Gesso application in a given element. The String argument should
 -- | be a valid query selector for some element on the page.
 launchIn
-  :: forall state input ouput
+  :: forall state input output
    . String
-  -> GApp.AppSpec state input ouput
+  -> GApp.AppSpec state input output
   -> Effect Unit
 launchIn selector input = runGessoAff do
   HAff.awaitLoad
@@ -73,8 +73,8 @@ runGessoAff = HAff.runHalogenAff
 -- | when performing other `Aff` effects at the same time as running the
 -- | application.
 run
-  :: forall state input ouput
-   . GApp.AppSpec state input ouput
+  :: forall state input output
+   . GApp.AppSpec state input output
   -> HTMLElement
   -> Aff Unit
 run spec element = do
