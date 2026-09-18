@@ -4,9 +4,11 @@
 module Gesso.Canvas
   ( CanvasInput(..)
   , CanvasOutput(..)
+  , CanvasIO
   , Slot
   , _gessoCanvas
   , component
+  , wrapHalogenIO
   ) where
 
 import Prelude
@@ -17,6 +19,7 @@ import Data.Function (on)
 import Data.List (List, snoc)
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
+import Data.Newtype (class Newtype, unwrap)
 import Data.Traversable (for, traverse)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
@@ -34,6 +37,7 @@ import Halogen.HTML (memoized, canvas) as HH
 import Halogen.HTML.Properties (id, tabIndex)
 import Halogen.Query.Event as HE
 import Halogen.Subscription as HS
+import Halogen.VDom.Driver as HV
 import Type.Proxy (Proxy(..))
 import Web.Event.Event (EventType(..))
 import Web.HTML (window)
@@ -144,10 +148,35 @@ data Action state
 -- | [`Gesso.Application.AppSpec`](Gesso.Application.html#t:AppSpec).
 newtype CanvasOutput output = CanvasOutput output
 
+derive instance Newtype (CanvasOutput output) _
+
 -- | Used to wrap Queries from a parent Halogen component. The component's input
 -- | type is defined by the `InputReceiver` in the
 -- | [`Gesso.Application.AppSpec`](Gesso.Application.html#t:AppSpec).
 data CanvasInput input a = CanvasInput input a
+
+-- | Functions for interacting with a Gesso component from outside of a Halogen
+-- | context. Returned by the `make` and `launch` functions in the
+-- | [`Gesso`](Gesso.html) module.
+type CanvasIO input output m =
+  { dispose :: m Unit
+  , output :: HS.Emitter output
+  , input :: input -> m (Maybe Unit)
+  }
+
+-- | Modifies the `HalogenIO` record returned by `Halogen.VDom.Driver.runUI` to
+-- | automatically wrap and unwrap the `input` and `output` types with
+-- | `CanvasInput` and `CanvasOutput`. Used by the `make` and `launch` functions
+-- | in the [`Gesso`](Gesso.html) module.
+wrapHalogenIO
+  :: forall input output m
+   . HV.HalogenIO (CanvasInput input) (CanvasOutput output) m
+  -> CanvasIO input output m
+wrapHalogenIO { dispose, messages, query } =
+  { dispose
+  , input: \input -> query (CanvasInput input unit)
+  , output: map unwrap messages
+  }
 
 -- | Definition of the Canvas component. Can be used to slot the canvas into a
 -- | parent Halogen component.
