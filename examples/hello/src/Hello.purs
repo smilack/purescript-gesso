@@ -1,7 +1,7 @@
 module Gesso.Example.Hello (main) where
 
 import Effect (Effect)
-import Gesso (launch)
+import Gesso (launch_)
 import Gesso.Application (WindowMode(..), defaultBehavior)
 import Gesso.Geometry (Scalers, null)
 import Gesso.State (States)
@@ -10,7 +10,7 @@ import Graphics.Canvas (Context2D, fillText)
 import Prelude (Unit, unit)
 
 main :: Effect Unit
-main = launch
+main = launch_
   { name: "hello"
   , initialState: unit
   , viewBox: null

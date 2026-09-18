@@ -8,7 +8,7 @@ import Data.Number ((%))
 import Data.Symbol (class IsSymbol)
 import Effect (Effect)
 import Effect.Uncurried (EffectFn2, runEffectFn2)
-import Gesso (launch)
+import Gesso (launch_)
 import Gesso.Application (WindowMode(..), defaultBehavior)
 import Gesso.Geometry (Rect, Scaler, Scalers, (*~>), (-~>), (/~>), (<~*), origin)
 import Gesso.State (States)
@@ -21,7 +21,7 @@ import Type.Proxy (Proxy(..))
 main :: Effect Unit
 main = do
   start <- _now
-  launch
+  launch_
     { name: "timing"
     , window: Fullscreen
     , initialState:

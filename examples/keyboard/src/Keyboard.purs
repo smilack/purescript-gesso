@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Gesso (launch) as Gesso
+import Gesso (launch_) as Gesso
 import Gesso.Application (WindowMode(..), defaultBehavior) as GApp
 import Gesso.Geometry (null, Scalers) as GGeo
 import Gesso.Interactions (KeyboardInteraction, KeyboardEvent, onKeyUp, onKeyDown) as GInt
@@ -14,7 +14,7 @@ import Graphics.Canvas as Canvas
 import Web.UIEvent.KeyboardEvent (key) as KEv
 
 main :: Effect Unit
-main = Gesso.launch
+main = Gesso.launch_
   { name: "keyboard"
   , initialState
   , viewBox: GGeo.null

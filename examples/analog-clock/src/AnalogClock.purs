@@ -10,7 +10,7 @@ import Data.Number (cos, sin, pi, tau)
 import Data.Time (hour, minute, second) as Time
 import Effect (Effect)
 import Effect.Now (nowTime) as Now
-import Gesso (launch) as Gesso
+import Gesso (launch_) as Gesso
 import Gesso.Application (WindowMode(..), defaultBehavior) as GApp
 import Gesso.Geometry (lengthTo, to)
 import Gesso.Geometry (Scalers) as GGeo
@@ -19,7 +19,7 @@ import Gesso.Time (Delta) as GTime
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
-main = Gesso.launch
+main = Gesso.launch_
   { name: "analog-clock"
   , initialState: unit
   , window: GApp.Fullscreen

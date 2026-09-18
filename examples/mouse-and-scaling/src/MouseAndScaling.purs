@@ -8,7 +8,7 @@ import Data.Int (toNumber, floor, round)
 import Data.Maybe (Maybe(..))
 import Data.Number (tau)
 import Effect (Effect)
-import Gesso (launch) as Gesso
+import Gesso (launch_) as Gesso
 import Gesso.Application (WindowMode(..), defaultBehavior) as GApp
 import Gesso.Geometry (yTo, xTo, lengthTo, to)
 import Gesso.Geometry (fromMouseEvent, Scalers, Point) as GGeo
@@ -18,7 +18,7 @@ import Gesso.State (States) as GSt
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
-main = Gesso.launch
+main = Gesso.launch_
   { name: "test-app"
   , initialState
   , window: GApp.Fullscreen

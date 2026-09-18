@@ -6,7 +6,7 @@ import Data.Int (trunc, parity, Parity(..))
 import Data.Maybe (Maybe(..))
 import Data.Number (abs, pi)
 import Effect (Effect)
-import Gesso (launch) as Gesso
+import Gesso (launch_) as Gesso
 import Gesso.Application (defaultBehavior, WindowMode(..)) as GApp
 import Gesso.Geometry (Scalers, null) as GGeo
 import Gesso.State (States, lerp) as GSt
@@ -14,7 +14,7 @@ import Gesso.Time (Delta, hz) as GTime
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
-main = Gesso.launch
+main = Gesso.launch_
   { name: "interpolation"
   , initialState
   , window: GApp.Fullscreen

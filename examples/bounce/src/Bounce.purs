@@ -5,7 +5,7 @@ import Prelude
 import Data.Maybe (Maybe(..))
 import Data.Number (pi)
 import Effect (Effect)
-import Gesso (launch) as Gesso
+import Gesso (launch_) as Gesso
 import Gesso.Application (WindowMode(..), defaultBehavior) as GApp
 import Gesso.Geometry (null, Scalers) as GGeo
 import Gesso.State (States) as GSt
@@ -13,7 +13,7 @@ import Gesso.Time (Delta) as GTime
 import Graphics.Canvas as Canvas
 
 main :: Effect Unit
-main = Gesso.launch
+main = Gesso.launch_
   { name: "bounce"
   , initialState
   , viewBox: GGeo.null
