@@ -6,39 +6,29 @@ import Control.Apply (lift2)
 import Gesso.Example.ReferenceFrames.Controls (initialState, State, handleInput, createControls)
 import Data.Foldable (for_)
 import Data.Int (round)
-import Data.Maybe (maybe)
 import Data.Traversable (traverse_)
 import Effect (Effect)
-import Effect.Aff (error, throwError)
-import Gesso (QuerySelector(..), runGessoAff, selectElement, awaitLoad)
+import Effect.Aff (launchAff_)
+import Gesso (makeIn)
 import Gesso.Application (WindowMode(..), defaultBehavior)
-import Gesso.Canvas (CanvasInput(..))
-import Gesso.Canvas (component) as Gesso.Canvas
 import Gesso.Geometry (Align, Alignment(..), Box, Point, PreserveAspectRatio(..), Rect, Scaler, Scalers, Position, mkReferenceFrame, mkReferenceFrameWithRatio, (*~>), (-~>), (|~>))
 import Gesso.Geometry (compose) as Geometry
 import Gesso.State (States)
 import Gesso.Time (Delta)
 import Graphics.Canvas (Context2D)
 import Graphics.Canvas as C
-import Halogen.VDom.Driver (runUI)
 import Gesso.Example.ReferenceFrames.Util (rangeNumber)
 
 main :: Effect Unit
-main = runGessoAff do
-  awaitLoad
-  container <- maybe err pure =<< selectElement (QuerySelector selector)
-  app <- runUI Gesso.Canvas.component
+main = launchAff_ do
+  app <- makeIn "#frameExample"
     { name: "frames"
     , initialState
     , viewBox: { x: -2.1, y: -1.6, width: 4.2, height: 3.7 }
     , window: Fullscreen
     , behavior: defaultBehavior { render = render, input = handleInput }
     }
-    container
-  createControls \q -> app.query (CanvasInput q unit)
-  where
-  selector = "#frameExample"
-  err = throwError $ error $ "Could not find " <> selector
+  createControls app.input
 
 faded :: Number
 faded = 0.33
