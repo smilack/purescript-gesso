@@ -1,20 +1,10 @@
 package:
-  name: gesso-frame-test
   dependencies:
     - canvas
-    - debug
     - effect
     - gesso
     - prelude
-  test:
-    main: Test.Main
-    dependencies: []
+  name: gesso-example-reference-frames
   bundle:
-    module: Main
+    module: Gesso.Example.ReferenceFrames
     outfile: "dist/example.js"
-workspace:
-  packageSet:
-    registry: 77.2.0
-  extraPackages:
-    gesso:
-      path: ../purescript-gesso

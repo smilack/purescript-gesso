@@ -1,4 +1,4 @@
-module Util (showAlign, showFit, rangeNumber) where
+module Gesso.Example.ReferenceFrames.Util (showAlign, showFit, rangeNumber) where
 
 import Prelude
 

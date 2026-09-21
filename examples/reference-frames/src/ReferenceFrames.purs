@@ -1,9 +1,9 @@
-module Main (main) where
+module Gesso.Example.ReferenceFrames (main) where
 
 import Prelude
 
 import Control.Apply (lift2)
-import Controls (initialState, State, handleInput, createControls)
+import Gesso.Example.ReferenceFrames.Controls (initialState, State, handleInput, createControls)
 import Data.Foldable (for_)
 import Data.Int (round)
 import Data.Maybe (maybe)
@@ -21,7 +21,7 @@ import Gesso.Time (Delta)
 import Graphics.Canvas (Context2D)
 import Graphics.Canvas as C
 import Halogen.VDom.Driver (runUI)
-import Util (rangeNumber)
+import Gesso.Example.ReferenceFrames.Util (rangeNumber)
 
 main :: Effect Unit
 main = runGessoAff do

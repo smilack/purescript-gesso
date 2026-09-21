@@ -1,4 +1,4 @@
-module Controls
+module Gesso.Example.ReferenceFrames.Controls
   ( InputType
   , State
   , createControls
