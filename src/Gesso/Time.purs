@@ -101,7 +101,7 @@ sort :: forall a. List (Stamped a) -> List (Stamped a)
 sort = sortBy (compare `on` _.time)
 
 -- | For a `last` timestamp and a function `f :: Delta -> a` (such as
--- | [`Gesso.Application.Behavior.UpdateFunction`](Gesso.Application.Behavior.html#t:UpdateFunction), create a
+-- | [`Gesso.Application.Behavior.UpdateFunction`](Gesso.Application.Behavior#t:UpdateFunction), create a
 -- | `Delta` between `last` and the current time, apply the delta to `f`, and
 -- | return a record containing the current time and the result of `f delta`.
 stamp :: forall a. Last -> (Delta -> a) -> Effect (Stamped a)
