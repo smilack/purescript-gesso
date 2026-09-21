@@ -141,12 +141,12 @@ data Action state
 
 -- | Used to wrap Output to a parent Halogen component. The component's output
 -- | type is defined by the `OutputProducer` in the
--- | [`Gesso.Application.AppSpec`](Gesso.Application.html#t:AppSpec).
+-- | [`Gesso.Application.AppSpec`](Gesso.Application#t:AppSpec).
 newtype CanvasOutput ouput = CanvasOutput ouput
 
 -- | Used to wrap Queries from a parent Halogen component. The component's input
 -- | type is defined by the `InputReceiver` in the
--- | [`Gesso.Application.AppSpec`](Gesso.Application.html#t:AppSpec).
+-- | [`Gesso.Application.AppSpec`](Gesso.Application#t:AppSpec).
 data CanvasInput input a = CanvasInput input a
 
 -- | Definition of the Canvas component. Can be used to slot the canvas into a

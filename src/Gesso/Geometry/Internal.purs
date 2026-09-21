@@ -20,7 +20,7 @@ type Scalers =
   }
 
 -- | Create a `Scalers` record based on the view box of the application and the
--- | client rect ([`Gesso.Canvas.Element.getCanvasClientRect`](Gesso.Canvas.Element.html#v:getCanvasClientRect),
+-- | client rect ([`Gesso.Canvas.Element.getCanvasClientRect`](Gesso.Canvas.Element#v:getCanvasClientRect),
 -- | [MDN: DOMRect](https://developer.mozilla.org/en-US/docs/Web/API/DOMRect))
 -- | of the canvas.
 mkScalers :: Rect -> Rect -> Scalers
