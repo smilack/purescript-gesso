@@ -111,24 +111,37 @@ sizeless = { width: 0.0, height: 0.0 }
 null :: Rect
 null = mkRect origin sizeless
 
--- |
+-- | A mapping from one coordinate system to another. When used with `Rect`,
+-- | defines coordinates of equal regions in both systems. Mostly equivalent to
+-- | [`Scalers`](Gesso.Geometry.Internal#t:Scalers) when returned with `Scaler`
+-- | by [`mkReferenceFrame`](Gesso.Geometry.Internal#v:mkReferenceFrame).
 type ReferenceFrame :: Type -> Type
 type ReferenceFrame a =
   { outer :: a
   , inner :: a
   }
 
+-- | How a scaled item should be aligned on a single axis:
 -- |
+-- | - `Min`: Left or top
+-- | - `Mid`: Centered
+-- | - `Max`: Right or bottom
 data Alignment :: Type
 data Alignment = Min | Mid | Max
 
+-- | How a scaled item should be aligned on each axis.
 type Align :: Type
 type Align = { | Position Alignment () }
 
+-- | Defines the scaling and alignment of one area relative to another, using
+-- | the same rules as the
+-- | [`preserveAspectRatio` SVG attribute](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/preserveAspectRatio)
 data PreserveAspectRatio :: Type
 data PreserveAspectRatio = None | Meet Align | Slice Align
 
--- | Result x/y area relative to the outer rect
+-- | Scale the `inner` `Rect` relative to `outer` using the
+-- | `PreserveAspectRatio` rules given. The result is a `Rect` in the `outer`
+-- | coordinate system's units describing the area of the scaled `inner`.
 preserveAspectRatio :: PreserveAspectRatio -> ReferenceFrame Rect -> Rect
 preserveAspectRatio par { outer, inner } = case par of
   None -> outer { x = 0.0, y = 0.0 }
