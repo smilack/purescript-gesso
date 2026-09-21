@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="data:," />
+  <title>Gesso Frame Example</title>
+  <style type="text/css">
+    html {
+    }
+
+    body {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #frameExample {
+      flex-grow: 1;
+      position: relative;
+      min-height: 500px;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+    }
+
+    li {
+      list-style-type: none;
+      margin: 0.5em;
+    }
+  </style>
+</head>
+
+<body>
+  <form>
+    <fieldset>
+      <legend>Reference Frames</legend>
+      <ul>
+        <li>
+          <input type="checkbox" name="drawingGrid" id="drawingGrid" autocomplete="off">
+          <label for="drawingGrid">Show canvas/table frame</label>
+        </li>
+        <li>
+        <li>
+          <input type="checkbox" name="cellGrids" id="cellGrids" autocomplete="off">
+          <label for="cellGrids">Show cell frames</label>
+        </li>
+        <li>
+        <li>
+          <input type="checkbox" name="exampleGrids" id="exampleGrids" autocomplete="off">
+          <label for="exampleGrids">Show scaled example frames</label>
+        </li>
+        <li>
+      </ul>
+    </fieldset>
+  </form>
+  <div id="frameExample"></div>
+  <script src="./example.js"></script>
+</body>
+
+</html>

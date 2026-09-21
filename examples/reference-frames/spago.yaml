@@ -1,0 +1,10 @@
+package:
+  dependencies:
+    - canvas
+    - effect
+    - gesso
+    - prelude
+  name: gesso-example-reference-frames
+  bundle:
+    module: Gesso.Example.ReferenceFrames
+    outfile: "dist/example.js"

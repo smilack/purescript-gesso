@@ -12,6 +12,7 @@ This folder contains several Gesso programs showcasing a variety of options. Eac
 | [Interpolation](interpolation) | Fixed-rate update functions and interpolating state for rendering. |
 | [Paint App](paint-app) | A Halogen application with an embedded Gesso component. |
 | [Timing](timing) | A graph comparing the `delta` values in fixed and per-frame update functions. |
+| [Reference Frames](reference-frames) | Converting between multiple coordinate systems. Also runs in a non-Halogen `Aff` and uses HTML form controls. |
 
 ## Compiling the examples
 
@@ -57,6 +58,7 @@ gesso-example-analog-clock
 gesso-example-interpolation
 gesso-example-paint-app
 gesso-example-timing
+gesso-example-reference-frames
 ```
 
 ### Running

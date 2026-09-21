@@ -213,6 +213,20 @@
           "dependencies": []
         }
       },
+      "gesso-example-reference-frames": {
+        "path": "examples/reference-frames",
+        "core": {
+          "dependencies": [
+            "canvas",
+            "effect",
+            "gesso",
+            "prelude"
+          ]
+        },
+        "test": {
+          "dependencies": []
+        }
+      },
       "gesso-example-timing": {
         "path": "examples/timing",
         "core": {

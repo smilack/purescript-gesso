@@ -23,7 +23,8 @@
       2. [Scaling a Record](#scaling-a-record)
       3. [Flipped Scaling Functions](#flipped-scaling-functions)
       4. [Scaling Function Operators](#scaling-function-operators)
-   4. [Other Geometry Functions](#other-geometry-functions)
+   4. [Reference Frames](#reference-frames)
+   5. [Other Geometry Functions](#other-geometry-functions)
 5. [Gesso as a Halogen Component](#gesso-as-a-halogen-component)
    1. [Halogen Component Input (Queries)](#halogen-component-input-queries)
    2. [Halogen Component Output](#halogen-component-output)
@@ -402,6 +403,77 @@ For example:
 ```purescript
 x' = 2.0 -~> canvas
 circle' = canvas <~* { x: 2.0, y: 3.0, r: 1.0 }
+```
+## Reference Frames
+
+Gesso automatically creates scalers between the coordinate system of the drawing ([`AppSpec.viewBox`](#basic-appspec-fields)) and the canvas element, but you can create more scalers as needed. For example, if you're making a grid-based game, you may want one coordinate system for layout out your UI elements, and another for the game grid itself.
+
+> [!TIP]
+> See [the Reference Frames example](../examples/reference-frames) for more.
+
+The `ReferenceFrame` type relates an `inner` and an `outer` item, and is used with `Gesso.Geometry.mkReferenceFrame`
+
+```purescript
+type ReferenceFrame :: Type -> Type
+type ReferenceFrame a =
+  { outer :: a
+  , inner :: a
+  }
+
+mkReferenceFrame :: ReferenceFrame Rect -> ReferenceFrame Scaler
+```
+
+For a hypothetical application with scalers `drawing` and `canvas` and `viewBox: { x: 0.0, y: 0.0, width: 1920.0, height: 1080.0 }`, you could create a square 8×8 grid in the center of the drawing that takes 50% of the height of the canvas, and then find the `Rect` of the first cell of the grid.
+
+```purescript
+let
+  inner = { x: 0.0, y: 0.0, width: 8.0, height: 8.0 }
+  side = 0.5 * drawing.height
+  outer =
+    { x: drawing.x + (drawing.width - side) / 2.0
+    , y: drawing.y + (drawing.height - side) / 2.0
+    , width: side
+    , height: side
+    }
+  frame = mkReferenceFrame { inner, outer }
+in
+  { x: 0.0, y: 0.0, width: 1.0, height: 1.0 } *~> frame.outer
+-- { height: 67.5, width: 67.5, x: 690.0, y: 270.0 }
+```
+
+Scaling to `frame.outer` gives the result in drawing coordinates, and it can be scaled again using `*~> canvas`, or the scalers can be combined with `Geometry.compose`:
+
+```purescript
+let
+  toDrawingToCanvas = Gesso.Geometry.compose frame.outer canvas
+in
+  (rect *~> toDrawingToCanvas) == (rect *~> frame.outer) *~> canvas
+```
+
+> [!NOTE]
+> `Scaler` doesn't have a `Semigroupoid` instance, so `Geometry.compose` is not the same `compose` function from Prelude.
+
+### Refrence Frame Aspect Ratios
+
+To control how the inner frame scales relative to the outer, you can use `Gesso.Geometry.mkReferenceFrameWithRatio`, which is based on the [`preserveAspectRatio` SVG attribute](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/preserveAspectRatio).
+
+```purescript
+mkReferenceFrameWithRatio :: PreserveAspectRatio -> ReferenceFrame Rect -> ReferenceFrame Scaler
+
+data Alignment
+  = Min
+  | Mid
+  | Max
+
+type Align =
+  { x :: Alignment
+  , y :: Alignment
+  }
+
+data PreserveAspectRatio
+  = None
+  | Meet Align
+  | Slice Align
 ```
 
 ## Other Geometry Functions
