@@ -6,10 +6,10 @@ module Gesso.Geometry
 import Prelude
 
 import Data.Int (toNumber)
-import Gesso.Geometry.Dimensions (Area, Point, Position, Rect, Rectangular, Size, null, origin, sizeless) as Exports
+import Gesso.Geometry.Dimensions (Align, Alignment(..), Area, Box, Boxed, Point, Position, PreserveAspectRatio(..), Rect, Rectangular, ReferenceFrame, Size, null, origin, sizeless) as Exports
 import Gesso.Geometry.Dimensions (Point)
-import Gesso.Geometry.Internal (Scalers) as Exports
-import Gesso.Geometry.Scaler ((*~>), (-~>), (/~>), (<~*), (<~-), (<~/), (<~|), (|~>), Scaler, from, lengthFrom, lengthTo, to, xFrom, xTo, yFrom, yTo) as Exports
+import Gesso.Geometry.Internal (Scalers, mkReferenceFrame, mkReferenceFrameWithRatio) as Exports
+import Gesso.Geometry.Scaler ((*~>), (-~>), (/~>), (<~*), (<~-), (<~/), (<~|), (|~>), Scaler, compose, from, lengthFrom, lengthTo, to, xFrom, xTo, yFrom, yTo) as Exports
 import Web.UIEvent.MouseEvent (MouseEvent)
 import Web.UIEvent.MouseEvent (pageX, pageY) as MouseEvent
 

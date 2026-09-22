@@ -1,8 +1,13 @@
-module Gesso.Geometry.Internal (Scalers, mkScalers) where
+module Gesso.Geometry.Internal
+  ( Scalers
+  , mkScalers
+  , mkReferenceFrame
+  , mkReferenceFrameWithRatio
+  ) where
 
 import Prelude
 
-import Gesso.Geometry.Dimensions (Rect, largestContainedArea)
+import Gesso.Geometry.Dimensions (Alignment(..), PreserveAspectRatio(..), Rect, ReferenceFrame, largestContainedArea, preserveAspectRatio)
 import Gesso.Geometry.Scaler (Scaler, mkScaler)
 
 -- | Data and functions for converting between the coordinate systems of the
@@ -19,10 +24,44 @@ type Scalers =
   , drawing :: Scaler
   }
 
+-- | Create `Scaler`s between two arbitrary areas. If the areas have different
+-- | aspect ratios, center the `inner` in the `outer` and scale uniformly so
+-- | that `inner` fits entirely within `outer`.
+mkReferenceFrame :: ReferenceFrame Rect -> ReferenceFrame Scaler
+mkReferenceFrame = mkReferenceFrameWithRatio $ Meet { x: Mid, y: Mid }
+
+-- | Create `Scaler`s between two arbitrary areas. If the areas have different
+-- | aspect ratios, scale `inner` according to the `PreserveAspectRatio` rules.
+mkReferenceFrameWithRatio :: PreserveAspectRatio -> ReferenceFrame Rect -> ReferenceFrame Scaler
+mkReferenceFrameWithRatio par frame@{ outer, inner } =
+  { outer: mkScaler outer toOuter
+  , inner: mkScaler inner toInner
+  }
+  where
+  coveredArea = preserveAspectRatio par frame
+
+  scale =
+    { x: inner.width / coveredArea.width
+    , y: inner.height / coveredArea.height
+    }
+
+  toInner =
+    { x: (_ - (outer.x + coveredArea.x)) >>> mul scale.x >>> add inner.x
+    , y: (_ - (outer.y + coveredArea.y)) >>> mul scale.y >>> add inner.y
+    , length: mul scale.x
+    }
+
+  toOuter =
+    { x: (_ - inner.x) >>> (_ / scale.x) >>> add (outer.x + coveredArea.x)
+    , y: (_ - inner.y) >>> (_ / scale.y) >>> add (outer.y + coveredArea.y)
+    , length: (_ / scale.x)
+    }
+
 -- | Create a `Scalers` record based on the view box of the application and the
 -- | client rect ([`Gesso.Canvas.Element.getCanvasClientRect`](Gesso.Canvas.Element#v:getCanvasClientRect),
 -- | [MDN: DOMRect](https://developer.mozilla.org/en-US/docs/Web/API/DOMRect))
--- | of the canvas.
+-- | of the canvas. This is slightly different from `mkReferenceFrameWithRatio`
+-- | because this needs to clear the position from the client rect.
 mkScalers :: Rect -> Rect -> Scalers
 mkScalers viewBox clientRect =
   { scale: k

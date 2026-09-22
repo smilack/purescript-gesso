@@ -10,6 +10,7 @@ module Gesso.Geometry.Scaler
   , Scaler
   , ScalingFunctions
   , class Scalable
+  , compose
   , from
   , lengthFrom
   , lengthTo
@@ -29,7 +30,7 @@ import Data.Map (fromFoldable, lookup) as Map
 import Data.Maybe (Maybe, fromMaybe)
 import Data.Symbol (reflectSymbol, class IsSymbol)
 import Data.Tuple.Nested ((/\))
-import Gesso.Geometry.Dimensions (Position, Rect, Rectangular)
+import Gesso.Geometry.Dimensions (Box, Boxed, Position, Rect, Rectangular)
 import Record (delete, get) as Record
 import Record.Builder (Builder, buildFromScratch, nub)
 import Record.Builder (insert) as Builder
@@ -54,6 +55,9 @@ type ScalingFunctions =
 -- | easier to access them indiviually, and sometimes it's easier to access them
 -- | as a complete `Rect`.
 -- |
+-- | The `left`, `top`, `right`, `bottom`, and `box` fields are also convenience
+-- | accessors for CSS-style positioning.
+-- |
 -- | `scaling` contains functions to scale `x`, `y`, `length`, and entire
 -- | records, but they're more convenient to use with the `to` and `from`
 -- | functions rather than being called directly:
@@ -67,7 +71,7 @@ type ScalingFunctions =
 -- | ```
 type Scaler :: Type
 type Scaler =
-  { | Rectangular Number +
+  { | Rectangular Number + Boxed Number +
       ( scaling ::
           { all ::
               forall rl r
@@ -78,6 +82,7 @@ type Scaler =
           | ScalingFunctions
           }
       , rect :: Rect
+      , box :: Box
       )
   }
 
@@ -169,54 +174,65 @@ lengthFrom = flip lengthTo
 -- | line' = { x1: 0.0, y1: 0.0, x2: 1.0, y2: 1.0 } *~> canvas
 -- | circle' = { x: 0.0, y: 0.0, r: 1.0 } *~> canvas
 -- | ```
-infix 2 to as *~>
+infixl 2 to as *~>
 
 -- | [`to`](#v:to) with arguments flipped:
 -- | ```purescript
 -- | line' = canvas <~* { x1: 0.0, y1: 0.0, x2: 1.0, y2: 1.0 }
 -- | circle' = canvas <~* { x: 0.0, y: 0.0, r: 1.0 }
 -- | ```
-infix 2 from as <~*
+infixr 2 from as <~*
 
 -- | Convert a single `x` value to the coordinate system of a `Scaler`:
 -- | ```purescript
 -- | x' = x -~> canvas
 -- | ```
-infix 2 xTo as -~>
+infixl 2 xTo as -~>
 
 -- | [`xTo`](#v:xTo) with arguments flipped:
 -- | ```purescript
 -- | x' = canvas <~- x
 -- | ```
-infix 2 xFrom as <~-
+infixr 2 xFrom as <~-
 
 -- | Convert a single `y` value to the coordinate system of a `Scaler`:
 -- | ```purescript
 -- | y' = y |~> canvas
 -- | ```
-infix 2 yTo as |~>
+infixl 2 yTo as |~>
 
 -- | [`yTo`](#v:yTo) with arguments flipped:
 -- | ```purescript
 -- | y' = canvas <~| y
 -- | ```
-infix 2 yFrom as <~|
+infixr 2 yFrom as <~|
 
 -- | Convert a single `length` value to the coordinate system of a `Scaler`:
 -- | ```purescript
 -- | l' = l /~> canvas
 -- | ```
-infix 2 lengthTo as /~>
+infixl 2 lengthTo as /~>
 
 -- | [`lengthTo`](#v:lengthTo) with arguments flipped:
 -- | ```purescript
 -- | l' = canvas <~/ l
 -- | ```
-infix 2 lengthFrom as <~/
+infixr 2 lengthFrom as <~/
 
 -- ┌─────────────────┐
 -- │ Scaler creation │
 -- └─────────────────┘
+
+-- This looks overcomplicated (because why call `mkScaler` when it's just four
+-- function compositions?), but composing `aToB.all` with `bToC.all` doesn't
+-- work because of all the weird type constraints. `mkScaler` rebuilds the `all`
+-- function using the other composed functions.
+compose :: Scaler -> Scaler -> Scaler
+compose aToB bToC = mkScaler bToC.rect
+  { x: aToB.scaling.x >>> bToC.scaling.x
+  , y: aToB.scaling.y >>> bToC.scaling.y
+  , length: aToB.scaling.length >>> bToC.scaling.length
+  }
 
 -- | Create a `Scaler` record for a coordinate system using its dimensions and
 -- | `x`, `y`, and `length` scaling functions.
@@ -233,8 +249,20 @@ mkScaler rect fns =
       , length: fns.length
       , all
       }
+  , box
+  , top: box.top
+  , right: box.right
+  , bottom: box.bottom
+  , left: box.left
   }
   where
+  box =
+    { top: rect.y
+    , right: rect.x + rect.width
+    , bottom: rect.y + rect.height
+    , left: rect.x
+    }
+
   all
     :: forall rl r
      . RowToList r rl
@@ -246,17 +274,56 @@ mkScaler rect fns =
 toMap :: { | ScalingFunctions } -> Map String (Number -> Number)
 toMap { x, y, length } = Map.fromFoldable
   [ "x" /\ x
+  , "x'" /\ x
+  , "x0" /\ x
   , "x1" /\ x
   , "x2" /\ x
+  , "x3" /\ x
+  , "x4" /\ x
+  , "x5" /\ x
+  , "x6" /\ x
+  , "x7" /\ x
+  , "x8" /\ x
+  , "x9" /\ x
+  , "cpx" /\ x
+  , "cp1x" /\ x
+  , "cp2x" /\ x
+  , "right" /\ x
+  , "left" /\ x
   , "y" /\ y
+  , "y'" /\ y
+  , "y0" /\ y
   , "y1" /\ y
   , "y2" /\ y
+  , "y3" /\ y
+  , "y4" /\ y
+  , "y5" /\ y
+  , "y6" /\ y
+  , "y7" /\ y
+  , "y8" /\ y
+  , "y9" /\ y
+  , "cpy" /\ y
+  , "cp1y" /\ y
+  , "cp2y" /\ y
+  , "top" /\ y
+  , "bottom" /\ y
   , "width" /\ length
   , "w" /\ length
   , "height" /\ length
   , "h" /\ length
   , "radius" /\ length
   , "r" /\ length
+  , "r'" /\ length
+  , "r0" /\ length
+  , "r1" /\ length
+  , "r2" /\ length
+  , "r3" /\ length
+  , "r4" /\ length
+  , "r5" /\ length
+  , "r6" /\ length
+  , "r7" /\ length
+  , "r8" /\ length
+  , "r9" /\ length
   , "length" /\ length
   , "len" /\ length
   , "l" /\ length
