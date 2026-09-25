@@ -14,6 +14,7 @@ import Prelude
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
 import Data.Foldable (foldl, for_, traverse_)
 import Data.Function (on)
+import Data.Functor (mapFlipped)
 import Data.List (List, snoc)
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
@@ -247,7 +248,11 @@ handleAction = case _ of
           Document.Visible -> pure unit
           Document.Hidden -> pure unit
 
-  FirstTick notify -> H.liftEffect $ getFirstFrame notify
+  FirstTick notify -> do
+    timers <- H.liftEffect do
+      getFirstFrame notify
+      mkTimers
+    H.modify_ (_ { timers = Just timers })
 
   Tick notify lastFrame -> do
     { localState, behavior: { fixed, update, render }, pendingUpdates } <- H.get
@@ -327,14 +332,11 @@ initialize
        (Action state -> Effect Unit)
 initialize = do
   { notify, subscriptions } <- mkSubs
-  timers <- H.liftEffect mkTimers
   state <- H.get
   dom <- H.liftEffect $ mkDom state
-  H.put $ state { dom = dom, subscriptions = subscriptions, timers = timers }
+  H.put $ state { dom = dom, subscriptions = subscriptions }
   pure notify
   where
-  mkTimers = T.started <#> \t -> Just { frame: t, fixed: t }
-
   mkSubs = do
     notifications <- H.liftEffect HS.create
     emitter <- H.subscribe notifications.emitter
@@ -356,6 +358,10 @@ initialize = do
         <*> canvas
         <*> context
         <*> scalers
+
+-- | todo
+mkTimers :: Effect { frame :: T.Last, fixed :: T.Last }
+mkTimers = mapFlipped T.started \t -> { frame: t, fixed: t }
 
 -- | The reusable chunk of requesting an animation frame:
 -- |
