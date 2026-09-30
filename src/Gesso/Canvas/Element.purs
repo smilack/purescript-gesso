@@ -7,6 +7,7 @@ module Gesso.Canvas.Element
   , getContextByAppName
   , style
   , toSizeProps
+  , visibilityState
   ) where
 
 import Prelude
@@ -17,6 +18,7 @@ import Data.Int (round)
 import Data.Maybe (Maybe, fromMaybe)
 import Data.Traversable (traverse)
 import Effect (Effect)
+import Effect.Uncurried (EffectFn1, runEffectFn1)
 import Gesso.Application (WindowMode(..)) as App
 import Gesso.Geometry (Rect, Size) as Geo
 import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
@@ -26,7 +28,8 @@ import Halogen.HTML.Properties (width, height) as HP
 import Web.DOM.Element (Element, DOMRect, getBoundingClientRect)
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.HTML (window)
-import Web.HTML.HTMLDocument (toNonElementParentNode)
+import Web.HTML.HTMLDocument (toNonElementParentNode, HTMLDocument)
+import Web.HTML.HTMLDocument.VisibilityState as VisibilityState
 import Web.HTML.Window (document)
 
 -- | Wrapper for a `Web.DOM.Element.Element` to tag elements that came from this
@@ -108,3 +111,16 @@ toSizeProps { width, height } =
   [ HP.width $ round width
   , HP.height $ round height
   ]
+
+-- | Read the visibility state of a document.
+-- The `visibilityState` function in `Web.HTML.HTMLDocument` is broken in the
+-- most recently published version (4.1.1); it always returns `Visible` because
+-- it actually checks `document.readyState`, so `VisibilityState.parse` fails.
+-- When the fixed version is published, this function can be retired.
+visibilityState :: HTMLDocument -> Effect VisibilityState.VisibilityState
+visibilityState doc =
+  (fromMaybe VisibilityState.Visible <<< VisibilityState.parse)
+    <$> (runEffectFn1 _visibilityState doc)
+
+-- See `visibilityState`
+foreign import _visibilityState :: EffectFn1 HTMLDocument String
