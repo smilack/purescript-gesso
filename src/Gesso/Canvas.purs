@@ -11,13 +11,14 @@ module Gesso.Canvas
 
 import Prelude
 
+import Control.Apply (lift2)
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
 import Data.Foldable (foldl, for_, traverse_)
 import Data.Function (on)
 import Data.Functor (mapFlipped)
 import Data.List (List, snoc)
 import Data.List as List
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), isNothing, maybe)
 import Data.Traversable (for, traverse)
 import Effect (Effect)
 import Effect.Aff.Class (class MonadAff)
@@ -38,8 +39,8 @@ import Halogen.Subscription as HS
 import Type.Proxy (Proxy(..))
 import Web.Event.Event (EventType(..))
 import Web.HTML (window)
-import Web.HTML.HTMLDocument (toEventTarget, visibilityState) as Document
-import Web.HTML.HTMLDocument.VisibilityState (VisibilityState(..)) as Document
+import Web.HTML.HTMLDocument (toEventTarget) as Document
+import Web.HTML.HTMLDocument.VisibilityState (VisibilityState(..))
 import Web.HTML.Window (document)
 import Web.HTML.Window (toEventTarget) as Window
 
@@ -82,6 +83,7 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |     to pause or resume running timers.
 -- |   - `emitter` is a subscription to a listener/emitter pair used to send
 -- |     Actions from `requestAnimationFrame` callbacks to the component.
+-- |   - `notify` is the function that sends messages to the listener/emitter.
 -- | - `timers` contains two timestamps, which are both set to a default value
 -- |   when the component is initialized:
 -- |   - `frame` is the timestamp of the most recently fired animation frame.
@@ -92,6 +94,8 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- | - `rafId` is the ID of the most recently requested animation frame. It's
 -- |   set when `requestAnimationFrame` is called and cleared when the animation
 -- |   frame callback runs.
+-- | - `visibility` is the document visibility state, used for pausing the
+-- |   application when the window is hidden or minimized.
 type State state input output =
   { name :: String
   , localState :: state
@@ -117,6 +121,7 @@ type State state input output =
         { resize :: H.SubscriptionId
         , visibility :: H.SubscriptionId
         , emitter :: H.SubscriptionId
+        , notify :: Action state -> Effect Unit
         }
   , timers ::
       Maybe
@@ -125,6 +130,7 @@ type State state input output =
         }
   , pendingUpdates :: List (T.Stamped (App.TimestampedUpdate state))
   , rafId :: Maybe T.RequestAnimationFrameId
+  , visibility :: VisibilityState
   }
 
 -- | See `handleAction`
@@ -132,8 +138,8 @@ data Action state
   = Initialize
   | HandleResize
   | HandleVisibilityChange
-  | FirstTick (Action state -> Effect Unit)
-  | Tick (Action state -> Effect Unit) T.Last
+  | FirstTick
+  | Tick T.Last
   | Finalize
   | StateUpdated T.Delta Geo.Scalers (Compare state)
   | QueueUpdate (App.UpdateFunction state)
@@ -194,6 +200,7 @@ initialState { name, window, initialState: localState, viewBox, behavior } =
   , timers: Nothing
   , pendingUpdates: List.Nil
   , rafId: Nothing
+  , visibility: Visible
   }
 
 -- | Render Canvas component. The `width` and `height` attributes may be
@@ -213,8 +220,8 @@ renderComponent { name, dom, window, behavior: { interactions } } =
 -- |   `FirstTick` to request the first animation frame.
 -- | - `HandleResize`: Window resized, get new client rect and recalculate
 -- |   `scaler` functions.
--- | - (TODO) `HandleVisibilityChange`: Window visibility has changed; pause or
--- |   resume running timers.
+-- | - `HandleVisibilityChange`: Window visibility has changed; pause or resume
+-- |   running timers.
 -- | - `FirstTick`: Request an animation frame that only checks the time and
 -- |   then starts the `Tick` loop, so that `Tick` can start out knowing the
 -- |   frame timing.
@@ -237,27 +244,33 @@ handleAction
        m
        Unit
 handleAction = case _ of
-  Initialize -> initialize >>= (FirstTick >>> handleAction)
+  Initialize -> initialize *> handleAction FirstTick
 
   HandleResize -> updateClientRect
 
-  HandleVisibilityChange -> {- TODO -} 
-    H.liftEffect do
-      window >>= document >>= Document.visibilityState
-        >>= case _ of
-          Document.Visible -> pure unit
-          Document.Hidden -> pure unit
+  HandleVisibilityChange -> do
+    visibility <- H.liftEffect $ window >>= document >>= GEl.visibilityState
+    H.modify_ (_ { visibility = visibility })
+    -- I don't know if `visibility` can ever become `Visible` when there's
+    -- already a frame requested, but it seems reasonable to check whether it's
+    -- already running and not resume ticking if so.
+    rafId <- H.gets _.rafId
+    when (visibility == Visible && isNothing rafId)
+      $ handleAction FirstTick
 
-  FirstTick notify -> do
-    timers <- H.liftEffect do
-      getFirstFrame notify
-      mkTimers
-    H.modify_ (_ { timers = Just timers })
+  FirstTick -> do
+    timers <- runMaybeT do
+      { notify } <- MaybeT $ H.gets _.subscriptions
+      lift $ H.liftEffect do
+        getFirstFrame notify
+        mkTimers
+    H.modify_ (_ { timers = timers })
 
-  Tick notify lastFrame -> do
+  Tick lastFrame -> whenM (lift2 eq (pure Visible) (H.gets _.visibility)) do
     { localState, behavior: { fixed, update, render }, pendingUpdates } <- H.get
 
     results <- runMaybeT do
+      { notify } <- MaybeT $ H.gets _.subscriptions
       timers <- MaybeT $ H.gets _.timers
       { context, scalers } <- MaybeT $ H.gets _.dom
 
@@ -328,14 +341,12 @@ handleAction = case _ of
 initialize
   :: forall state input output slots o m
    . MonadAff m
-  => H.HalogenM (State state input output) (Action state) slots o m
-       (Action state -> Effect Unit)
+  => H.HalogenM (State state input output) (Action state) slots o m Unit
 initialize = do
-  { notify, subscriptions } <- mkSubs
+  subscriptions <- mkSubs
   state <- H.get
   dom <- H.liftEffect $ mkDom state
-  H.put $ state { dom = dom, subscriptions = subscriptions }
-  pure notify
+  H.put $ state { dom = dom, subscriptions = Just subscriptions }
   where
   mkSubs = do
     notifications <- H.liftEffect HS.create
@@ -344,7 +355,9 @@ initialize = do
     visibility <- subscribeVisibility
     pure
       { notify: HS.notify notifications.listener
-      , subscriptions: Just { resize, visibility, emitter }
+      , emitter
+      , resize
+      , visibility
       }
 
   mkDom { name, viewBox } = do
@@ -384,7 +397,7 @@ requestAnimationFrame callback notify =
       *> callback timestamp
       *> tick timestamp
 
-  tick = notify <<< Tick notify <<< T.elapse
+  tick = notify <<< Tick <<< T.elapse
 
 -- | Request one animation frame in order to get a timestamp to start counting
 -- | from.
