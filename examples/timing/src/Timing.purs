@@ -13,6 +13,7 @@ import Gesso.Application (WindowMode(..), defaultBehavior)
 import Gesso.Geometry (Rect, Scaler, Scalers, (*~>), (-~>), (/~>), (<~*), origin)
 import Gesso.State (States)
 import Gesso.Time (Delta, hz)
+import Gesso.Time (now) as GT
 import Graphics.Canvas (Context2D, clearRect, fillText, lineTo, moveTo, setFillStyle, setFont, setStrokeStyle, strokePath, setTextBaseline, TextBaseline(..))
 import Prim.Row (class Cons)
 import Record (set, merge)
@@ -20,7 +21,7 @@ import Type.Proxy (Proxy(..))
 
 main :: Effect Unit
 main = do
-  start <- _now
+  start <- GT.now
   launch
     { name: "timing"
     , window: Fullscreen
@@ -42,8 +43,6 @@ main = do
             }
         }
     }
-
-foreign import _now :: Effect Number
 
 type Data = { start :: Number, reg :: Number, fixed :: Number }
 
