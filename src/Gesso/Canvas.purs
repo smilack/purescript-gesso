@@ -372,7 +372,8 @@ initialize = do
         <*> context
         <*> scalers
 
--- | todo
+-- | When starting or restarting the application, get the timestamp in order to
+-- | track the time between updates.
 mkTimers :: Effect { frame :: T.Last, fixed :: T.Last }
 mkTimers = mapFlipped T.started \t -> { frame: t, fixed: t }
 
