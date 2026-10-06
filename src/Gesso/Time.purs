@@ -12,6 +12,7 @@ module Gesso.Time
   , elapse
   , hz
   , never
+  , now
   , requestAnimationFrame
   , sort
   , stamp
@@ -54,10 +55,12 @@ requestAnimationFrame
 requestAnimationFrame = _requestAnimationFrame <<< mkEffectFn1
 
 -- | The current time in milliseconds, or the time at which a value became
--- | `Stamped`.
+-- | `Stamped`. Used internally for keeping past and present timestamps
+-- | consistent.
 newtype Now = Now Number
 
--- | A time in the past, in milliseconds.
+-- | A time in the past, in milliseconds. Used internally for keeping past and
+-- | present timestamps consistent.
 newtype Last = Last Number
 
 -- | Convert a current time into a previous time.
@@ -80,12 +83,19 @@ type Delta = { now :: Number, last :: Number, delta :: Number }
 
 -- | Create a Delta from a current time and a previous time.
 delta :: Now -> Last -> Delta
-delta (Now now) (Last last) = { now, last, delta: now - last }
+delta (Now n) (Last last) = { now: n, last, delta: n - last }
 
--- | Get the current `DOMHighResTimeStamp` from `performance.now`.
+-- | Get the current `DOMHighResTimeStamp` from `performance.now` as a `Number`.
 -- |
 -- | See [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp)
-foreign import _now :: Effect Now
+foreign import now :: Effect Number
+
+-- | Get the current `DOMHighResTimeStamp` from `performance.now` as a `Now`.
+-- | Used internally for keeping past and present timestamps consistent.
+-- |
+-- | See [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp)
+_now :: Effect Now
+_now = Now <$> now
 
 -- | Get a single `Last` value at the current time, useful for starting a timer.
 started :: Effect Last
@@ -178,9 +188,9 @@ stampInterval last fn = case _ of
     lastTime l = maybe last (Last <<< _.time) $ head l
 
     schedule :: List (Stamped a) -> Last -> Now -> List (Stamped a)
-    schedule items prev@(Last p) now@(Now n)
+    schedule items prev@(Last p) now'@(Now n)
       | p + ms >= n = items
-      | otherwise = schedule items' (elapse cur) now
+      | otherwise = schedule items' (elapse cur) now'
           where
           cur@(Now c) = Now $ p + ms
           items' = { time: c, item: fn (delta cur prev) } : items
