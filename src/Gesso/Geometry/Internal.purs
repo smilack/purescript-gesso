@@ -24,10 +24,14 @@ type Scalers =
   , drawing :: Scaler
   }
 
+-- | Create `Scaler`s between two arbitrary areas. If the areas have different
+-- | aspect ratios, center the `inner` in the `outer` and scale uniformly so
+-- | that `inner` fits entirely within `outer`.
 mkReferenceFrame :: ReferenceFrame Rect -> ReferenceFrame Scaler
 mkReferenceFrame = mkReferenceFrameWithRatio $ Meet { x: Mid, y: Mid }
 
--- |
+-- | Create `Scaler`s between two arbitrary areas. If the areas have different
+-- | aspect ratios, scale `inner` according to the `PreserveAspectRatio` rules.
 mkReferenceFrameWithRatio :: PreserveAspectRatio -> ReferenceFrame Rect -> ReferenceFrame Scaler
 mkReferenceFrameWithRatio par frame@{ outer, inner } =
   { outer: mkScaler outer toOuter
@@ -54,7 +58,7 @@ mkReferenceFrameWithRatio par frame@{ outer, inner } =
     }
 
 -- | Create a `Scalers` record based on the view box of the application and the
--- | client rect ([`Gesso.Canvas.Element.getCanvasClientRect`](Gesso.Canvas.Element.html#v:getCanvasClientRect),
+-- | client rect ([`Gesso.Canvas.Element.getCanvasClientRect`](Gesso.Canvas.Element#v:getCanvasClientRect),
 -- | [MDN: DOMRect](https://developer.mozilla.org/en-US/docs/Web/API/DOMRect))
 -- | of the canvas. This is slightly different from `mkReferenceFrameWithRatio`
 -- | because this needs to clear the position from the client rect.

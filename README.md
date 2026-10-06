@@ -108,15 +108,6 @@ Install with [Spago](https://github.com/purescript/spago#installation):
 spago install gesso
 ```
 
-> [!NOTE]
-> Gesso is available starting in package set 63.6.0. If you're using an earlier package set, add these lines to the `extraPackages` section in `spago.yaml`:
-> ```yaml
->   extraPackages:
->     gesso:
->       git: https://github.com/smilack/purescript-gesso.git
->       ref: v1.0.0
-> ```
-
 ## Documentation
 
 - [Quick-Start Guide](docs/quickstart.md)

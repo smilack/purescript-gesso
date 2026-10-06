@@ -274,18 +274,34 @@ mkScaler rect fns =
 toMap :: { | ScalingFunctions } -> Map String (Number -> Number)
 toMap { x, y, length } = Map.fromFoldable
   [ "x" /\ x
+  , "x'" /\ x
   , "x0" /\ x
   , "x1" /\ x
   , "x2" /\ x
+  , "x3" /\ x
+  , "x4" /\ x
+  , "x5" /\ x
+  , "x6" /\ x
+  , "x7" /\ x
+  , "x8" /\ x
+  , "x9" /\ x
   , "cpx" /\ x
   , "cp1x" /\ x
   , "cp2x" /\ x
   , "right" /\ x
   , "left" /\ x
   , "y" /\ y
+  , "y'" /\ y
   , "y0" /\ y
   , "y1" /\ y
   , "y2" /\ y
+  , "y3" /\ y
+  , "y4" /\ y
+  , "y5" /\ y
+  , "y6" /\ y
+  , "y7" /\ y
+  , "y8" /\ y
+  , "y9" /\ y
   , "cpy" /\ y
   , "cp1y" /\ y
   , "cp2y" /\ y
@@ -297,8 +313,17 @@ toMap { x, y, length } = Map.fromFoldable
   , "h" /\ length
   , "radius" /\ length
   , "r" /\ length
+  , "r'" /\ length
   , "r0" /\ length
   , "r1" /\ length
+  , "r2" /\ length
+  , "r3" /\ length
+  , "r4" /\ length
+  , "r5" /\ length
+  , "r6" /\ length
+  , "r7" /\ length
+  , "r8" /\ length
+  , "r9" /\ length
   , "length" /\ length
   , "len" /\ length
   , "l" /\ length

@@ -14,6 +14,6 @@ export function cancelAnimationFrame(id) {
   };
 };
 
-export function _now() {
+export function now() {
   return performance.now();
 }

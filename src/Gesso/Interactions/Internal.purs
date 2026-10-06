@@ -54,7 +54,7 @@ data Interaction event state =
 
 -- | `Interactions` is a record containing arrays of interactions for each type
 -- | of event that Canvas supports. It's used in
--- | [`Gesso.Application.AppBehavior`](Gesso.Application.html#t:AppBehavior)
+-- | [`Gesso.Application.AppBehavior`](Gesso.Application#t:AppBehavior)
 -- | to add event handlers to a component.
 type Interactions state =
   { base :: Array (Interaction Exports.Event state)
