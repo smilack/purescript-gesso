@@ -70,14 +70,25 @@ defaultBehavior =
   , input: \_ _ _ _ -> pure Nothing
   }
 
--- | There are three modes that determine the size and position of a Gesso
+-- | The modes that determine the CSS for sizing and positioning a Gesso canvas
 -- | component:
 -- |
--- | - `Fixed` creates a screen of the specified size.
--- | - `Stretch` expands to fill its containing element.
+-- | - `Fixed` creates an element of the specified size.
+-- | - `Stretch` expands to fill its container¹
 -- | - `FullScreen` takes up the entire page from the top left corner to the
 -- |   bottom right.
+-- | - `Plain` has no size or positioning CSS, so it must be styled from outside
+-- |   of the application.
+-- |
+-- | ¹ More specifically, `Stretch` makes the canvas fill its
+-- | [containing block](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Display/Containing_block).
+-- | The easiest way to deal with this is to give the parent element
+-- | `position: relative;`.
+-- |
+-- | [Gesso.Canvas.Element.style](Gesso.Canvas.Element#v:style) generates the
+-- | CSS for the canvas element.
 data WindowMode
   = Fixed Area
   | Stretch
   | Fullscreen
+  | Plain

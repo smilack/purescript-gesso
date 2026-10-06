@@ -107,6 +107,13 @@ The `name` field will be used as the `id` attribute for the canvas element.
 - `Fixed` creates an element with an exact size.
 - `Stretch` causes the element to fill its parent.
 - `FullScreen` takes up the entire page from the top left corner to the bottom right.
+- `Plain` has no size or positioning CSS, so the element must be styled from outside the application.
+
+> [!NOTE]
+> More specifically, `Stretch` makes the canvas fill its [containing block](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Display/Containing_block). The easiest way to deal with this is to give the parent element `position: relative;`.
+>
+> The exact CSS used for each `WindowMode` can be found in `Gesso.Canvas.Element.windowCss`.
+
 
 The `viewBox` scales automatically to fit within the canvas element while remaining centered. Unless the view box and drawing have the exact same aspect ratio, this leaves a margin in the canvas outside of the view box on one axis. (That is, it behaves like SVG's `preserveAspectRatio="xMidYMid meet"`)
 

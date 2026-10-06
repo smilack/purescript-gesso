@@ -25,7 +25,7 @@ main = launchAff_ do
     { name: "frames"
     , initialState
     , viewBox: { x: -2.1, y: -1.6, width: 4.2, height: 3.7 }
-    , window: Fullscreen
+    , window: Stretch
     , behavior: defaultBehavior { render = render, input = handleInput }
     }
   createControls app.input

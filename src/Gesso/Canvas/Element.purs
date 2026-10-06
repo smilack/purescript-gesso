@@ -79,6 +79,7 @@ windowCss = case _ of
   App.Fixed size -> fix size
   App.Stretch -> stretched
   App.Fullscreen -> full
+  App.Plain -> common
   where
   common = do
     CSS.key (CSS.fromString "outline") "none"
@@ -88,12 +89,17 @@ windowCss = case _ of
     CSS.height $ CSS.px height
     common
 
-  stretched = do
-    CSS.width $ CSS.pct 100.0
-    CSS.height $ CSS.pct 100.0
+  full = do
+    CSS.position CSS.fixed
+    CSS.top $ CSS.px 0.0
+    CSS.right $ CSS.px 0.0
+    CSS.bottom $ CSS.px 0.0
+    CSS.left $ CSS.px 0.0
+    CSS.width $ CSS.vw 100.0
+    CSS.height $ CSS.vh 100.0
     common
 
-  full = do
+  stretched = do
     CSS.width $ CSS.pct 100.0
     CSS.height $ CSS.pct 100.0
     CSS.position CSS.absolute
