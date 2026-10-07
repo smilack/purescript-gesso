@@ -209,7 +209,7 @@ import Web.UIEvent.MouseEvent (MouseEvent)
 import Web.UIEvent.WheelEvent (WheelEvent)
 ```
 
-Interaction constructors are re-exported in the `Gesso.Interactions` module but you can look at `Gesso.Interactions.Events` for a complete list. A small number of canvas events are not implemented yet, but they are included with comments for completeness.
+Interaction constructors are re-exported in the `Gesso.Interactions` module but you can look at `Gesso.Interactions.Events` for a complete list.
 
 Interaction constructors take a `Handler event state` function and return a type of interaction specific to that event (e.g. `onMouseDown :: forall s. Handler MouseEvent s -> MouseInteraction s`). A default record containing no interactions is provided for convenience.
 
