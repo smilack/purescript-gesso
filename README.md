@@ -113,6 +113,7 @@ spago install gesso
 - [Quick-Start Guide](docs/quickstart.md)
 - [The Gesso Manual](docs/manual.md) covers the vast majority of what you need to know to use Gesso effectively.
 - There are a variety of [examples](examples/README.md) available to look through.
+- [Change log](CHANGES.md)
 - Details about specific functions and types can be found on [Pursuit](https://pursuit.purescript.org/packages/purescript-gesso/).
 - If you encounter a bug, the documentation is unclear or incorrect, or you have ideas for improving the API, open an issue.
 - For general help or questions, create a thread on the [PureScript Discourse instance](https://discourse.purescript.org/) or the [PureScript Discord Server](https://purescript.org/chat).
