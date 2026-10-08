@@ -1,5 +1,8 @@
 # Change Log
 
+## v1.3.0
+- [#34](https://github.com/smilack/purescript-gesso/issues/34) Added interaction functions for  `beforeinput`, `contextmenu`, `gotpointercapture`, `lostpointercapture`, `pointercancel`, `pointerdown`, `pointerenter`, `pointerleave`, `pointermove`, `pointerout`, `pointerover`, and `pointerup` events
+
 ## v1.2.0
 
 ### Features
