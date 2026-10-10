@@ -51,49 +51,24 @@ data WebGL = WebGL (Maybe GL.ContextAttributes)
 data WebGL2 = WebGL2 (Maybe GL.ContextAttributes)
 data WebGPU = WebGPU (Maybe WebGPU.GPUCanvasConfiguration)
 
+-- TODO replace Unit
 instance Context Context2D Unit Graphics.Canvas.Context2D where
   getContext id _ = getCanvasElement id >>= traverse Graphics.Canvas.getContext2D
 
-getWebGlContext :: String -> CanvasElement -> GL.ContextAttributes -> Effect (Maybe GL)
-getWebGlContext string canvas attrs = Nullable.toMaybe <$> GL.getContext canvas string attrs
+getWebGlContext :: String -> String -> Maybe GL.ContextAttributes -> Effect (Maybe GL)
+getWebGlContext glType id mConfig = do
+  mCanvas <- getCanvasElementById id
+  mmGl <- sequence $ getContext' <$> mCanvas <*> mConfig
+  pure $ join mmGl
+  where
+  getContext' :: CanvasElement -> GL.ContextAttributes -> Effect (Maybe GL)
+  getContext' can att = Nullable.toMaybe <$> GL.getContext can glType att
 
 instance Context WebGL GL.ContextAttributes GL where
-  getContext canvasId maybeContextAttrs =
-    do
-      maybeCanvas <- getCanvasElementById canvasId :: Effect (Maybe CanvasElement)
-
-      let
-        maybeGetContextForCanvas =
-          traverse GL.getContext maybeCanvas :: String -> Maybe (GL.ContextAttributes -> Effect (Nullable GL))
-
-        maybeGetWebGlContext =
-          maybeGetContextForCanvas "webgl" :: Maybe (GL.ContextAttributes -> Effect (Nullable GL))
-
-        maybeEffectNullableGl =
-          maybeGetWebGlContext <*> maybeContextAttrs :: Maybe (Effect (Nullable GL))
-
-        maybeEffectMaybeGl =
-          map (map Nullable.toMaybe) maybeEffectNullableGl :: Maybe (Effect (Maybe GL))
-
-        effectMaybeMaybeGl =
-          sequence maybeEffectMaybeGl :: Effect (Maybe (Maybe GL))
-
-      map join effectMaybeMaybeGl :: Effect (Maybe GL)
+  getContext = getWebGlContext "webgl"
 
 instance Context WebGL2 GL.ContextAttributes GL where
-  getContext id config = runMaybeT do
-
-    (elem {-:: ?em-} ) <- MaybeT $ (getCanvasElement id {-:: ?f-} )
-    let
-      (a {-:: ?a-} ) = map Nullable.toMaybe <$> GL.getContext elem "webgl2" <$> config
-    -- (b {-:: ?b-} ) <- MaybeT $ join <$> sequence a
-    -- pure b
-    MaybeT $ join <$> sequence a
-
--- do
---   elem <- mElem
---   cfg <- config
---   Nullable.toMaybe <$> WebGL.getContext elem "webgl2" cfg
+  getContext = getWebGlContext "webgl2"
 
 -- instance Context WebGPU WebGPU.GPUCanvasConfiguration WebGPU.GPUCanvasContext where
 --   getContext id config = do
