@@ -31,8 +31,8 @@ import Web.HTML.Window (document)
 -- └──────────────────────────────────────────┘
 
 class RenderingContext :: Type -> Type -> Type -> Constraint
-class RenderingContext ctxtype config context | ctxtype -> config context where
-  getContext :: String -> Maybe config -> Effect (Maybe context)
+class RenderingContext cxtype cxattrs context | cxtype -> cxattrs context where
+  getContext :: String -> Maybe cxattrs -> Effect (Maybe context)
 
 data Context2D = Context2D
 data WebGL = WebGL (Maybe GL.ContextAttributes)
@@ -52,9 +52,9 @@ instance RenderingContext Context2D Unit Graphics.Canvas.Context2D where
 -- └───────┘
 
 getWebGlContext :: String -> String -> Maybe GL.ContextAttributes -> Effect (Maybe GL)
-getWebGlContext glType id mConfig = do
+getWebGlContext glType id mAttrs = do
   mCanvas <- getCanvasElementById id
-  mmGl <- sequence $ getContext' <$> mCanvas <*> mConfig
+  mmGl <- sequence $ getContext' <$> mCanvas <*> mAttrs
   pure $ join mmGl
   where
   getContext' :: CanvasElement -> GL.ContextAttributes -> Effect (Maybe GL)
@@ -77,8 +77,8 @@ getCanvasHTMLElement id =
     >>= (getElementById id >>> map (bindFlipped fromElement))
 
 instance RenderingContext WebGPU GPUCanvasConfiguration GPUCanvasContext where
-  getContext id config = runMaybeT do
+  getContext id attrs = runMaybeT do
     canvas <- MaybeT $ getCanvasHTMLElement id
     context <- MaybeT $ GPU.getContext canvas
-    MaybeT $ traverse (GPU.configure context) config
+    MaybeT $ traverse (GPU.configure context) attrs
     pure context
