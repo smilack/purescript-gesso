@@ -24,16 +24,11 @@ import Web.HTML.HTMLCanvasElement (fromElement)
 import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.Window (document)
 
-getCanvasElement :: String -> Effect (Maybe CanvasElement)
-getCanvasElement = getCanvasElementById
-
-getCanvasHTMLElement :: String -> Effect (Maybe HTMLCanvasElement)
-getCanvasHTMLElement id =
-  window
-    >>= (document >>> map toNonElementParentNode)
-    >>= (getElementById id >>> map (bindFlipped fromElement))
-
 -- make a ContextKind?
+
+-- ┌──────────────────────────────────────────┐
+-- │ Context types and RenderingContext class │
+-- └──────────────────────────────────────────┘
 
 class RenderingContext :: Type -> Type -> Type -> Constraint
 class RenderingContext ctxtype config context | ctxtype -> config context where
@@ -44,9 +39,17 @@ data WebGL = WebGL (Maybe GL.ContextAttributes)
 data WebGL2 = WebGL2 (Maybe GL.ContextAttributes)
 data WebGPU = WebGPU (Maybe GPUCanvasConfiguration)
 
+-- ┌────┐
+-- │ 2D │
+-- └────┘
+
 -- TODO replace Unit
 instance RenderingContext Context2D Unit Graphics.Canvas.Context2D where
-  getContext id _ = getCanvasElement id >>= traverse Graphics.Canvas.getContext2D
+  getContext id _ = getCanvasElementById id >>= traverse Graphics.Canvas.getContext2D
+
+-- ┌───────┐
+-- │ WebGL │
+-- └───────┘
 
 getWebGlContext :: String -> String -> Maybe GL.ContextAttributes -> Effect (Maybe GL)
 getWebGlContext glType id mConfig = do
@@ -62,6 +65,16 @@ instance RenderingContext WebGL GL.ContextAttributes GL where
 
 instance RenderingContext WebGL2 GL.ContextAttributes GL where
   getContext = getWebGlContext "webgl2"
+
+-- ┌────────┐
+-- │ WebGPU │
+-- └────────┘
+
+getCanvasHTMLElement :: String -> Effect (Maybe HTMLCanvasElement)
+getCanvasHTMLElement id =
+  window
+    >>= (document >>> map toNonElementParentNode)
+    >>= (getElementById id >>> map (bindFlipped fromElement))
 
 instance RenderingContext WebGPU GPUCanvasConfiguration GPUCanvasContext where
   getContext id config = runMaybeT do
