@@ -80,7 +80,9 @@
             },
             {
               "web-uievents": ">=4.0.0 <6.0.0"
-            }
+            },
+            "webgl-raw",
+            "webgpu"
           ]
         },
         "test": {
@@ -768,7 +770,12 @@
         "zipperarray": "2.0.0"
       }
     },
-    "extra_packages": {}
+    "extra_packages": {
+      "webgl-raw": {
+        "git": "https://github.com/rowtype-yoga/purescript-webgl-raw.git",
+        "ref": "v0.0.1"
+      }
+    }
   },
   "packages": {
     "aff": {
@@ -1743,6 +1750,18 @@
         "type-equality"
       ]
     },
+    "uint": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-MCTYyDPFLoNLweSY1oEjKKo0xhqCGrAbiBQNdva1B3w=",
+      "dependencies": [
+        "enums",
+        "gen",
+        "maybe",
+        "numbers",
+        "prelude"
+      ]
+    },
     "unfoldable": {
       "type": "registry",
       "version": "6.0.0",
@@ -1913,6 +1932,39 @@
         "maybe",
         "nullable",
         "prelude",
+        "unsafe-coerce",
+        "web-events",
+        "web-html"
+      ]
+    },
+    "webgl-raw": {
+      "type": "git",
+      "url": "https://github.com/rowtype-yoga/purescript-webgl-raw.git",
+      "rev": "7cd89fcc01153f32c29c9c837fb979dea063e87f",
+      "dependencies": [
+        "canvas",
+        "effect",
+        "nullable",
+        "prelude"
+      ]
+    },
+    "webgpu": {
+      "type": "registry",
+      "version": "0.0.1",
+      "integrity": "sha256-yOGNyqd4IhMF0NnXlp3pXJ1NKf8mIMEePgorgJ93dFM=",
+      "dependencies": [
+        "arraybuffer-types",
+        "effect",
+        "foreign",
+        "foreign-object",
+        "functions",
+        "integers",
+        "js-promise",
+        "maybe",
+        "newtype",
+        "ordered-collections",
+        "prelude",
+        "uint",
         "unsafe-coerce",
         "web-events",
         "web-html"

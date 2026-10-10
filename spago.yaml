@@ -3,6 +3,8 @@ package:
   description: "Easily build <canvas> applications in PureScript — Compatible with Halogen"
   dependencies:
     - point-free
+    - webgl-raw
+    - webgpu
     - aff: ">=7.0.0 <9.0.0"
     - canvas: ">=6.0.0 <7.0.0"
     - css: ">=6.0.0 <7.0.0"
@@ -39,3 +41,7 @@ package:
 workspace:
   packageSet:
     registry: 62.2.6
+  extraPackages:
+    webgl-raw:
+      git: https://github.com/rowtype-yoga/purescript-webgl-raw.git
+      ref: v0.0.1
