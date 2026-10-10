@@ -16,8 +16,8 @@ import Gesso.Geometry (Rect, Size) as Geo
 import Graphics.Canvas (CanvasElement, getCanvasElementById)
 import Graphics.Canvas as Canvas
 import Graphics.Canvas as Graphics.Canvas
-import Graphics.WebGL.Raw (ContextAttributes, GL, getContext) as WebGL
 import Graphics.WebGL.Raw (GL)
+import Graphics.WebGL.Raw (ContextAttributes, getContext) as GL
 import Halogen.HTML (AttrName(..), attr)
 import Web.DOM (Element)
 import Web.DOM.Element (DOMRect, getBoundingClientRect)
@@ -47,24 +47,27 @@ class Context ctxtype config context | ctxtype -> config context where
   getContext :: String -> Maybe config -> Effect (Maybe context)
 
 data Context2D = Context2D
-data WebGL = WebGL (Maybe WebGL.ContextAttributes)
-data WebGL2 = WebGL2 (Maybe WebGL.ContextAttributes)
+data WebGL = WebGL (Maybe GL.ContextAttributes)
+data WebGL2 = WebGL2 (Maybe GL.ContextAttributes)
 data WebGPU = WebGPU (Maybe WebGPU.GPUCanvasConfiguration)
 
 instance Context Context2D Unit Graphics.Canvas.Context2D where
   getContext id _ = getCanvasElement id >>= traverse Graphics.Canvas.getContext2D
 
-instance Context WebGL WebGL.ContextAttributes WebGL.GL where
+getWebGlContext :: String -> CanvasElement -> GL.ContextAttributes -> Effect (Maybe GL)
+getWebGlContext string canvas attrs = Nullable.toMaybe <$> GL.getContext canvas string attrs
+
+instance Context WebGL GL.ContextAttributes GL where
   getContext canvasId maybeContextAttrs =
     do
       maybeCanvas <- getCanvasElementById canvasId :: Effect (Maybe CanvasElement)
 
       let
         maybeGetContextForCanvas =
-          traverse WebGL.getContext maybeCanvas :: String -> Maybe (WebGL.ContextAttributes -> Effect (Nullable GL))
+          traverse GL.getContext maybeCanvas :: String -> Maybe (GL.ContextAttributes -> Effect (Nullable GL))
 
         maybeGetWebGlContext =
-          maybeGetContextForCanvas "webgl" :: Maybe (WebGL.ContextAttributes -> Effect (Nullable GL))
+          maybeGetContextForCanvas "webgl" :: Maybe (GL.ContextAttributes -> Effect (Nullable GL))
 
         maybeEffectNullableGl =
           maybeGetWebGlContext <*> maybeContextAttrs :: Maybe (Effect (Nullable GL))
@@ -77,12 +80,12 @@ instance Context WebGL WebGL.ContextAttributes WebGL.GL where
 
       map join effectMaybeMaybeGl :: Effect (Maybe GL)
 
-instance Context WebGL2 WebGL.ContextAttributes WebGL.GL where
+instance Context WebGL2 GL.ContextAttributes GL where
   getContext id config = runMaybeT do
 
     (elem {-:: ?em-} ) <- MaybeT $ (getCanvasElement id {-:: ?f-} )
     let
-      (a {-:: ?a-} ) = map Nullable.toMaybe <$> WebGL.getContext elem "webgl2" <$> config
+      (a {-:: ?a-} ) = map Nullable.toMaybe <$> GL.getContext elem "webgl2" <$> config
     -- (b {-:: ?b-} ) <- MaybeT $ join <$> sequence a
     -- pure b
     MaybeT $ join <$> sequence a
