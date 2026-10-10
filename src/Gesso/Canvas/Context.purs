@@ -6,29 +6,22 @@ import Prelude
 
 import Control.Bind (bindFlipped)
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Nullable (Nullable)
+import Data.Maybe (Maybe)
 import Data.Nullable as Nullable
 import Data.Traversable (sequence, traverse)
 import Effect (Effect)
-import Gesso.Application (WindowMode(..)) as App
-import Gesso.Geometry (Rect, Size) as Geo
 import Graphics.Canvas (CanvasElement, getCanvasElementById)
-import Graphics.Canvas as Canvas
 import Graphics.Canvas as Graphics.Canvas
-import Graphics.WebGL.Raw (GL)
 import Graphics.WebGL.Raw (ContextAttributes, getContext) as GL
-import Halogen.HTML (AttrName(..), attr)
-import Web.DOM (Element)
-import Web.DOM.Element (DOMRect, getBoundingClientRect)
+import Graphics.WebGL.Raw (GL)
 import Web.DOM.NonElementParentNode (getElementById)
-import Web.GPU.GPUCanvasConfiguration (GPUCanvasConfiguration) as WebGPU
-import Web.GPU.GPUCanvasContext (GPUCanvasContext, configure) as WebGPU
-import Web.GPU.HTMLCanvasElement (getContext) as WebGPU
+import Web.GPU.GPUCanvasConfiguration (GPUCanvasConfiguration)
+import Web.GPU.GPUCanvasContext (GPUCanvasContext)
+import Web.GPU.GPUCanvasContext (configure) as GPU
+import Web.GPU.HTMLCanvasElement (getContext) as GPU
 import Web.HTML (HTMLCanvasElement, window)
 import Web.HTML.HTMLCanvasElement (fromElement)
-import Web.HTML.HTMLDocument (toNonElementParentNode, HTMLDocument)
-import Web.HTML.HTMLDocument.VisibilityState as VisibilityState
+import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.Window (document)
 
 getCanvasElement :: String -> Effect (Maybe CanvasElement)
@@ -49,7 +42,7 @@ class RenderingContext ctxtype config context | ctxtype -> config context where
 data Context2D = Context2D
 data WebGL = WebGL (Maybe GL.ContextAttributes)
 data WebGL2 = WebGL2 (Maybe GL.ContextAttributes)
-data WebGPU = WebGPU (Maybe WebGPU.GPUCanvasConfiguration)
+data WebGPU = WebGPU (Maybe GPUCanvasConfiguration)
 
 -- TODO replace Unit
 instance RenderingContext Context2D Unit Graphics.Canvas.Context2D where
@@ -70,12 +63,9 @@ instance RenderingContext WebGL GL.ContextAttributes GL where
 instance RenderingContext WebGL2 GL.ContextAttributes GL where
   getContext = getWebGlContext "webgl2"
 
--- instance RenderingContext WebGPU WebGPU.GPUCanvasConfiguration WebGPU.GPUCanvasContext where
---   getContext id config = do
---     mElem <- getCanvasHTMLElement id
---     do
---       elem <- mElem
---       ctx <- WebGPU.getContext elem
---       cfg <- config
---       WebGPU.configure ctx cfg
---       pure ctx
+instance RenderingContext WebGPU GPUCanvasConfiguration GPUCanvasContext where
+  getContext id config = runMaybeT do
+    canvas <- MaybeT $ getCanvasHTMLElement id
+    context <- MaybeT $ GPU.getContext canvas
+    MaybeT $ traverse (GPU.configure context) config
+    pure context
