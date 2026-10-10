@@ -42,8 +42,8 @@ getCanvasHTMLElement id =
 
 -- make a ContextKind?
 
-class Context :: Type -> Type -> Type -> Constraint
-class Context ctxtype config context | ctxtype -> config context where
+class RenderingContext :: Type -> Type -> Type -> Constraint
+class RenderingContext ctxtype config context | ctxtype -> config context where
   getContext :: String -> Maybe config -> Effect (Maybe context)
 
 data Context2D = Context2D
@@ -52,7 +52,7 @@ data WebGL2 = WebGL2 (Maybe GL.ContextAttributes)
 data WebGPU = WebGPU (Maybe WebGPU.GPUCanvasConfiguration)
 
 -- TODO replace Unit
-instance Context Context2D Unit Graphics.Canvas.Context2D where
+instance RenderingContext Context2D Unit Graphics.Canvas.Context2D where
   getContext id _ = getCanvasElement id >>= traverse Graphics.Canvas.getContext2D
 
 getWebGlContext :: String -> String -> Maybe GL.ContextAttributes -> Effect (Maybe GL)
@@ -64,13 +64,13 @@ getWebGlContext glType id mConfig = do
   getContext' :: CanvasElement -> GL.ContextAttributes -> Effect (Maybe GL)
   getContext' can att = Nullable.toMaybe <$> GL.getContext can glType att
 
-instance Context WebGL GL.ContextAttributes GL where
+instance RenderingContext WebGL GL.ContextAttributes GL where
   getContext = getWebGlContext "webgl"
 
-instance Context WebGL2 GL.ContextAttributes GL where
+instance RenderingContext WebGL2 GL.ContextAttributes GL where
   getContext = getWebGlContext "webgl2"
 
--- instance Context WebGPU WebGPU.GPUCanvasConfiguration WebGPU.GPUCanvasContext where
+-- instance RenderingContext WebGPU WebGPU.GPUCanvasConfiguration WebGPU.GPUCanvasContext where
 --   getContext id config = do
 --     mElem <- getCanvasHTMLElement id
 --     do
