@@ -32,7 +32,6 @@ import Gesso.Geometry.Internal (Scalers, mkScalers) as Geo
 import Gesso.Interactions.Internal as GI
 import Gesso.State (Compare, History)
 import Gesso.Time as T
-import Graphics.Canvas (Context2D)
 import Halogen (liftEffect)
 import Halogen as H
 import Halogen.HTML (memoized, canvas) as HH
@@ -100,24 +99,25 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- |   frame callback runs.
 -- | - `visibility` is the document visibility state, used for pausing the
 -- |   application when the window is hidden or minimized.
-type State state input output =
+type State state input output context =
   { name :: String
   , localState :: state
   , viewBox :: Geo.Rect
   , window :: App.WindowMode
   , behavior ::
-      { render :: App.RenderFunction state
+      { render :: App.RenderFunction context state
       , update :: App.UpdateFunction state
       , fixed :: App.FixedUpdate state
       , interactions :: GI.Interactions state
       , output :: App.OutputProducer state output
       , input :: App.InputReceiver state input
+      , getContext :: String -> Effect (Maybe context)
       }
   , dom ::
       Maybe
         { clientRect :: Geo.Rect
         , canvas :: GEl.Canvas
-        , context :: Context2D
+        , context :: context
         , scalers :: Geo.Scalers
         }
   , subscriptions ::
@@ -190,11 +190,11 @@ wrapHalogenIO { dispose, messages, query } =
 -- `render` is memoized so that it only re-renders when the dimensions of the
 -- canvas element change.
 component
-  :: forall state input output m
+  :: forall state input output context m
    . MonadAff m
   => H.Component
        (CanvasInput input)
-       (App.AppSpec state input output)
+       (App.AppSpec state input output context)
        (CanvasOutput output)
        m
 component =
@@ -215,9 +215,9 @@ component =
 -- | input. The rest require Effects and are created in `initialize`, except for
 -- | the update queues, which start empty.
 initialState
-  :: forall state input output
-   . App.AppSpec state input output
-  -> State state input output
+  :: forall state input output context
+   . App.AppSpec state input output context
+  -> State state input output context
 initialState { name, window, initialState: localState, viewBox, behavior } =
   { name
   , localState
@@ -237,8 +237,8 @@ initialState { name, window, initialState: localState, viewBox, behavior } =
 -- | element takes up on the page, while the HTML attributes control the
 -- | coordinate system of the drawing area.
 renderComponent
-  :: forall state input output slots m
-   . State state input output
+  :: forall state input output context slots m
+   . State state input output context
   -> H.ComponentHTML (Action state) slots m
 renderComponent { name, dom, window, behavior: { interactions } } =
   HH.canvas $ [ id name, GEl.style window, tabIndex 0 ]
@@ -265,10 +265,10 @@ renderComponent { name, dom, window, behavior: { interactions } } =
 -- | - `FrameRequested`: An animation frame has been requested, save its ID.
 -- | - `FrameFired`: The requested animation frame has fired, forget its ID.
 handleAction
-  :: forall state input output slots m
+  :: forall state input output context slots m
    . MonadAff m
   => Action state
-  -> H.HalogenM (State state input output) (Action state) slots
+  -> H.HalogenM (State state input output context) (Action state) slots
        (CanvasOutput output)
        m
        Unit
@@ -368,9 +368,9 @@ handleAction = case _ of
 -- | `Context2D` and `clientRect`. Create scaling functions based on the
 -- | `viewBox` and `clientRect`.
 initialize
-  :: forall state input output slots o m
+  :: forall state input output context slots o m
    . MonadAff m
-  => H.HalogenM (State state input output) (Action state) slots o m Unit
+  => H.HalogenM (State state input output context) (Action state) slots o m Unit
 initialize = do
   subscriptions <- mkSubs
   state <- H.get
@@ -389,8 +389,8 @@ initialize = do
       , visibility
       }
 
-  mkDom { name, viewBox } = do
-    context <- GEl.getContextByAppName name
+  mkDom { name, viewBox, behavior: { getContext } } = do
+    context <- getContext name
     canvas <- GEl.getCanvasByAppName name
     clientRect <- traverse GEl.getCanvasClientRect canvas
     let scalers = Geo.mkScalers viewBox <$> clientRect
@@ -443,14 +443,14 @@ getFirstFrame = requestAnimationFrame (const $ pure unit)
 -- | the beginning of this tick to the app's output function to determine
 -- | whether to send I/O.
 queueAnimationFrame
-  :: forall state
+  :: forall state context
    . T.Last
   -> (T.Now -> Number)
-  -> Context2D
+  -> context
   -> Geo.Scalers
   -> History state
   -> App.UpdateFunction state
-  -> App.RenderFunction state
+  -> App.RenderFunction context state
   -> (Action state -> Effect Unit)
   -> Effect Unit
 queueAnimationFrame
@@ -499,9 +499,9 @@ tryUpdate scalers update state = do
 -- | Get a new `clientRect` for the `canvas` element and create new scalers for
 -- | it, saving both to the component state.
 updateClientRect
-  :: forall state input output action slots o m
+  :: forall state input output context action slots o m
    . MonadAff m
-  => H.HalogenM (State state input output) action slots o m Unit
+  => H.HalogenM (State state input output context) action slots o m Unit
 updateClientRect = do
   dom' <- H.liftEffect <<< updateDom =<< H.get
   H.modify_ (_ { dom = dom' })
@@ -515,9 +515,9 @@ updateClientRect = do
 
 -- | Unsubscribe from window resize events and paired listener/emitter.
 unsubscribe
-  :: forall state input output action slots o m
+  :: forall state input output context action slots o m
    . MonadAff m
-  => H.HalogenM (State state input output) action slots o m Unit
+  => H.HalogenM (State state input output context) action slots o m Unit
 unsubscribe =
   H.gets _.subscriptions
     >>= traverse_ \subs -> do
@@ -527,9 +527,9 @@ unsubscribe =
 -- | Subscribe to window resize events and fire the `HandleResize` `Action` when
 -- | they occur.
 subscribeResize
-  :: forall state input output slots o m
+  :: forall state input output context slots o m
    . MonadAff m
-  => H.HalogenM (State state input output) (Action state) slots o m
+  => H.HalogenM (State state input output context) (Action state) slots o m
        H.SubscriptionId
 subscribeResize = do
   wnd <- H.liftEffect window
@@ -542,9 +542,9 @@ subscribeResize = do
 -- | Subscribe to document visibility events and fire the
 -- | `HandleVisibilityChange` `Action` when they occur.
 subscribeVisibility
-  :: forall state input output slots o m
+  :: forall state input output context slots o m
    . MonadAff m
-  => H.HalogenM (State state input output) (Action state) slots o m
+  => H.HalogenM (State state input output context) (Action state) slots o m
        H.SubscriptionId
 subscribeVisibility = do
   doc <- H.liftEffect $ document =<< window
@@ -557,12 +557,12 @@ subscribeVisibility = do
 -- | Save the updated local state of the application. Compare the old and new
 -- | states in the `OutputProducer` function and send output, if necessary.
 saveNewState
-  :: forall state input output slots m
+  :: forall state input output context slots m
    . MonadAff m
   => T.Delta
   -> Geo.Scalers
   -> Compare state
-  -> H.HalogenM (State state input output) (Action state) slots
+  -> H.HalogenM (State state input output context) (Action state) slots
        (CanvasOutput output)
        m
        Unit
@@ -575,11 +575,11 @@ saveNewState delta scalers stateVersions = do
 -- | Receiving input from the host application. Convert it into an `Update` and
 -- | call `handleAction` to add it to the update queue.
 handleQuery
-  :: forall state input output slots a m
+  :: forall state input output context slots a m
    . MonadAff m
   => CanvasInput input a
   -> H.HalogenM
-       (State state input output)
+       (State state input output context)
        (Action state)
        slots
        (CanvasOutput output)

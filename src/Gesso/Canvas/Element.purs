@@ -4,7 +4,6 @@ module Gesso.Canvas.Element
   ( Canvas
   , getCanvasByAppName
   , getCanvasClientRect
-  , getContextByAppName
   , style
   , toSizeProps
   , visibilityState
@@ -16,12 +15,10 @@ import CSS (CSS)
 import CSS as CSS
 import Data.Int (round)
 import Data.Maybe (Maybe, fromMaybe)
-import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, runEffectFn1)
 import Gesso.Application (WindowMode(..)) as App
 import Gesso.Geometry (Rect, Size) as Geo
-import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
 import Halogen.HTML (AttrName(..), attr)
 import Halogen.HTML.Properties (IProp, CSSPixel)
 import Halogen.HTML.Properties (width, height) as HP
@@ -58,10 +55,6 @@ getCanvasClientRect (Canvas canvas) =
 
 fromDOMRect :: DOMRect -> Geo.Rect
 fromDOMRect { left, top, width, height } = { x: left, y: top, width, height }
-
--- | Attempt to get the `Context2D` for this component's `canvas` element.
-getContextByAppName :: String -> Effect (Maybe Context2D)
-getContextByAppName name = getCanvasElementById name >>= traverse getContext2D
 
 -- | Get size and positioning CSS based on the app's window mode.
 style :: forall r i. App.WindowMode -> IProp (style :: String | r) i

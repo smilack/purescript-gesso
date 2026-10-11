@@ -55,8 +55,8 @@ import Web.HTML.HTMLElement (HTMLElement)
 -- | Launch a Gesso component in the page body, in an `Effect` context,
 -- | returning a `Fiber` for a `CanvasIO` record for the component.
 launch
-  :: forall state input output
-   . GApp.AppSpec state input output
+  :: forall state input output context
+   . GApp.AppSpec state input output context
   -> Effect (Fiber (CanvasIO input output Aff))
 launch = launchAff <<< make
 
@@ -64,52 +64,52 @@ launch = launchAff <<< make
 -- | selector, in an `Effect` context, returning a `Fiber` for a `CanvasIO`
 -- | record for the component.
 launchIn
-  :: forall state input output
+  :: forall state input output context
    . String
-  -> GApp.AppSpec state input output
+  -> GApp.AppSpec state input output context
   -> Effect (Fiber (CanvasIO input output Aff))
 launchIn = launchAff <.. makeIn
 
 -- | Launch a Gesso component in the given element, in an `Effect` context,
 -- | returning a `Fiber` for a `CanvasIO` record for the component.
 launchInElement
-  :: forall state input output
+  :: forall state input output context
    . HTMLElement
-  -> GApp.AppSpec state input output
+  -> GApp.AppSpec state input output context
   -> Effect (Fiber (CanvasIO input output Aff))
 launchInElement = launchAff <.. makeInElement
 
 -- | Launch a Gesso component in the page body, in an `Effect` context,
 -- | discarding the `Fiber`.
 launch_
-  :: forall state input output
-   . GApp.AppSpec state input output
+  :: forall state input output context
+   . GApp.AppSpec state input output context
   -> Effect Unit
 launch_ = void <<< launch
 
 -- | Launch a Gesso component in the first element matching the given query
 -- | selector, in an `Effect` context, discarding the `Fiber`.
 launchIn_
-  :: forall state input output
+  :: forall state input output context
    . String
-  -> GApp.AppSpec state input output
+  -> GApp.AppSpec state input output context
   -> Effect Unit
 launchIn_ = void <.. launchIn
 
 -- | Launch a Gesso component in the given element, in an `Effect` context,
 -- | discarding the `Fiber`.
 launchInElement_
-  :: forall state input output
+  :: forall state input output context
    . HTMLElement
-  -> GApp.AppSpec state input output
+  -> GApp.AppSpec state input output context
   -> Effect Unit
 launchInElement_ = void <.. launchInElement
 
 -- | Launch a Gesso component in the page body, in an `Aff` context, returning a
 -- | `CanvasIO` record for the component.
 make
-  :: forall state input output
-   . GApp.AppSpec state input output
+  :: forall state input output context
+   . GApp.AppSpec state input output context
   -> Aff (CanvasIO input output Aff)
 make = makeIn "body"
 
@@ -117,9 +117,9 @@ make = makeIn "body"
 -- | selector, in an `Aff` context, returning a `CanvasIO` record for the
 -- | component.
 makeIn
-  :: forall state input output
+  :: forall state input output context
    . String
-  -> GApp.AppSpec state input output
+  -> GApp.AppSpec state input output context
   -> Aff (CanvasIO input output Aff)
 makeIn selector spec = do
   HAff.awaitLoad
@@ -132,32 +132,35 @@ makeIn selector spec = do
 -- | Launch a Gesso component in the given element, in an `Aff` context,
 -- | returning a `CanvasIO` record for the component.
 makeInElement
-  :: forall state input output
+  :: forall state input output context
    . HTMLElement
-  -> GApp.AppSpec state input output
+  -> GApp.AppSpec state input output context
   -> Aff (CanvasIO input output Aff)
 makeInElement element spec =
   map wrapHalogenIO $ runUI component spec element
 
 -- | Launch a Gesso component in the page body, in an `Aff` context, discarding
 -- | the result.
-make_ :: forall state input output. GApp.AppSpec state input output -> Aff Unit
+make_
+  :: forall state input output context
+   . GApp.AppSpec state input output context
+  -> Aff Unit
 make_ = apathize <<< make
 
 -- | Launch a Gesso component in the first element matching the given query
 -- | selector, in an `Aff` context, discarding the result.
 makeIn_
-  :: forall state input output
+  :: forall state input output context
    . String
-  -> GApp.AppSpec state input output
+  -> GApp.AppSpec state input output context
   -> Aff Unit
 makeIn_ = apathize <.. makeIn
 
 -- | Launch a Gesso component in the given element, in an `Aff` context,
 -- | discarding the result.
 makeInElement_
-  :: forall state input output
+  :: forall state input output context
    . HTMLElement
-  -> GApp.AppSpec state input output
+  -> GApp.AppSpec state input output context
   -> Aff Unit
 makeInElement_ = apathize <.. makeInElement

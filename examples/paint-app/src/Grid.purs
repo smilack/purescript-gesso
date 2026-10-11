@@ -23,6 +23,7 @@ import Gesso.Geometry as GGeo
 import Gesso.Interactions as GInt
 import Gesso.State as GSt
 import Gesso.Time as GTime
+import Graphics.Canvas (Context2D)
 import Graphics.Canvas as Canvas
 import Halogen.HTML as HH
 import Record (merge) as Record
@@ -77,7 +78,7 @@ localState =
     , mouseDown: false
     }
 
-appSpec :: GApp.AppSpec CanvasState CanvasIO CanvasIO
+appSpec :: GApp.AppSpec CanvasState CanvasIO CanvasIO Context2D
 appSpec =
   { name: "canvas"
   , initialState: localState

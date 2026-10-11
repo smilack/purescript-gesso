@@ -14,11 +14,11 @@ import Effect (Effect)
 import Gesso.Geometry (Scalers)
 import Gesso.State (Compare, States)
 import Gesso.Time (Delta, Interval)
-import Graphics.Canvas (Context2D)
 
 -- | A function that draws on the component. It knows the following:
 -- |
--- | - `Context2D` is the drawing context of the canvas element
+-- | - `context` is the drawing context of the canvas element, determined by the
+-- |   context selection in the `AppBehavior`
 -- | - `Delta` is a record containing current and previous timestamps and the
 -- |   time elapsed since the previous frame.
 -- | - `Scalers` is a record containing scaling information for transforming
@@ -29,8 +29,8 @@ import Graphics.Canvas (Context2D)
 -- |
 -- | The render function may run any operations in `Effect`, not just functions
 -- | related to drawing on the canvas.
-type RenderFunction state =
-  Context2D -> Delta -> Scalers -> States state -> Effect Unit
+type RenderFunction context state =
+  context -> Delta -> Scalers -> States state -> Effect Unit
 
 -- | An function that may update the application state. It runs on every frame,
 -- | before the render function. It knows the following:

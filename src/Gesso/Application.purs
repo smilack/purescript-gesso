@@ -10,12 +10,15 @@ module Gesso.Application
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Gesso.Application.Behavior (FixedUpdate, InputReceiver, OutputProducer, RenderFunction, UpdateFunction)
+import Effect (Effect)
 import Gesso.Application.Behavior (FixedUpdate, InputReceiver, OutputProducer, RenderFunction, TimestampedUpdate, UpdateFunction) as Exports
+import Gesso.Application.Behavior (FixedUpdate, InputReceiver, OutputProducer, RenderFunction, UpdateFunction)
+import Gesso.Canvas.Context (getDefault2D)
 import Gesso.Geometry (Area, Rect)
 import Gesso.Interactions (Interactions)
 import Gesso.Interactions (default) as Interactions
 import Gesso.Time (never)
+import Graphics.Canvas (Context2D)
 
 -- | `AppSpec` holds information about the setup and behavior of a Gesso
 -- | component.
@@ -26,12 +29,12 @@ import Gesso.Time (never)
 -- | - `viewBox` is the desired dimensions for the drawing area.
 -- | - `window` defines how the screen element should size and position itself.
 -- | - `behavior` contains functions that control i/o, updates, and rendering.
-type AppSpec state input output =
+type AppSpec state input output context =
   { name :: String
   , initialState :: state
   , viewBox :: Rect
   , window :: WindowMode
-  , behavior :: AppBehavior state input output
+  , behavior :: AppBehavior state input output context
   }
 
 -- | `AppBehavior` holds the functions that make an application run.
@@ -44,20 +47,21 @@ type AppSpec state input output =
 -- |   a parent component.
 -- | - `input` defines how the component's state should change in response to
 -- |   receiving input from a parent component.
-type AppBehavior state input output =
-  { render :: RenderFunction state
+type AppBehavior state input output context =
+  { render :: RenderFunction context state
   , update :: UpdateFunction state
   , fixed :: FixedUpdate state
   , interactions :: Interactions state
   , output :: OutputProducer state output
   , input :: InputReceiver state input
+  , getContext :: String -> Effect (Maybe context)
   }
 
 -- | A default `AppBehavior` which can be modified piecemeal like Halogen's
 -- | `EvalSpec`. It does nothing on its own.
 defaultBehavior
   :: forall state input output
-   . AppBehavior state input output
+   . AppBehavior state input output Context2D
 defaultBehavior =
   { render: \_ _ _ _ -> pure unit
   , update: \_ _ _ -> pure Nothing
@@ -68,6 +72,7 @@ defaultBehavior =
   , interactions: Interactions.default
   , output: \_ _ _ -> pure Nothing
   , input: \_ _ _ _ -> pure Nothing
+  , getContext: getDefault2D
   }
 
 -- | The modes that determine the CSS for sizing and positioning a Gesso canvas
