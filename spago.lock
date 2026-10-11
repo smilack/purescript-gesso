@@ -246,6 +246,20 @@
         "test": {
           "dependencies": []
         }
+      },
+      "gesso-example-webgl": {
+        "path": "examples/webgl",
+        "core": {
+          "dependencies": [
+            "canvas",
+            "effect",
+            "gesso",
+            "prelude"
+          ]
+        },
+        "test": {
+          "dependencies": []
+        }
       }
     },
     "package_set": {
