@@ -1,5 +1,6 @@
 module Gesso.Application.Behavior
   ( FixedUpdate
+  , InitFunction
   , InputReceiver
   , OutputProducer
   , RenderFunction
@@ -31,6 +32,10 @@ import Gesso.Time (Delta, Interval)
 -- | related to drawing on the canvas.
 type RenderFunction context state =
   context -> Delta -> Scalers -> States state -> Effect Unit
+
+-- | TODO
+type InitFunction context state =
+  context -> UpdateFunction state
 
 -- | An function that may update the application state. It runs on every frame,
 -- | before the render function. It knows the following:

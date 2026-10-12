@@ -11,8 +11,8 @@ import Prelude
 
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Gesso.Application.Behavior (FixedUpdate, InputReceiver, OutputProducer, RenderFunction, TimestampedUpdate, UpdateFunction) as Exports
-import Gesso.Application.Behavior (FixedUpdate, InputReceiver, OutputProducer, RenderFunction, UpdateFunction)
+import Gesso.Application.Behavior (FixedUpdate, InitFunction, InputReceiver, OutputProducer, RenderFunction, TimestampedUpdate, UpdateFunction) as Exports
+import Gesso.Application.Behavior (FixedUpdate, InitFunction, InputReceiver, OutputProducer, RenderFunction, UpdateFunction)
 import Gesso.Canvas.Context (getDefault2D)
 import Gesso.Geometry (Area, Rect)
 import Gesso.Interactions (Interactions)
@@ -40,6 +40,7 @@ type AppSpec state input output context =
 -- | `AppBehavior` holds the functions that make an application run.
 -- |
 -- | - `render` draws on the component every animation frame.
+-- | - `init` TODO
 -- | - `update` runs on each animation frame, just before `render`.
 -- | - `fixed` runs at a set interval of time.
 -- | - `interactions` are events which will be attached to the canvas element.
@@ -49,6 +50,7 @@ type AppSpec state input output context =
 -- |   receiving input from a parent component.
 type AppBehavior state input output context =
   { render :: RenderFunction context state
+  , init :: InitFunction context state
   , update :: UpdateFunction state
   , fixed :: FixedUpdate state
   , interactions :: Interactions state
@@ -64,6 +66,7 @@ defaultBehavior
    . AppBehavior state input output Context2D
 defaultBehavior =
   { render: \_ _ _ _ -> pure unit
+  , init: \_ _ _ _ -> pure Nothing
   , update: \_ _ _ -> pure Nothing
   , fixed:
       { interval: never

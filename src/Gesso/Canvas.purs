@@ -64,6 +64,7 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- | - `window` defines how the screen element should size and position itself.
 -- | - `behavior` contains functions that make the application do things.
 -- |   - `render` draws on the component every animation frame.
+-- |   - `init` TODO
 -- |   - `update` runs on each animation frame, just before `render`.
 -- |   - `fixed` runs at a set interval of time.
 -- |   - `interactions` are events attached to the canvas element.
@@ -106,6 +107,7 @@ type State state input output context =
   , window :: App.WindowMode
   , behavior ::
       { render :: App.RenderFunction context state
+      , init :: App.InitFunction context state
       , update :: App.UpdateFunction state
       , fixed :: App.FixedUpdate state
       , interactions :: GI.Interactions state
@@ -273,7 +275,11 @@ handleAction
        m
        Unit
 handleAction = case _ of
-  Initialize -> initialize *> handleAction FirstTick
+  Initialize -> initialize *> handleAction FirstTick *> do
+    -- Run init after creating the timers
+    { behavior: { init }, dom } <- H.get
+    let mInit = init <$> _.context <$> dom
+    traverse_ handleAction (QueueUpdate <$> mInit)
 
   HandleResize -> updateClientRect
 
