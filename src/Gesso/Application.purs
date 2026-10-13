@@ -4,6 +4,7 @@ module Gesso.Application
   , AppSpec
   , WindowMode(..)
   , defaultBehavior
+  , nominalBehavior
   , module Exports
   ) where
 
@@ -76,6 +77,29 @@ defaultBehavior =
   , output: \_ _ _ -> pure Nothing
   , input: \_ _ _ _ -> pure Nothing
   , getContext: getDefault2D
+  }
+
+-- | A totally blank `AppBehavior` which can be modified piecemeal like
+-- | Halogen's `EvalSpec`. More general than `defaultBehavior` because that
+-- | provides a working value for `getContext`, which this does not. Using
+-- | `defaultBehavior` with a context other than `Context2D` requires updating
+-- | `init` and `render` as well. (`render` is almost always updated, but `init`
+-- | may not be.)
+nominalBehavior
+  :: forall state input output context
+   . AppBehavior state input output context
+nominalBehavior =
+  { render: \_ _ _ _ -> pure unit
+  , init: \_ _ _ _ -> pure Nothing
+  , update: \_ _ _ -> pure Nothing
+  , fixed:
+      { interval: never
+      , function: \_ _ _ -> pure Nothing
+      }
+  , interactions: Interactions.default
+  , output: \_ _ _ -> pure Nothing
+  , input: \_ _ _ _ -> pure Nothing
+  , getContext: \_ -> pure Nothing
   }
 
 -- | The modes that determine the CSS for sizing and positioning a Gesso canvas

@@ -7,7 +7,7 @@ import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Console (logShow)
 import Gesso (launch_)
-import Gesso.Application (WindowMode(..), defaultBehavior)
+import Gesso.Application (WindowMode(..), nominalBehavior)
 import Gesso.Canvas.Context (getDefaultWebGL)
 import Gesso.Geometry (Scalers, fromMouseEvent, null)
 import Gesso.Interactions (MouseInteraction, onMouseDown)
@@ -24,7 +24,7 @@ main = launch_
   , initialState: { r: 0.0, g: 0.0, b: 0.0 }
   , viewBox: null
   , window: Fullscreen
-  , behavior: defaultBehavior
+  , behavior: nominalBehavior
       { render = render
       , init = init
       , getContext = getDefaultWebGL
