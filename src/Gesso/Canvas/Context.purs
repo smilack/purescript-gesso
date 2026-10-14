@@ -2,6 +2,10 @@
 module Gesso.Canvas.Context
   ( getDefault2D
   , get2D
+  , defaultContext2DAttributes
+  , Context2DAttributes
+  , Context2DColorSpace(..)
+  , Context2DColorType(..)
   , getDefaultWebGL
   , getWebGL
   , getDefaultWebGL2
@@ -11,17 +15,22 @@ module Gesso.Canvas.Context
   , getWebGPU
   , module Exports
   , getCanvasHTMLElementById
+  , sRGB
+  , displayP3
+  , unorm8
+  , float16
   ) where
 
 import Prelude
 
 import Control.Bind (bindFlipped)
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Nullable as Nullable
 import Data.Traversable (sequence, traverse)
 import Effect (Effect)
-import Graphics.Canvas (CanvasElement, getCanvasElementById, Context2D, getContext2D)
+import Effect.Uncurried (EffectFn2, runEffectFn2)
+import Graphics.Canvas (CanvasElement, getCanvasElementById, Context2D)
 import Graphics.Canvas (getCanvasElementById) as Exports
 import Graphics.WebGL.Raw (ContextAttributes, getContext) as GL
 import Graphics.WebGL.Raw (GL)
@@ -49,13 +58,50 @@ getCanvasHTMLElementById id =
 -- │ 2D │
 -- └────┘
 
--- TODO: going to need a custom Context2D in order to pass attrs - need to make sure it's compatible with Graphics.Canvas
-
 getDefault2D :: String -> Effect (Maybe Context2D)
-getDefault2D = get2D Nothing
+getDefault2D = get2D defaultContext2DAttributes
 
-get2D :: forall attrs. attrs -> String -> Effect (Maybe Context2D)
-get2D _ id = getCanvasElementById id >>= traverse getContext2D
+foreign import getContext2DImpl :: EffectFn2 Context2DAttributes CanvasElement Context2D
+
+getContext2D :: Context2DAttributes -> CanvasElement -> Effect Context2D
+getContext2D = runEffectFn2 getContext2DImpl
+
+get2D :: Context2DAttributes -> String -> Effect (Maybe Context2D)
+get2D attrs id = getCanvasElementById id >>= traverse (getContext2D attrs)
+
+-- https://html.spec.whatwg.org/multipage/canvas.html#canvasrenderingcontext2dsettings
+defaultContext2DAttributes :: Context2DAttributes
+defaultContext2DAttributes =
+  { alpha: true
+  , colorSpace: sRGB
+  , colorType: unorm8
+  , desynchronized: false
+  , willReadFrequently: false
+  }
+
+type Context2DAttributes =
+  { alpha :: Boolean
+  , colorSpace :: Context2DColorSpace
+  , colorType :: Context2DColorType
+  , desynchronized :: Boolean
+  , willReadFrequently :: Boolean
+  }
+
+newtype Context2DColorSpace = Context2DColorSpace String
+
+sRGB :: Context2DColorSpace
+sRGB = Context2DColorSpace "srgb"
+
+displayP3 :: Context2DColorSpace
+displayP3 = Context2DColorSpace "display-p3"
+
+newtype Context2DColorType = Context2DColorType String
+
+unorm8 :: Context2DColorType
+unorm8 = Context2DColorType "unorm8"
+
+float16 :: Context2DColorType
+float16 = Context2DColorType "float16"
 
 -- ┌───────┐
 -- │ WebGL │
