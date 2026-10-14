@@ -7,12 +7,10 @@ import Data.Maybe (Maybe(..))
 import Data.Number (cos, pi, sin, (%))
 import Data.Traversable (traverse_)
 import Effect (Effect)
-import Effect.Console (logShow)
 import Gesso (launch_)
 import Gesso.Application (WindowMode(..), nominalBehavior)
 import Gesso.Canvas.Context (getDefaultWebGL)
-import Gesso.Geometry (Scalers, fromMouseEvent, null)
-import Gesso.Interactions (MouseInteraction, onMouseDown)
+import Gesso.Geometry (Scalers, null)
 import Gesso.State (States)
 import Gesso.Time (Delta)
 import Graphics.WebGL.Raw (GL)
@@ -28,7 +26,7 @@ type State = Maybe
 
 main :: Effect Unit
 main = launch_
-  { name: "hello"
+  { name: "webgl"
   , initialState: Nothing
   , viewBox: null
   , window: Fullscreen
@@ -40,11 +38,7 @@ main = launch_
   }
 
 init :: GL -> Delta -> Scalers -> State -> Effect (Maybe State)
-init gl _ { canvas } _ = do
-  GL.viewport gl (round canvas.width) (round canvas.height)
-  GL.clearColor gl 0.0 0.0 0.0 1.0
-  GL.clear gl GL.colorBufferBit
-
+init gl _ _ _ = do
   vertexShader <- createShader GL.vertexShader vertexShaderSource
   fragmentShader <- createShader GL.fragmentShader fragmentShaderSource
   program <- createProgram [ vertexShader, fragmentShader ]
