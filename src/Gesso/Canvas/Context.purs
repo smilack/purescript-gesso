@@ -1,4 +1,4 @@
--- | TODO docs
+-- | Functions for getting a variety of canvas rendering contexts.
 module Gesso.Canvas.Context
   ( getDefault2D
   , get2D
@@ -36,9 +36,11 @@ import Web.GPU.HTMLCanvasElement (getContext) as GPU
 -- │ 2D │
 -- └────┘
 
+-- | Get a `CanvasRenderingContext2D` with default settings.
 getDefault2D :: String -> Effect (Maybe Context2D)
 getDefault2D = get2D defaultContext2DSettings
 
+-- | Get a `CanvasRenderingContext2D` with custom settings.
 get2D :: CanvasRenderingContext2DSettings -> String -> Effect (Maybe Context2D)
 get2D attrs id = getCanvasElementById id >>= traverse (getContext2D attrs)
 
@@ -51,19 +53,24 @@ getContext2D = runEffectFn2 getContext2DImpl
 -- │ WebGL │
 -- └───────┘
 
+-- | Get a `WebGLRenderingContext` with default settings.
 getDefaultWebGL :: String -> Effect (Maybe GL)
 getDefaultWebGL = getWebGL defaultWebGLContextAttributes
 
+-- | Get a `WebGLRenderingContext` with custom settings.
 getWebGL :: GL.ContextAttributes -> String -> Effect (Maybe GL)
 getWebGL = getWebGLContext "webgl"
 
+-- | Get a `WebGL2RenderingContext` with default settings.
 getDefaultWebGL2 :: String -> Effect (Maybe GL)
 getDefaultWebGL2 = getWebGL2 defaultWebGLContextAttributes
 
+-- | Get a `WebGL2RenderingContext` with custom settings.
 getWebGL2 :: GL.ContextAttributes -> String -> Effect (Maybe GL)
 getWebGL2 = getWebGLContext "webgl2"
 
--- https://registry.khronos.org/webgl/specs/latest/1.0/#WEBGLCONTEXTATTRIBUTES
+-- | Default values for `WebGLRenderingContext`, based on the
+-- | [WebGL Specification](https://registry.khronos.org/webgl/specs/latest/1.0/#WEBGLCONTEXTATTRIBUTES)
 defaultWebGLContextAttributes :: GL.ContextAttributes
 defaultWebGLContextAttributes =
   { alpha: true
@@ -87,11 +94,13 @@ getWebGLContext glType attrs id = do
 -- │ WebGPU │
 -- └────────┘
 
+-- | Get a `GPUCanvasContext` with default settings.
 getDefaultWebGPU :: String -> Effect (Maybe GPUCanvasContext)
 getDefaultWebGPU id = runMaybeT do
   canvas <- MaybeT $ getCanvasHTMLElementById id
   MaybeT $ GPU.getContext canvas
 
+-- | Get a `GPUCanvasContext` with custom settings.
 getWebGPU :: GPUCanvasConfiguration -> String -> Effect (Maybe GPUCanvasContext)
 getWebGPU config id = runMaybeT do
   context <- MaybeT $ getDefaultWebGPU id
