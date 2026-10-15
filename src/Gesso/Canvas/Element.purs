@@ -3,6 +3,7 @@
 module Gesso.Canvas.Element
   ( Canvas
   , getCanvasByAppName
+  , getCanvasHTMLElementById
   , getCanvasClientRect
   , style
   , toSizeProps
@@ -13,6 +14,7 @@ import Prelude
 
 import CSS (CSS)
 import CSS as CSS
+import Control.Bind (bindFlipped)
 import Data.Int (round)
 import Data.Maybe (Maybe, fromMaybe)
 import Effect (Effect)
@@ -25,6 +27,7 @@ import Halogen.HTML.Properties (width, height) as HP
 import Web.DOM.Element (Element, DOMRect, getBoundingClientRect)
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.HTML (window)
+import Web.HTML.HTMLCanvasElement (fromElement, HTMLCanvasElement)
 import Web.HTML.HTMLDocument (toNonElementParentNode, HTMLDocument)
 import Web.HTML.HTMLDocument.VisibilityState as VisibilityState
 import Web.HTML.Window (document)
@@ -33,6 +36,9 @@ import Web.HTML.Window (document)
 -- | module.
 newtype Canvas = Canvas Element
 
+getCanvasHTMLElementById :: String -> Effect (Maybe HTMLCanvasElement)
+getCanvasHTMLElementById = mapCanvasElement (bindFlipped fromElement)
+
 -- | Wrapper for `getElementById` which returns a `Canvas`.
 -- |
 -- | `getElementById` from `Web.DOM.NonElementParentNode`, which returns a
@@ -40,12 +46,13 @@ newtype Canvas = Canvas Element
 -- | `Graphics.Canvas`, which returns a `Graphics.Canvas.CanvasElement`, so
 -- | they're unfortunately incompatible.
 getCanvasByAppName :: String -> Effect (Maybe Canvas)
-getCanvasByAppName name =
+getCanvasByAppName = mapCanvasElement (map Canvas)
+
+mapCanvasElement :: forall a. (Maybe Element -> Maybe a) -> String -> Effect (Maybe a)
+mapCanvasElement f id =
   window
-    >>= document
-      >>> map toNonElementParentNode
-    >>= getElementById name
-      >>> map (map Canvas)
+    >>= (document >>> map toNonElementParentNode)
+    >>= (getElementById id >>> map f)
 
 -- | Get the bounding client rect for a `Canvas` element and convert it to a
 -- | `ClientRect` value.
