@@ -53,6 +53,6 @@ The `gl` instance doesn't need to be part of the state because it's passed as an
 
 ## Sample output
 
-[See this example in action]()
+[See this example in action](https://smilack.github.io/purescript-gesso/examples/webgl/dist/)
 
 ![A triangle on a white background. The triangle gradually changes color as it rotates.](webgl.webm)
