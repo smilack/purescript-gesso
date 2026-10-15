@@ -64,7 +64,8 @@ _gessoCanvas = Proxy :: Proxy "gessoCanvas"
 -- | - `window` defines how the screen element should size and position itself.
 -- | - `behavior` contains functions that make the application do things.
 -- |   - `render` draws on the component every animation frame.
--- |   - `init` TODO
+-- |   - `init` runs once, after the context is created but before the first
+-- |     animation frame.
 -- |   - `update` runs on each animation frame, just before `render`.
 -- |   - `fixed` runs at a set interval of time.
 -- |   - `interactions` are events attached to the canvas element.
