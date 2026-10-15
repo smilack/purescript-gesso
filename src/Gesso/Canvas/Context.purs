@@ -4,8 +4,8 @@ module Gesso.Canvas.Context
   , get2D
   , defaultContext2DAttributes
   , Context2DAttributes
-  , Context2DColorSpace(..)
-  , Context2DColorType(..)
+  , Context2DColorSpace
+  , Context2DColorType
   , getDefaultWebGL
   , getWebGL
   , getDefaultWebGL2
