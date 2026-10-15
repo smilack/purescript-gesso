@@ -1,0 +1,10 @@
+package:
+  dependencies:
+    - canvas
+    - effect
+    - gesso
+    - prelude
+  name: gesso-example-webgl
+  bundle:
+    module: Gesso.Example.WebGL
+    outfile: "dist/example.js"

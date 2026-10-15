@@ -3,31 +3,31 @@
 module Gesso.Canvas.Element
   ( Canvas
   , getCanvasByAppName
+  , getCanvasHTMLElementById
   , getCanvasClientRect
-  , getContextByAppName
   , style
   , toSizeProps
   , visibilityState
+  , WindowMode(..)
   ) where
 
 import Prelude
 
 import CSS (CSS)
 import CSS as CSS
+import Control.Bind (bindFlipped)
 import Data.Int (round)
 import Data.Maybe (Maybe, fromMaybe)
-import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, runEffectFn1)
-import Gesso.Application (WindowMode(..)) as App
-import Gesso.Geometry (Rect, Size) as Geo
-import Graphics.Canvas (Context2D, getCanvasElementById, getContext2D)
+import Gesso.Geometry (Rect, Size, Area) as Geo
 import Halogen.HTML (AttrName(..), attr)
 import Halogen.HTML.Properties (IProp, CSSPixel)
 import Halogen.HTML.Properties (width, height) as HP
 import Web.DOM.Element (Element, DOMRect, getBoundingClientRect)
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.HTML (window)
+import Web.HTML.HTMLCanvasElement (fromElement, HTMLCanvasElement)
 import Web.HTML.HTMLDocument (toNonElementParentNode, HTMLDocument)
 import Web.HTML.HTMLDocument.VisibilityState as VisibilityState
 import Web.HTML.Window (document)
@@ -36,19 +36,22 @@ import Web.HTML.Window (document)
 -- | module.
 newtype Canvas = Canvas Element
 
+-- | Wrapper for `getElementById` which returns a `Web.HTML.HTMLCanvasElement`.
+getCanvasHTMLElementById :: String -> Effect (Maybe HTMLCanvasElement)
+getCanvasHTMLElementById = mapCanvasElement (bindFlipped fromElement)
+
 -- | Wrapper for `getElementById` which returns a `Canvas`.
--- |
--- | `getElementById` from `Web.DOM.NonElementParentNode`, which returns a
--- | `Web.DOM.Element.Element`, is different from `getCanvasElementById` from
--- | `Graphics.Canvas`, which returns a `Graphics.Canvas.CanvasElement`, so
--- | they're unfortunately incompatible.
 getCanvasByAppName :: String -> Effect (Maybe Canvas)
-getCanvasByAppName name =
+getCanvasByAppName = mapCanvasElement (map Canvas)
+
+-- | Generic wrapper for `getElementById` that can be transformed into a
+-- | different type depending on the type of element needed.
+mapCanvasElement
+  :: forall a. (Maybe Element -> Maybe a) -> String -> Effect (Maybe a)
+mapCanvasElement f id =
   window
-    >>= document
-      >>> map toNonElementParentNode
-    >>= getElementById name
-      >>> map (map Canvas)
+    >>= (document >>> map toNonElementParentNode)
+    >>= (getElementById id >>> map f)
 
 -- | Get the bounding client rect for a `Canvas` element and convert it to a
 -- | `ClientRect` value.
@@ -59,12 +62,8 @@ getCanvasClientRect (Canvas canvas) =
 fromDOMRect :: DOMRect -> Geo.Rect
 fromDOMRect { left, top, width, height } = { x: left, y: top, width, height }
 
--- | Attempt to get the `Context2D` for this component's `canvas` element.
-getContextByAppName :: String -> Effect (Maybe Context2D)
-getContextByAppName name = getCanvasElementById name >>= traverse getContext2D
-
 -- | Get size and positioning CSS based on the app's window mode.
-style :: forall r i. App.WindowMode -> IProp (style :: String | r) i
+style :: forall r i. WindowMode -> IProp (style :: String | r) i
 style =
   attr (AttrName "style")
     <<< fromMaybe ""
@@ -74,12 +73,12 @@ style =
     <<< windowCss
 
 -- | Get the appropriate CSS for the screen element based on the `WindowMode`.
-windowCss :: App.WindowMode -> CSS
+windowCss :: WindowMode -> CSS
 windowCss = case _ of
-  App.Fixed size -> fix size
-  App.Stretch -> stretched
-  App.Fullscreen -> full
-  App.Plain -> common
+  Fixed size -> fix size
+  Stretch -> stretched
+  Fullscreen -> full
+  Plain -> common
   where
   common = do
     CSS.key (CSS.fromString "outline") "none"
@@ -130,3 +129,26 @@ visibilityState doc =
 
 -- See `visibilityState`
 foreign import _visibilityState :: EffectFn1 HTMLDocument String
+
+-- | The modes that determine the CSS for sizing and positioning a Gesso canvas
+-- | component:
+-- |
+-- | - `Fixed` creates an element of the specified size.
+-- | - `Stretch` expands to fill its container¹
+-- | - `FullScreen` takes up the entire page from the top left corner to the
+-- |   bottom right.
+-- | - `Plain` has no size or positioning CSS, so it must be styled from outside
+-- |   of the application.
+-- |
+-- | ¹ More specifically, `Stretch` makes the canvas fill its
+-- | [containing block](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Display/Containing_block).
+-- | The easiest way to deal with this is to give the parent element
+-- | `position: relative;`.
+-- |
+-- | [style](#v:style) generates the
+-- | CSS for the canvas element.
+data WindowMode
+  = Fixed Geo.Area
+  | Stretch
+  | Fullscreen
+  | Plain

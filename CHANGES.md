@@ -1,12 +1,26 @@
 # Change Log
 
+## 2.0-beta branch
+
+### more-contexts
+
+#### Features
+- [#20](https://github.com/smilack/purescript-gesso/issues/20) Added `getContext` function to `AppBehavior` record to allow use of other canvas contexts
+- [#20](https://github.com/smilack/purescript-gesso/issues/20) Added functions to get WebGL, WebGL2, and WebGPU contexts
+- [#70](https://github.com/smilack/purescript-gesso/issues/70) Added `init` function to `AppBehavior` to allow one-time setup before first render
+
+#### Bugs
+- Added blank favicon tags to example html files to prevent `GET .../favicon.ico ... 404 Not Found` in console
+
+#### Examples
+- Added [WebGL example](examples/webgl)
+
 ## v1.3.0
 - [#34](https://github.com/smilack/purescript-gesso/issues/34) Added interaction functions for  `beforeinput`, `contextmenu`, `gotpointercapture`, `lostpointercapture`, `pointercancel`, `pointerdown`, `pointerenter`, `pointerleave`, `pointermove`, `pointerout`, `pointerover`, and `pointerup` events
 
 ## v1.2.0
 
 ### Features
-
 - [#46](https://github.com/smilack/purescript-gesso/issues/46) Provide function to access timestamp value from `performance.now`
 
 ## v1.1.1
