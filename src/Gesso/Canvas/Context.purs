@@ -14,43 +14,37 @@ module Gesso.Canvas.Context
 
 import Prelude
 
-import Control.Bind (bindFlipped)
 import Control.Monad.Maybe.Trans (MaybeT(..), lift, runMaybeT)
 import Data.Maybe (Maybe)
 import Data.Nullable as Nullable
 import Data.Traversable (sequence, traverse)
 import Effect (Effect)
 import Effect.Uncurried (EffectFn2, runEffectFn2)
-import Gesso.Canvas.Context.Context2D (Context2DAttributes, Context2DColorSpace, Context2DColorType, defaultContext2DAttributes, displayP3, float16, sRGB, unorm8) as Exports
-import Gesso.Canvas.Context.Context2D (Context2DAttributes, defaultContext2DAttributes)
+import Gesso.Canvas.Context.Context2D (CanvasRenderingContext2DSettings, defaultContext2DSettings)
+import Gesso.Canvas.Context.Context2D (CanvasRenderingContext2DSettings, PredefinedColorSpace, CanvasColorType, sRGB, displayP3, unorm8, float16, defaultContext2DSettings) as Exports
 import Gesso.Canvas.Element (getCanvasHTMLElementById)
 import Graphics.Canvas (CanvasElement, getCanvasElementById, Context2D)
 import Graphics.Canvas (getCanvasElementById) as Exports
 import Graphics.WebGL.Raw (ContextAttributes, getContext) as GL
 import Graphics.WebGL.Raw (GL)
-import Web.DOM.NonElementParentNode (getElementById)
 import Web.GPU.GPUCanvasConfiguration (GPUCanvasConfiguration)
 import Web.GPU.GPUCanvasContext (GPUCanvasContext)
 import Web.GPU.GPUCanvasContext (configure) as GPU
 import Web.GPU.HTMLCanvasElement (getContext) as GPU
-import Web.HTML (HTMLCanvasElement, window)
-import Web.HTML.HTMLCanvasElement (fromElement)
-import Web.HTML.HTMLDocument (toNonElementParentNode)
-import Web.HTML.Window (document)
 
 -- ┌────┐
 -- │ 2D │
 -- └────┘
 
 getDefault2D :: String -> Effect (Maybe Context2D)
-getDefault2D = get2D defaultContext2DAttributes
+getDefault2D = get2D defaultContext2DSettings
 
-get2D :: Context2DAttributes -> String -> Effect (Maybe Context2D)
+get2D :: CanvasRenderingContext2DSettings -> String -> Effect (Maybe Context2D)
 get2D attrs id = getCanvasElementById id >>= traverse (getContext2D attrs)
 
-foreign import getContext2DImpl :: EffectFn2 Context2DAttributes CanvasElement Context2D
+foreign import getContext2DImpl :: EffectFn2 CanvasRenderingContext2DSettings CanvasElement Context2D
 
-getContext2D :: Context2DAttributes -> CanvasElement -> Effect Context2D
+getContext2D :: CanvasRenderingContext2DSettings -> CanvasElement -> Effect Context2D
 getContext2D = runEffectFn2 getContext2DImpl
 
 -- ┌───────┐

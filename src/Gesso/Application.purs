@@ -2,7 +2,6 @@
 module Gesso.Application
   ( AppBehavior
   , AppSpec
-  , WindowMode(..)
   , defaultBehavior
   , nominalBehavior
   , module Exports
@@ -14,8 +13,10 @@ import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Gesso.Application.Behavior (FixedUpdate, InitFunction, InputReceiver, OutputProducer, RenderFunction, TimestampedUpdate, UpdateFunction) as Exports
 import Gesso.Application.Behavior (FixedUpdate, InitFunction, InputReceiver, OutputProducer, RenderFunction, UpdateFunction)
+import Gesso.Canvas.Element (WindowMode)
+import Gesso.Canvas.Element (WindowMode(..)) as Exports
 import Gesso.Canvas.Context (getDefault2D)
-import Gesso.Geometry (Area, Rect)
+import Gesso.Geometry (Rect)
 import Gesso.Interactions (Interactions)
 import Gesso.Interactions (default) as Interactions
 import Gesso.Time (never)
@@ -41,7 +42,8 @@ type AppSpec state input output context =
 -- | `AppBehavior` holds the functions that make an application run.
 -- |
 -- | - `render` draws on the component every animation frame.
--- | - `init` TODO
+-- | - `init` runs once, after the context is created but before the first
+-- |   animation frame.
 -- | - `update` runs on each animation frame, just before `render`.
 -- | - `fixed` runs at a set interval of time.
 -- | - `interactions` are events which will be attached to the canvas element.
@@ -49,6 +51,7 @@ type AppSpec state input output context =
 -- |   a parent component.
 -- | - `input` defines how the component's state should change in response to
 -- |   receiving input from a parent component.
+-- | - `getContext` gets the rendering context from the canvas element.
 type AppBehavior state input output context =
   { render :: RenderFunction context state
   , init :: InitFunction context state
@@ -61,7 +64,10 @@ type AppBehavior state input output context =
   }
 
 -- | A default `AppBehavior` which can be modified piecemeal like Halogen's
--- | `EvalSpec`. It does nothing on its own.
+-- | `EvalSpec`. It gets a `Context2D` with default options, but otherwise does
+-- | nothing unless modified. If you need to change the `getContext` function
+-- | and don't need a `render` and/or `init` function, it's slightly cleaner to
+-- | use `nominalBehavior` instead.
 defaultBehavior
   :: forall state input output
    . AppBehavior state input output Context2D
@@ -83,8 +89,7 @@ defaultBehavior =
 -- | Halogen's `EvalSpec`. More general than `defaultBehavior` because that
 -- | provides a working value for `getContext`, which this does not. Using
 -- | `defaultBehavior` with a context other than `Context2D` requires updating
--- | `init` and `render` as well. (`render` is almost always updated, but `init`
--- | may not be.)
+-- | both `init` and `render` in order to unify the `context` type variable.
 nominalBehavior
   :: forall state input output context
    . AppBehavior state input output context
@@ -101,26 +106,3 @@ nominalBehavior =
   , input: \_ _ _ _ -> pure Nothing
   , getContext: \_ -> pure Nothing
   }
-
--- | The modes that determine the CSS for sizing and positioning a Gesso canvas
--- | component:
--- |
--- | - `Fixed` creates an element of the specified size.
--- | - `Stretch` expands to fill its container¹
--- | - `FullScreen` takes up the entire page from the top left corner to the
--- |   bottom right.
--- | - `Plain` has no size or positioning CSS, so it must be styled from outside
--- |   of the application.
--- |
--- | ¹ More specifically, `Stretch` makes the canvas fill its
--- | [containing block](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Display/Containing_block).
--- | The easiest way to deal with this is to give the parent element
--- | `position: relative;`.
--- |
--- | [Gesso.Canvas.Element.style](Gesso.Canvas.Element#v:style) generates the
--- | CSS for the canvas element.
-data WindowMode
-  = Fixed Area
-  | Stretch
-  | Fullscreen
-  | Plain

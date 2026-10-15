@@ -33,7 +33,9 @@ import Gesso.Time (Delta, Interval)
 type RenderFunction context state =
   context -> Delta -> Scalers -> States state -> Effect Unit
 
--- | TODO
+-- | A function that runs once, after the context is gotten from the canvas, but
+-- | before the first rendering frame. It knows the rendering context in
+-- | addition to all of the arguments of an `UpdateFunction`.
 type InitFunction context state =
   context -> UpdateFunction state
 
